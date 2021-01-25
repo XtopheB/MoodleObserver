@@ -1,0 +1,166 @@
+---
+title: "Monitoring DTV activity"
+author: "Christophe Bontemps (UN SIAP)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    highlight: tango
+    number_sections: yes
+    theme: lumen
+  html_notebook: default
+  pdf_document: 
+    keep_tex: yes  ## keep images in folder + latex
+---
+
+
+```{r setup, include=FALSE}
+# Remember to disable png for Word export...
+knitr::opts_chunk$set( message = FALSE, warning = FALSE, 
+                       results =FALSE, echo = FALSE,
+                       fig.width=7, fig.height=4, 
+                       dev="png", 
+                       dev.args=list(type="cairo"), dpi=96)
+
+# My colors:
+SIAP.color <- "#0385a8"
+
+# Function used to recreate ggplot standard colors
+ggplotColours <- function(n = 6, h = c(0, 360) + 15){
+  if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360/n
+  hcl(h = (seq(h[1], h[2], length = n)), c = 100, l = 65)
+}
+
+# Palette 
+library(wesanderson)
+```
+
+```{r libraries}
+library(readxl)
+library(tidyverse)
+library(viridis)
+library(ggthemes)
+library(ggplot2)
+library(forcats)
+library(knitr)
+library(kableExtra)
+# Additionnal 
+#devtools::install_github("wilkelab/ungeviz")
+library(ungeviz)
+
+```
+
+# Monitoring DTV learler's activity using **Activity Completion** report{-}
+
+
+The data set is the following: 
+
+```{r dataset, echo = FALSE, results=TRUE}
+MoodleData<- read.csv("MoodleData/progress.dtv20-18-01_2021.csv")
+
+
+
+## Table
+
+# t <-  kbl(MyData)
+# 
+# kable_styling(t,full_width = F )
+
+```
+## What are the legitimate questions?  {-}
+
+Since the data is about comparing. What do we want to compare here? 
+
+## What about bars? {-}
+
+
+```{r BarsAge}
+MyData %>%
+  mutate(MixEduInc = interaction(Education, Income, sep = "-")
+         )%>%
+ggplot()+
+    aes(x = Age, y = Satisfaction,  fill = MixEduInc) +
+    geom_bar(stat='identity', position='dodge') +
+    ggtitle(" Job Satisfaction for all categories, by Age")+
+    scale_fill_manual(values = wes_palette("Moonrise2"))+
+    theme_tufte() +
+    theme(legend.position="bottom")
+```
+
+
+```{r BarsAgeFlipped}
+MyData %>%
+  mutate(MixEduInc = interaction(Education, Income, sep = "-")
+         )%>%
+ggplot()+
+    aes(x = Age, y = Satisfaction,  fill = MixEduInc) +
+    geom_bar(stat='identity', position='dodge') +
+    ggtitle(" Job Satisfaction for all categories, by Age")+
+    scale_fill_manual(values = wes_palette("Moonrise2"))+
+    coord_flip()+
+    theme_tufte() +
+    theme(legend.position="bottom")
+```
+
+This new design does not really help comparing 
+
+
+```{r BarsEdu}
+MyData %>%
+  mutate(MixAgeInc = interaction(Age, Income, sep = "-")
+         )%>%
+ggplot()+
+    aes(x = Education, y = Satisfaction,  fill = MixAgeInc) +
+    geom_bar(stat='identity', position='dodge') +
+    ggtitle(" Job Satisfaction for all categories, by Education")+
+    scale_fill_manual(values = wes_palette("Royal1"))+
+    theme_tufte() +
+    theme(legend.position="bottom")
+```
+
+
+```{r BarsInc}
+MyData %>%
+  mutate(MixEduAge = interaction(Education, Age, sep = "-")
+         )%>%
+ggplot()+
+    aes(x = Income, y = Satisfaction,  fill = MixEduAge) +
+    geom_bar(stat='identity', position='dodge') +
+    ggtitle(" Job Satisfaction for all categories, by Income")+
+    scale_fill_manual(values =  wes_palette("Royal2"))+
+    theme_tufte() +
+    theme(legend.position="bottom")
+```
+
+
+
+
+
+```{r LineAge}
+library(directlabels)
+MyData %>%
+  mutate(MixEduInc = interaction(Education, Income, sep = "-")
+         )%>%
+ggplot()+
+    aes(x = Age, y = Satisfaction,  color = MixEduInc) +
+    geom_line(aes(group = MixEduInc), size =1.5) +
+    ggtitle(" Job Satisfaction for all categories, by Age")+
+    scale_color_manual(values = wes_palette("Moonrise2"))+
+    theme_tufte() +
+    theme(legend.position="none")+
+   geom_dl(aes(label = MixEduInc), 
+           method = list(dl.trans(x = x + 0.2),
+                         dl.combine("last.points"))) 
+
+```
+
+
+
+
+
+
+
+```{r}
+knitr::knit_exit()
+```
+
