@@ -1,22 +1,32 @@
 ---
-title: "Activity log"
+title: "Activity Log of UNSIAP Data Visualization E-Learning Course"
 author: "Jing Zhao"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  html_document:  
+    code_folding: hide
+    highlight: tango
+    number_sections: yes
+    theme: lumen
+  html_notebook: default
   pdf_document: default
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo = TRUE,
-  fig.align = 'center',
-  message = FALSE, 
-  warning = FALSE
-  )
+# Code folding oprion needs echo = TRUE to work 
+
+knitr::opts_chunk$set( message = FALSE, warning = FALSE, 
+                       results =FALSE, echo = TRUE, 
+                       dev="png", 
+                       fig.align = 'center',
+                       dev.args=list(type="cairo"), dpi=96)
+
+# Some colors we may want to use
+SIAP.color <- "#0385a8"
+
+
 ```
 
-## Activity Log of UNSIAP Data Visulization E-Learning Course
 
 ```{r libraries}
 library(stringr)
@@ -27,25 +37,29 @@ library(forcats)
 
 ```
 
-### Import data
+# Import data &  Clean data
 
 ```{r data}
-data_log <- read.csv("Data/logs_DTV20_20210121-1615.csv")
+
+date <- 20210127
+
+data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
 
 ```
 
-### Clean data
 
 ```{r}
 data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
 
 ```
 
-### Extract number and text from Description
+## Extract number and text from Description
+
 - Extract course ID
 ```{r}
 CourseID <- str_match(data_log$Description, "(?i)\\bcourse with id '?\\s*(\\d+)")[,2]
 head(CourseID)
+unique(CourseID)
 ```
 
 - Extract users ID
@@ -54,17 +68,31 @@ UserID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2
 head(UserID)
 ```
 
-Extract module ID
+- Extract module ID
 ```{r}
 ModuleID <- str_match(data_log$Description, "(?i)\\bcourse module with id '?\\s*(\\d+)")[,2]
 head(ModuleID)
+
 ```
 
+ 
 - New dataframe with extracted ID
 ```{r}
 #CourseID is not added since it means this datavis course
 log_new <- data.frame(data_log, ModuleID, UserID)
+
+NbUser <- count(unique((log_new %>%
+              filter(!is.na(Event.name) & !is.na(ModuleID)) %>%
+              select(UserID))))
+
+
 ```
+
+
+
+
+> So far, **`r NbUser`** different users visited the course.  There are *`r length(unique(ModuleID))-1`*  different activities that are reported in this log. Note that some activities are not available for learners. 
+
 
 
 ```{r}
@@ -74,7 +102,10 @@ log_new <- data.frame(data_log, ModuleID, UserID)
 #   mutate(data_log)
 ```
 
-### Visualize some variables
+
+
+
+## Visualize some variables
 Number of times the event was conducted
 ```{r}
 log_new %>%
