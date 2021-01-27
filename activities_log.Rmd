@@ -1,7 +1,7 @@
 ---
 title: "Activity log"
 author: "Jing Zhao"
-date: "1/22/2021"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document: default
   html_document: default
@@ -27,23 +27,54 @@ library(forcats)
 
 ```
 
-## Import data
+### Import data
 
 ```{r data}
 data_log <- read.csv("Data/logs_DTV20_20210121-1615.csv")
 
 ```
-## Extract users ID
+
+### Clean data
 
 ```{r}
-log_new <- data_log %>%
-  select(Description) %>%
-  extract(Description, 'UserID', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
-  mutate(data_log)
+data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
 
 ```
 
-## Visualize some variables
+### Extract number and text from Description
+- Extract course ID
+```{r}
+CourseID <- str_match(data_log$Description, "(?i)\\bcourse with id '?\\s*(\\d+)")[,2]
+head(CourseID)
+```
+
+- Extract users ID
+```{r}
+UserID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2]
+head(UserID)
+```
+
+Extract module ID
+```{r}
+ModuleID <- str_match(data_log$Description, "(?i)\\bcourse module with id '?\\s*(\\d+)")[,2]
+head(ModuleID)
+```
+
+- New dataframe with extracted ID
+```{r}
+#CourseID is not added since it means this datavis course
+log_new <- data.frame(data_log, ModuleID, UserID)
+```
+
+
+```{r}
+# log_new <- data_log %>%
+#   select(Description) %>%
+#   extract(Description, 'UserID', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
+#   mutate(data_log)
+```
+
+### Visualize some variables
 Number of times the event was conducted
 ```{r}
 log_new %>%
@@ -54,12 +85,9 @@ log_new %>%
   ggplot()+
   aes(x=reorder(Event.name, -n), y=n)+
   geom_bar(stat='identity')+
-  labs(
-    #subtitle = "74 events in total, at the time 21 Januray 2021", x="Event", y="")+
-    ##  To adapt....
-    subtitle = paste(nrow(log_new),"( some text ", format(Sys.time(), "%Y-%m-%d"), ")")) +
-  
-  
+  labs(x="Events", y="Number of times", 
+       subtitle = paste(length(unique(log_new$Event.name)),"events ( at the time", format(file.info("Data/logs_DTV20_20210121-1615.csv")["mtime"]
+                          ,"%Y-%m-%d"),")"))+
   ggtitle("Number of times the event was conducted (top 22 events)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -82,8 +110,9 @@ log_new %>%
   aes(x=reorder(UserID, -n), y=n, 
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
       geom_bar(stat='identity')+
-  labs(subtitle = "333 users in total, at the time 21 Januray 2021", 
-       x="Users' ID", y="", fill="")+
+  labs(x="Users' ID", y="", fill="",
+       subtitle = paste(length(unique(log_new$UserID)),"users ( at the time", format(file.info("Data/logs_DTV20_20210121-1615.csv")["mtime"]
+                          ,"%Y-%m-%d"),")"))+
   ggtitle("Number of events each user engaged (top and bottom users)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
