@@ -214,7 +214,13 @@ TSWLatexianTemp*
 # Makeindex log files
 *.lpz
 .Rproj.user
+<<<<<<< HEAD
 Data
 .Rhistory
 .RData
 .DS_Store
+=======
+activities_log.pdf
+>>>>>>> fc665820ee632d69ee00bee5b537bd74c7aac5d4
+activities_log.nb.html
+activities_log.html

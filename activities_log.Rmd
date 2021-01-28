@@ -1,24 +1,37 @@
 ---
-title: "Activity log"
-author: "Jing Zhao"
+title: "Activity Log of UNSIAP Data Visualization E-Learning Course"
+author: "Jing Zhao and Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  html_document:  
+    code_folding: hide
+    highlight: tango
+    number_sections: yes
+    theme: lumen
+  html_notebook: default
   pdf_document: default
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo = TRUE,
-  fig.align = 'center',
-  message = FALSE, 
-  warning = FALSE
-  )
+# Code folding oprion needs echo = TRUE to work 
+
+knitr::opts_chunk$set( message = FALSE, warning = FALSE, 
+                       results =FALSE, echo = TRUE, 
+                       dev="png", 
+                       fig.align = 'center',
+                       dev.args=list(type="cairo"), dpi=96)
+
+# Some colors we may want to use
+SIAP.color <- "#0385a8"
+
+
 ```
 
-## Activity Log of UNSIAP Data Visulization E-Learning Course
 
 ```{r libraries}
+# get knit worked for Mac
+library(Cairo)
+#
 library(stringr)
 library(dplyr)
 library(tidyr)
@@ -27,25 +40,30 @@ library(forcats)
 
 ```
 
-### Import data
+# Import data &  Clean data
 
 ```{r data}
-data_log <- read.csv("Data/logs_DTV20_20210121-1615.csv")
 
+date <- 20210127
+
+data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
+
+file <- paste0("Data/logs_DTV20_", date,".csv") 
 ```
 
-### Clean data
 
 ```{r}
 data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
 
 ```
 
-### Extract number and text from Description
+## Extract number and text from Description
+
 - Extract course ID
 ```{r}
 CourseID <- str_match(data_log$Description, "(?i)\\bcourse with id '?\\s*(\\d+)")[,2]
 head(CourseID)
+unique(CourseID)
 ```
 
 - Extract users ID
@@ -54,17 +72,36 @@ UserID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2
 head(UserID)
 ```
 
-Extract module ID
+- Extract module ID
 ```{r}
-ModuleID <- str_match(data_log$Description, "(?i)\\bcourse module with id '?\\s*(\\d+)")[,2]
+ModuleID <- str_match(data_log$Description, "(?i)\\bcourse module id '?\\s*(\\d+)")[,2]
 head(ModuleID)
+unique(ModuleID)
 ```
 
+ 
 - New dataframe with extracted ID
 ```{r}
 #CourseID is not added since it means this datavis course
 log_new <- data.frame(data_log, ModuleID, UserID)
+
+NbUser <- count(unique((log_new %>%
+              filter(!is.na(Event.name) & !is.na(ModuleID)) %>%
+              select(UserID))))
+
 ```
+
+- Split date and time
+```{r}
+log_new <- log_new %>%
+           mutate(Date = str_split(log_new$Time, ", ", simplify = TRUE)[,1],
+                    Times = str_split(log_new$Time, ", ", simplify = TRUE)[,2])
+
+```
+
+
+> So far, **`r NbUser`** different users visited the course.  There are *`r length(unique(ModuleID))-1`*  different activities that are reported in this log. Note that some activities are not available for learners. 
+
 
 
 ```{r}
@@ -74,8 +111,11 @@ log_new <- data.frame(data_log, ModuleID, UserID)
 #   mutate(data_log)
 ```
 
-### Visualize some variables
-Number of times the event was conducted
+
+
+
+## Visualize some variables
+- Number of times the event was conducted
 ```{r}
 log_new %>%
   filter(!is.na(Event.name)) %>%
@@ -86,9 +126,8 @@ log_new %>%
   aes(x=reorder(Event.name, -n), y=n)+
   geom_bar(stat='identity')+
   labs(x="Events", y="Number of times", 
-       subtitle = paste(length(unique(log_new$Event.name)),"events ( at the time", format(file.info("Data/logs_DTV20_20210121-1615.csv")["mtime"]
-                          ,"%Y-%m-%d"),")"))+
-  ggtitle("Number of times the event was conducted (top 22 events)")+
+       subtitle = paste(length(unique(log_new$Event.name)),"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Number of times the event was engaged in (top 22 events)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -99,7 +138,7 @@ log_new %>%
   
 ```
 
-Number of activity events each user engaged (top and bottom users)
+- Number of activity events each user engaged (top and bottom users)
 ```{r}
 log_new %>%
   filter(!is.na(UserID)) %>%
@@ -110,10 +149,10 @@ log_new %>%
   aes(x=reorder(UserID, -n), y=n, 
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
       geom_bar(stat='identity')+
-  labs(x="Users' ID", y="", fill="",
-       subtitle = paste(length(unique(log_new$UserID)),"users ( at the time", format(file.info("Data/logs_DTV20_20210121-1615.csv")["mtime"]
+  labs(x="Users' ID", y="Number of events", fill="",
+       subtitle = paste(NbUser,"users ( Date ", format(file.info(file)["ctime"]
                           ,"%Y-%m-%d"),")"))+
-  ggtitle("Number of events each user engaged (top and bottom users)")+
+  ggtitle("Number of events was engaged in, by users (top and bottom users)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
@@ -121,3 +160,22 @@ log_new %>%
 
 ```
 
+- Events conducted by date
+```{r}
+log_new %>%
+  filter(!is.na(UserID)) %>%
+  ggplot()+
+  aes(x=fct_infreq(Date))+
+  geom_bar()+
+  labs(x="Date", y="Number of events", 
+       subtitle = paste(length(unique(log_new$Date)),"days (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Number of events was engaged in, by date")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 10))+
+  coord_flip()
+  
+```
