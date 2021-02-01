@@ -8,8 +8,8 @@ output:
     highlight: tango
     number_sections: yes
     theme: lumen
-  html_notebook: default
   pdf_document: default
+  html_notebook: default
 ---
 
 ```{r setup, include=FALSE}
@@ -99,22 +99,33 @@ log_new <- log_new %>%
 
 ```
 
-
-> So far, **`r NbUser`** different users visited the course.  There are *`r length(unique(ModuleID))-1`*  different activities that are reported in this log. Note that some activities are not available for learners. 
-
-
+- Create time range
+```{r}
+# extract the hour and create time range. 
+t <- log_new %>%
+  select(Times) %>%
+  extract(Times, 'Time_range', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
+  mutate(Time_range = as.numeric(Time_range))
+```
 
 ```{r}
-# log_new <- data_log %>%
-#   select(Description) %>%
-#   extract(Description, 'UserID', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
-#   mutate(data_log)
+# a loop for time range
+  for (i in list(t$Time_range)) {
+  i = paste0(i,":00", "~", i+1, ":00")
+  log_new$Time_range <- i
+}
+
+head(log_new$Time_range)
 ```
 
 
 
+> So far, **`r paste0(NbUser)`** different users visited the course.  There are *`r length(unique(ModuleID))-1`*  different activities that are reported in this log. Note that some activities are not available for learners. 
 
-## Visualize some variables
+
+# Visualize some variables
+
+### Events
 - Number of times the event was conducted
 ```{r}
 log_new %>%
@@ -126,19 +137,41 @@ log_new %>%
   aes(x=reorder(Event.name, -n), y=n)+
   geom_bar(stat='identity')+
   labs(x="Events", y="Number of times", 
-       subtitle = paste(length(unique(log_new$Event.name)),"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Number of times the event was engaged in (top 22 events)")+
+       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Number of times the event was conducted (top 22 events)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
         axis.line = element_line(colour = "black"), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 10))+
+        axis.title.y = element_text(size = 8))+
   coord_flip()
   
 ```
-
-- Number of activity events each user engaged (top and bottom users)
+- Events conducted by number of users
+```{r}
+log_new %>%
+  filter(!is.na(Event.name)) %>%
+  group_by(Event.name) %>%
+  summarize(Users = n_distinct(UserID)) %>% 
+  mutate(rank = dense_rank(desc(Users))) %>% 
+  filter(rank <= 25) %>% 
+  ggplot()+
+  aes(x=reorder(Event.name, -Users), y=Users)+
+  geom_bar(stat='identity')+
+  labs(x="Events", y="Number of users", 
+       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Events conducted by number of users (top 30 events)")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+```
+- Users event counts (top and bottom users)
 ```{r}
 log_new %>%
   filter(!is.na(UserID)) %>%
@@ -152,14 +185,13 @@ log_new %>%
   labs(x="Users' ID", y="Number of events", fill="",
        subtitle = paste(NbUser,"users ( Date ", format(file.info(file)["ctime"]
                           ,"%Y-%m-%d"),")"))+
-  ggtitle("Number of events was engaged in, by users (top and bottom users)")+
+  ggtitle("Users event counts (top and bottom users)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 ```
-
 - Events conducted by date
 ```{r}
 log_new %>%
@@ -169,13 +201,100 @@ log_new %>%
   geom_bar()+
   labs(x="Date", y="Number of events", 
        subtitle = paste(length(unique(log_new$Date)),"days (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Number of events was engaged in, by date")+
+  ggtitle("Number of events was conducted by date")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
         axis.line = element_line(colour = "black"), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 10))+
+  coord_flip()
+  
+```
+### Modules and activities
+-Activities accessed by number of times
+```{r}
+log_new %>%
+  filter(!is.na(ModuleID)) %>%
+  count(ModuleID) %>%
+  mutate(rank = dense_rank(desc(n))) %>% 
+  filter(rank <= 20) %>% 
+  ggplot()+
+  aes(x=reorder(ModuleID, -n), y=n)+
+  geom_bar(stat='identity')+
+  labs(x="Activities", y="Number of times", 
+       subtitle = paste(length(unique(ModuleID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Activities accessed by number of times (top 20 activities)")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+```
+- Activities accessed by number of users
+```{r}
+log_new %>%
+  filter(!is.na(ModuleID)) %>%
+  group_by(ModuleID) %>%
+  summarize(Users = n_distinct(UserID)) %>% 
+  mutate(rank = dense_rank(desc(Users))) %>% 
+  filter(rank <= 30) %>% 
+  ggplot()+
+  aes(x=reorder(ModuleID, -Users), y=Users)+
+  geom_bar(stat='identity')+
+  labs(x="Activities", y="Number of users", 
+       subtitle = paste(length(unique(ModuleID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Activities accessed by number of users (top 30 activities)")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+```
+### Time
+- Active time by events
+```{r}
+log_new %>%
+  filter(!is.na(Time_range)) %>%
+  ggplot()+
+  aes(x=fct_infreq(Time_range))+
+  geom_bar()+
+  labs(x="Time", y="Number of events", 
+       subtitle = paste("JST (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Active time by events")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+```
+- Active time by users
+```{r}
+log_new %>%
+  filter(!is.na(Time_range)) %>%
+  group_by(Time_range) %>%
+  summarize(Users = n_distinct(UserID)) %>% 
+  ggplot()+
+  aes(x=reorder(Time_range, -Users), y=Users)+
+  geom_bar(stat='identity')+
+  labs(x="Time", y="Number of users", 
+       subtitle = paste("JST (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Active time by users")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
   coord_flip()
   
 ```
