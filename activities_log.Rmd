@@ -50,14 +50,33 @@ data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
 
 file <- paste0("Data/logs_DTV20_", date,".csv") 
 
+
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-data_log$Time <- data_log$ï..Time
+#data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
+
 
 ```
 
-
+## Remove less relevant observations 
+- remove administrator
 ```{r}
+#remove administrator 
 data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
+
+```
+- remove less relevant events (_all the listed events below are related to learners actions since the administrators actions have been removed above_)
+```{r}
+r <- unique(data_log$Event.name)
+r
+```
+```{r}
+#remove less relevant events
+# the events to remove
+rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned", "Course searched", "User list viewed", "User profile viewed", "Subscription created", tail(r, n=11))
+rem_events
+
+# remove events
+data_log <- data_log[!data_log$Event.name %in% rem_events, ]
 
 ```
 
@@ -70,37 +89,62 @@ head(CourseID)
 unique(CourseID)
 ```
 
-- Extract users ID
+- Extract Learners ID
 ```{r}
-UserID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2]
-head(UserID)
+LearnerID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2]
+head(LearnerID)
 ```
 
 - Extract module ID
 ```{r}
-ModuleID <- str_match(data_log$Description, "(?i)\\bcourse module id '?\\s*(\\d+)")[,2]
-head(ModuleID)
-unique(ModuleID)
+ModuleID <- str_match(data_log$Description, "(?i)\\bsection number '?\\s*(\\d+)")[,2]
+unique(ModuleID) # the actions applied on Modules that are hidden from students are from stuffs like Shimizu san, Eunkoo, and me. We are not removed before. 
+
+```
+
+- Extract activity ID
+```{r}
+ActID <- str_match(data_log$Description, "(?i)\\bcourse module id '?\\s*(\\d+)")[,2]
+head(ActID)
+unique(ActID)
 ```
 
  
 - New dataframe with extracted ID
 ```{r}
 #CourseID is not added since it means this datavis course
-log_new <- data.frame(data_log, ModuleID, UserID)
+log_new <- data.frame(data_log, ModuleID, LearnerID, ActID)
 
-NbUser <- count(unique((log_new %>%
+NbLearner <- count(unique((log_new %>%
               filter(!is.na(Event.name) & !is.na(ModuleID)) %>%
-              select(UserID))))
+              select(LearnerID))))
 
 ```
 
+## Fixing time data
 - Split date and time
 ```{r}
 log_new <- log_new  %>%
            mutate(Date = str_split(log_new$Time, ", ", simplify = TRUE)[,1],
                     Times = str_split(log_new$Time, ", ", simplify = TRUE)[,2])
 
+```
+
+- rm the date before the the course started (13 Jan), and formate time and date
+```{r}
+log_new <- log_new  %>%
+          mutate(Date = as.Date(log_new$Date, "%d/%m/%y"))%>%
+          filter(Date >= "2021-01-13")%>%
+          mutate(Times = format(strptime(log_new$Times, "%H:%M"), format = "%H:%M"))
+  
+          
+  
+```
+
+- create date ID
+```{r}
+log_new <- log_new %>%
+  mutate(DateID = group_indices(., Date))
 ```
 
 - Create time range
@@ -110,21 +154,18 @@ t <- log_new %>%
   select(Times) %>%
   extract(Times, 'Time_range', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
   mutate(Time_range = as.numeric(Time_range))
-```
 
-```{r}
 # a loop for time range
   for (i in list(t$Time_range)) {
-  i = paste0(i,":00", "~", i+1, ":00")
+  i = paste0(formatC(i, format="d",flag="0",width=2),":00", "-", formatC(i+1, format="d",flag="0",width=2), ":00")
   log_new$Time_range <- i
 }
 
-head(log_new$Time_range)
+unique(log_new$Time_range)
 ```
 
 
-
-> So far, **`r paste0(NbUser)`** different users visited the course.  There are **`r length(unique(ModuleID))-1`**  different activities that are reported in this log. Note that some activities are not available for learners. 
+> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(ModuleID))-1`**  different activities that are reported in this log. Note that some activities are not available for learners. 
 
 
 # Visualize some variables
@@ -152,20 +193,20 @@ log_new %>%
   coord_flip()
   
 ```
-- Events conducted by number of users
+- Events conducted by number of Learners
 ```{r}
 log_new %>%
   filter(!is.na(Event.name)) %>%
   group_by(Event.name) %>%
-  summarize(Users = n_distinct(UserID)) %>% 
-  mutate(rank = dense_rank(desc(Users))) %>% 
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  mutate(rank = dense_rank(desc(Learners))) %>% 
   filter(rank <= 25) %>% 
   ggplot()+
-  aes(x=reorder(Event.name, Users), y=Users)+
+  aes(x=reorder(Event.name, Learners), y=Learners)+
   geom_bar(stat='identity')+
-  labs(x="Events", y="Number of users", 
+  labs(x="Events", y="Number of Learners", 
        subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Events conducted by number of users (top 30 events)")+
+  ggtitle("Events conducted by number of Learners (top 30 events)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -175,21 +216,21 @@ log_new %>%
   coord_flip()
   
 ```
-- Users event counts (top and bottom users)
+- Learners event counts (top and bottom Learners)
 ```{r}
 log_new %>%
-  filter(!is.na(UserID)) %>%
-  count(UserID) %>%
+  filter(!is.na(LearnerID)) %>%
+  count(LearnerID) %>%
   mutate(rank = dense_rank(desc(n))) %>% 
   filter(row_number() >= max(row_number()) - 5 | rank <= 5) %>%
   ggplot()+
-  aes(x=reorder(UserID, -n), y=n, 
+  aes(x=reorder(LearnerID, -n), y=n, 
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
       geom_bar(stat='identity')+
-  labs(x="Users' ID", y="Number of events", fill="",
-       subtitle = paste(NbUser,"users ( Date ", format(file.info(file)["ctime"]
+  labs(x="Learners' ID", y="Number of events", fill="",
+       subtitle = paste(NbLearner,"Learners ( Date ", format(file.info(file)["ctime"]
                           ,"%Y-%m-%d"),")"))+
-  ggtitle("Users event counts (top and bottom users)")+
+  ggtitle("Learners event counts (top and bottom Learners)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
@@ -202,7 +243,7 @@ log_new %>%
 
 ```{r}
 log_new %>%
-  filter(!is.na(UserID)) %>%
+  filter(!is.na(LearnerID)) %>%
   ggplot()+
   #aes(x=fct_infreq(Date))+
   aes(x = Date)+
@@ -225,15 +266,15 @@ log_new %>%
 
 ```{r}
 log_new %>%
-  filter(!is.na(ModuleID)) %>%
-  count(ModuleID) %>%
+  filter(!is.na(ActID)) %>%
+  count(ActID) %>%
   mutate(rank = dense_rank(desc(n))) %>% 
   filter(rank <= 20) %>% 
   ggplot()+
-  aes(x=reorder(ModuleID, -n), y=n)+
+  aes(x=reorder(ActID, -n), y=n)+
   geom_bar(stat='identity')+
   labs(x="Activities", y="Number of times", 
-       subtitle = paste(length(unique(ModuleID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+       subtitle = paste(length(unique(ActID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
   ggtitle("Activities accessed by number of times (top 20 activities)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -244,24 +285,24 @@ log_new %>%
   coord_flip()
   
 ```
-### Activities accessed by number of users
+### Activities accessed by number of Learners
 
 > I changed the variable to have the lables and "see" which are the activities the most popular.  Could be good to the Module number too (1-6)!
 
 ```{r}
 log_new %>%
-  filter(!is.na(ModuleID)) %>%
-  mutate( ModuleID.lab = paste(ModuleID,"-",Event.context)) %>%
-  group_by(ModuleID.lab) %>%
-  summarize(Users = n_distinct(UserID)) %>% 
-  mutate(rank = dense_rank(desc(Users))) %>% 
+  filter(!is.na(ActID)) %>%
+  mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
+  group_by(ActID.lab) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  mutate(rank = dense_rank(desc(Learners))) %>% 
   filter(rank <= 30) %>% 
   ggplot()+
-  aes(x=reorder(ModuleID.lab, Users), y=Users)+
+  aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar(stat='identity')+
-  labs(x="Activities", y="Number of users", 
-       subtitle = paste(length(unique(ModuleID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Activities accessed by number of users (top 30 activities)")+
+  labs(x="Activities", y="Number of Learners", 
+       subtitle = paste(length(unique(ActID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+  ggtitle("Activities accessed by number of Learners (top 30 activities)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -295,19 +336,19 @@ log_new %>%
   coord_flip()
   
 ```
-- Active time by users
+- Active time by Learners
 
 ```{r}
 log_new %>%
   filter(!is.na(Time_range)) %>%
   group_by(Time_range) %>%
-  summarize(Users = n_distinct(UserID)) %>% 
+  summarize(Learners = n_distinct(LearnerID)) %>% 
   ggplot()+
-  aes(x=reorder(Time_range, Time_range), y=Users)+
+  aes(x=reorder(Time_range, Time_range), y=Learners)+
   geom_bar(stat='identity')+
-  labs(x="Time", y="Number of users", 
+  labs(x="Time", y="Number of Learners", 
        subtitle = paste("JST (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Active time by users")+
+  ggtitle("Active time by Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -329,7 +370,7 @@ Similar to the one I send but with selection of the final date; hat is thetable 
 ### Heatmap of the activities: 
     * Horizontally:  time since beginnig of course
     * Vertically:  activities (first activity Module 1 on top, last activity of module 6 at the bottom)
-    * heat = Nb of views (nb of users or events) of each activity  
+    * heat = Nb of views (nb of Learners or events) of each activity  
     
 
 
