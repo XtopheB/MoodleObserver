@@ -58,7 +58,7 @@ file <- paste0("Data/logs_DTV20_", date,".csv")
 ```
 
 ## Remove less relevant observations 
-- remove administrator
+- remove administrators
 ```{r}
 #remove administrator 
 data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
@@ -130,15 +130,15 @@ log_new <- log_new  %>%
 
 ```
 
-- rm the date before the the course started (13 Jan), and formate time and date
+- rm the date before the the course started (13 Jan), and format time and date
 ```{r}
 log_new <- log_new  %>%
+          mutate(Times = format(strptime(log_new$Times, "%H:%M"), format = "%H:%M"))%>%
           mutate(Date = as.Date(log_new$Date, "%d/%m/%y"))%>%
-          filter(Date >= "2021-01-13")%>%
-          mutate(Times = format(strptime(log_new$Times, "%H:%M"), format = "%H:%M"))
-  
+          filter(Date >= "2021-01-13")
           
   
+        
 ```
 
 - create date ID
