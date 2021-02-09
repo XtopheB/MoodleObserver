@@ -109,17 +109,32 @@ head(ActID)
 unique(ActID)
 ```
 
+- Extract activity type
+```{r}
+Act_type <- str_match(data_log$Event.context,  "(?<=\\[).+?(?=\\])")[,1]
+unique(Act_type)#Many students also accessed old version such as "OLD-Video".
+```
+
  
 - New dataframe with extracted ID
 ```{r}
 #CourseID is not added since it means this datavis course
-log_new <- data.frame(data_log, ModuleID, LearnerID, ActID)
+log_new <- data.frame(data_log, ModuleID, LearnerID, ActID, Act_type)
 
 NbLearner <- count(unique((log_new %>%
               filter(!is.na(Event.name) & !is.na(ModuleID)) %>%
               select(LearnerID))))
 
 ```
+
+
+> **Note that there is no overlap of Activity ID and Module ID from Description**. E.g., We extracted the Module ID by "section number": "The user with id '11216' viewed the **section number '1'** of the course with id '97' and extracted the activity ID by "module number" as: "The user with id '10946' viewed the 'page' activity with **course module id '3250'**". The "section number" and "module number" do not exist at the same time in a sentence. _**Description is not perfect**_
+```{r}
+log_new %>%
+  filter(!is.na(ActID),
+         !is.na(ModuleID))
+```
+
 
 ## Fixing time data
 - Split date and time
@@ -141,12 +156,6 @@ log_new <- log_new  %>%
         
 ```
 
-- create date ID
-```{r}
-log_new <- log_new %>%
-  mutate(DateID = group_indices(., Date))
-```
-
 - Create time range
 ```{r}
 # extract the hour and create time range. 
@@ -163,6 +172,14 @@ t <- log_new %>%
 
 unique(log_new$Time_range)
 ```
+- Create date and time ID
+```{r}
+log_new <- log_new %>%
+  mutate(DateID = group_indices(., Date))%>%
+  mutate(TimeID = as.numeric(str_extract(log_new$Time_range, "([\\d.]+)")))
+
+```
+
 
 
 > So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(ModuleID))-1`**  different activities that are reported in this log. Note that some activities are not available for learners. 
@@ -171,42 +188,16 @@ unique(log_new$Time_range)
 # Visualize some variables
 
 ### Events {-}
-- Number of times the event was conducted
-```{r}
-log_new %>%
-  filter(!is.na(Event.name)) %>%
-  count(Event.name) %>%
-  mutate(rank = dense_rank(desc(n))) %>% 
-  filter(rank <= 20) %>% 
-  ggplot()+
-  aes(x=reorder(Event.name, n), y=n)+
-  geom_bar(stat='identity')+
-  labs(x="Events", y="Number of times", 
-       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Number of times the event was conducted (top 22 events)")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-  
-```
 - Events conducted by number of Learners
 ```{r}
 log_new %>%
   filter(!is.na(Event.name)) %>%
-  group_by(Event.name) %>%
-  summarize(Learners = n_distinct(LearnerID)) %>% 
-  mutate(rank = dense_rank(desc(Learners))) %>% 
-  filter(rank <= 25) %>% 
   ggplot()+
-  aes(x=reorder(Event.name, Learners), y=Learners)+
-  geom_bar(stat='identity')+
+  aes(x=fct_rev(fct_infreq(Event.name)))+
+  geom_bar()+
   labs(x="Events", y="Number of Learners", 
        subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Events conducted by number of Learners (top 30 events)")+
+  ggtitle("Events conducted by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -258,33 +249,9 @@ log_new %>%
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 10))+
   coord_flip()
-  
 ```
 ##  Modules and activities
 
-### Activities accessed by number of times
-
-```{r}
-log_new %>%
-  filter(!is.na(ActID)) %>%
-  count(ActID) %>%
-  mutate(rank = dense_rank(desc(n))) %>% 
-  filter(rank <= 20) %>% 
-  ggplot()+
-  aes(x=reorder(ActID, -n), y=n)+
-  geom_bar(stat='identity')+
-  labs(x="Activities", y="Number of times", 
-       subtitle = paste(length(unique(ActID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Activities accessed by number of times (top 20 activities)")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-  
-```
 ### Activities accessed by number of Learners
 
 > I changed the variable to have the lables and "see" which are the activities the most popular.  Could be good to the Module number too (1-6)!
@@ -317,25 +284,6 @@ log_new %>%
 
 > (I reordered here to have a distribution over the day time but do not manage to rank the date corectly... 
 
-```{r}
-log_new %>%
-  filter(!is.na(Time_range)) %>%
-  ggplot()+
- # aes(x=fct_infreq(Time_range))+
-  aes(x= fct_reorder(Time_range, desc(Time_range)))+
-  geom_bar()+
-  labs(x="Time", y="Number of events", 
-       subtitle = paste("JST (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
-  ggtitle("Active time by events")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-  
-```
 - Active time by Learners
 
 ```{r}
