@@ -109,10 +109,10 @@ head(ActID)
 unique(ActID)
 ```
 
-- Extract activity type
+- Extract activity type. Note:**Many students also accessed old version such as "OLD-Video".**
 ```{r}
 Act_type <- str_match(data_log$Event.context,  "(?<=\\[).+?(?=\\])")[,1]
-unique(Act_type)#Many students also accessed old version such as "OLD-Video".
+unique(Act_type)# Many students also accessed old version such as "OLD-Video".
 ```
 
  
@@ -192,11 +192,15 @@ log_new <- log_new %>%
 ```{r}
 log_new %>%
   filter(!is.na(Event.name)) %>%
+  group_by(Event.name) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  #mutate(rank = dense_rank(desc(Learners))) %>% 
+  #filter(rank <= 25) %>% 
   ggplot()+
-  aes(x=fct_rev(fct_infreq(Event.name)))+
-  geom_bar()+
+  aes(x=reorder(Event.name, Learners), y=Learners)+
+  geom_bar(stat='identity')+
   labs(x="Events", y="Number of Learners", 
-       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
   ggtitle("Events conducted by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -219,8 +223,7 @@ log_new %>%
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
       geom_bar(stat='identity')+
   labs(x="Learners' ID", y="Number of events", fill="",
-       subtitle = paste(NbLearner,"Learners ( Date ", format(file.info(file)["ctime"]
-                          ,"%Y-%m-%d"),")"))+
+       subtitle = paste(NbLearner,"Learners (Final Date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
   ggtitle("Learners event counts (top and bottom Learners)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
@@ -240,7 +243,7 @@ log_new %>%
   aes(x = Date)+
   geom_bar()+
   labs(x="Date", y="Number of events", 
-       subtitle = paste(length(unique(log_new$Date)),"days (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+       subtitle = paste(length(unique(log_new$Date)),"days (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
   ggtitle("Number of events was conducted by date")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -268,7 +271,7 @@ log_new %>%
   aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar(stat='identity')+
   labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(length(unique(ActID))-1,"activities (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+       subtitle = paste(length(unique(ActID))-1,"activities (Final Date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
   ggtitle("Activities accessed by number of Learners (top 30 activities)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -295,7 +298,7 @@ log_new %>%
   aes(x=reorder(Time_range, Time_range), y=Learners)+
   geom_bar(stat='identity')+
   labs(x="Time", y="Number of Learners", 
-       subtitle = paste("JST (Date ", format(file.info(file)["ctime"],"%Y-%m-%d"),")"))+
+       subtitle = paste("JST (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
   ggtitle("Active time by Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -313,12 +316,122 @@ log_new %>%
     
 ### Table of learners activities
 Similar to the one I send but with selection of the final date; hat is thetable can be generated for any fianl date in the past. --> the idea is to do shiny app of that and change the date...
+
+- Final date: 20210201
+```{r}
+final_date = as.Date("20210201", format = "%Y%m%d")
+
+log_new %>%
+  filter(!is.na(ActID),
+         Date == final_date) %>%
+  mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
+  group_by(ActID.lab) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  #mutate(rank = dense_rank(desc(Learners))) %>% 
+  #filter(rank <= 30) %>% 
+  ggplot()+
+  aes(x=reorder(ActID.lab, Learners), y=Learners)+
+  geom_bar(stat='identity')+
+  labs(x="Activities", y="Number of Learners", 
+       subtitle = paste(nrow(subset(unique(log_new[c("ActID", "Date")]), Date==final_date)),"activities (Date ", final_date,")"))+
+  ggtitle("Activities accessed by number of Learners")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+
+```
+
+
+
+
+- Final data: 20210131
+```{r}
+final_date2 = as.Date("20210131", format = "%Y%m%d")
+
+log_new %>%
+  filter(!is.na(ActID),
+         Date == final_date2) %>%
+  mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
+  group_by(ActID.lab) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  #mutate(rank = dense_rank(desc(Learners))) %>% 
+  #filter(rank <= 30) %>% 
+  ggplot()+
+  aes(x=reorder(ActID.lab, Learners), y=Learners)+
+  geom_bar(stat='identity')+
+  labs(x="Activities", y="Number of Learners", 
+       subtitle = paste(nrow(subset(unique(log_new[c("ActID", "Date")]), Date==final_date2)),"activities (Date ", final_date2,")"))+
+  ggtitle("Activities accessed by number of Learners")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+```
+
+ 
  
  
 ### Heatmap of the activities: 
     * Horizontally:  time since beginnig of course
     * Vertically:  activities (first activity Module 1 on top, last activity of module 6 at the bottom)
     * heat = Nb of views (nb of Learners or events) of each activity  
-    
 
+> Failed to generate the activities order from Module 1 to Module 6
+
+- Sort by the ActID in ascending order    
+```{r, fig.width=12,fig.height=12}
+#Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
+#sort by the ActID in ascending order
+log_new %>%
+  filter(!is.na(ActID)) %>%
+  mutate(ActID.lab = paste(fct_rev(fct_inorder(ActID)),"-",Event.context)) %>%
+  group_by(ActID.lab, Date) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  ggplot()+
+  aes(x=Date, y= ActID.lab, fill=Learners)+
+  geom_tile()+
+  labs(x="Date", y="Activities", 
+       subtitle = paste("Final date ", as.Date(as.character(date),format = "%Y%m%d")))+
+  ggtitle("Heatmap of the activities")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=14),
+        panel.background = element_blank(), text = element_text(size=10), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 10))+
+  coord_fixed(ratio = 0.5)
+
+
+```
+- Sort by the frequency of activities 
+```{r, fig.width=12,fig.height=12}
+#Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
+log_new %>%
+  filter(!is.na(ActID)) %>%
+  mutate(ActID.lab = paste(ActID,"-",Event.context, "-")) %>%
+  group_by(ActID.lab, Date) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  ggplot()+
+  aes(x=Date, y=fct_rev(fct_infreq(ActID.lab)), fill=Learners)+
+  geom_tile()+
+  labs(x="Date", y="Activities", 
+       subtitle = paste("Final date ", as.Date(as.character(date),format = "%Y%m%d")))+
+  ggtitle("Heatmap of the activities")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=14),
+        panel.background = element_blank(), text = element_text(size=10), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 10))+
+  coord_fixed(ratio = 0.5)
+
+```
 
