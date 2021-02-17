@@ -44,7 +44,7 @@ library(forcats)
 
 ```{r data}
 
-date <- 20210201     # 20210127
+date <- 20210217  #20210201     # 20210127
 
 data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
 
@@ -52,7 +52,7 @@ file <- paste0("Data/logs_DTV20_", date,".csv")
 
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-#data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
+data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
 
 
 ```
@@ -250,8 +250,8 @@ log_new %>%
         panel.background = element_blank(), text = element_text(size=8), 
         axis.line = element_line(colour = "black"), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 10))+
-  coord_flip()
+        axis.title.y = element_text(size = 10))
+#  coord_flip()
 ```
 ##  Modules and activities
 
@@ -266,7 +266,7 @@ log_new %>%
   group_by(ActID.lab) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   mutate(rank = dense_rank(desc(Learners))) %>% 
-  filter(rank <= 30) %>% 
+  filter(rank <= 40) %>% 
   ggplot()+
   aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar(stat='identity')+
@@ -317,9 +317,11 @@ log_new %>%
 ### Table of learners activities
 Similar to the one I send but with selection of the final date; hat is thetable can be generated for any fianl date in the past. --> the idea is to do shiny app of that and change the date...
 
-- Final date: 20210201
+- Final date: `r as.Date(paste(date), format = "%Y%m%d")' 
+
 ```{r}
-final_date = as.Date("20210201", format = "%Y%m%d")
+
+final_date = as.Date(paste(date), format = "%Y%m%d")
 
 log_new %>%
   filter(!is.na(ActID),
@@ -351,7 +353,7 @@ log_new %>%
 
 - Final data: 20210131
 ```{r}
-final_date2 = as.Date("20210131", format = "%Y%m%d")
+final_date2 = as.Date(paste(date), format = "%Y%m%d")
 
 log_new %>%
   filter(!is.na(ActID),
@@ -387,12 +389,14 @@ log_new %>%
 > Failed to generate the activities order from Module 1 to Module 6
 
 - Sort by the ActID in ascending order    
+
 ```{r, fig.width=12,fig.height=12}
 #Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
 #sort by the ActID in ascending order
 log_new %>%
   filter(!is.na(ActID)) %>%
-  mutate(ActID.lab = paste(fct_rev(fct_inorder(ActID)),"-",Event.context)) %>%
+ # mutate(ActID.lab = paste(fct_rev(fct_inorder(ActID)),"-",Event.context)) %>%
+  mutate(ActID.lab = paste(ActID,"-",Event.context, "-")) %>%
   group_by(ActID.lab, Date) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   ggplot()+
