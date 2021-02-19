@@ -52,7 +52,7 @@ file <- paste0("Data/logs_DTV20_", date,".csv")
 
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
+#data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
 
 
 ```
@@ -69,6 +69,8 @@ data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log
 r <- unique(data_log$Event.name)
 r
 ```
+
+
 ```{r}
 #remove less relevant events
 # the events to remove
@@ -127,21 +129,12 @@ NbLearner <- count(unique((log_new %>%
 
 ```
 
-
-> **Note that there is no overlap of Activity ID and Module ID from Description**. E.g., We extracted the Module ID by "section number": "The user with id '11216' viewed the **section number '1'** of the course with id '97' and extracted the activity ID by "module number" as: "The user with id '10946' viewed the 'page' activity with **course module id '3250'**". The "section number" and "module number" do not exist at the same time in a sentence. _**Description is not perfect**_
-```{r}
-log_new %>%
-  filter(!is.na(ActID),
-         !is.na(ModuleID))
-```
-
-
 ## Fixing time data
 - Split date and time
 ```{r}
 log_new <- log_new  %>%
-           mutate(Date = str_split(log_new$Time, ", ", simplify = TRUE)[,1],
-                    Times = str_split(log_new$Time, ", ", simplify = TRUE)[,2])
+           mutate(Date = str_split(log_new$Time, ", " , simplify = TRUE)[,1],
+                    Times = str_split(log_new$Time, ", " , simplify = TRUE)[,2])
 
 ```
 
@@ -177,6 +170,42 @@ unique(log_new$Time_range)
 log_new <- log_new %>%
   mutate(DateID = group_indices(., Date))%>%
   mutate(TimeID = as.numeric(str_extract(log_new$Time_range, "([\\d.]+)")))
+
+```
+
+## Activity ID in order: ActOrder
+```{r}
+progress <- read.csv("Data/progress.dtv20_20210217.csv", header = FALSE)
+# Extract the activity names in order
+actname <- progress[1,]
+actname <- actname[colSums(is.na(actname) | actname == "") != nrow(actname)]
+actname <- as.data.frame(t(actname[,-(1:2)]))
+names(actname)[1] <- "Actname2"
+actname <- actname %>%
+  mutate(ActOrder = row_number())
+
+```
+
+```{r}
+# Matching and adding columns
+log_new <- log_new  %>%
+  mutate(Actname = str_split(log_new$Event.context, ": ", simplify = TRUE)[,2])%>%
+  left_join(actname, by = c("Actname" = "Actname2"))
+```
+
+## Add module ID by the name of activities
+```{r}
+log_new <- log_new %>%
+            mutate(ModuleID_2 = case_when(ActOrder == 1 ~ 0,
+                                          between(ActOrder, 1, 13) ~ 1,
+                                          between(ActOrder, 14, 22) ~ 2,
+                                          between(ActOrder, 23, 33) ~ 3,
+                                          between(ActOrder, 34, 46) ~ 4,
+                                          between(ActOrder, 47, 62) ~ 5,
+                                          between(ActOrder, 63, 76) ~ 6,
+                                            )) %>%
+   mutate(ActOrder = formatC(ActOrder, format="d",flag="0",width=2))
+  
 
 ```
 
@@ -262,7 +291,7 @@ log_new %>%
 ```{r}
 log_new %>%
   filter(!is.na(ActID)) %>%
-  mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
+  mutate( ActID.lab = paste(ActID,"-",Event.context, "-", ModuleID_2)) %>%
   group_by(ActID.lab) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   mutate(rank = dense_rank(desc(Learners))) %>% 
@@ -385,18 +414,20 @@ log_new %>%
     * Horizontally:  time since beginnig of course
     * Vertically:  activities (first activity Module 1 on top, last activity of module 6 at the bottom)
     * heat = Nb of views (nb of Learners or events) of each activity  
+```{r}
+log_new %>%
+  filter(!is.na(ActOrder)) %>%
+  mutate(ActOrder = formatC(ActOrder, format="d",flag="0",width=2))
+```
 
-> Failed to generate the activities order from Module 1 to Module 6
 
-- Sort by the ActID in ascending order    
-
+- Sort by the ActOrder in ascending order    
 ```{r, fig.width=12,fig.height=12}
 #Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
-#sort by the ActID in ascending order
+
 log_new %>%
-  filter(!is.na(ActID)) %>%
- # mutate(ActID.lab = paste(fct_rev(fct_inorder(ActID)),"-",Event.context)) %>%
-  mutate(ActID.lab = paste(ActID,"-",Event.context, "-")) %>%
+  filter(!is.na(ActOrder)) %>%
+  mutate(ActID.lab = paste(ActOrder,"-",Event.context, "-", ModuleID_2)) %>%
   group_by(ActID.lab, Date) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   ggplot()+
