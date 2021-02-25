@@ -41,10 +41,16 @@ library(forcats)
 ```
 
 # Import data &  Clean data
+```{r CourseParameters}
+# Course parameters
 
-```{r data}
+date <-  20210224 #20210217  #20210201     # 20210127
 
-date <- 20210217  #20210201     # 20210127
+```
+
+## Event data set:  (*`r paste0("Data/logs_DTV20_", date,".csv")`*)
+
+```{r LogData}
 
 data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
 
@@ -52,7 +58,7 @@ file <- paste0("Data/logs_DTV20_", date,".csv")
 
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-#data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
+data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
 
 
 ```
@@ -71,10 +77,20 @@ r
 ```
 
 
-```{r}
+```{r RemoveEvents}
 #remove less relevant events
 # the events to remove
-rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned", "Course searched", "User list viewed", "User profile viewed", "Subscription created", tail(r, n=11))
+rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned",
+                "Course searched", "User list viewed", "User profile viewed",
+                "Subscription created", 
+                "User profile viewed", "User list viewed", "Course user report viewed",
+                "Badge listing viewed", "User report viewed", "Course module instance list viewed",
+                "Read tracking disabled", 
+                "User enrolled in course", "Discussion deleted" , "Post deleted", 
+                "Step shown", "Tour started", "Tour reset", "Quiz report viewed",
+                "Subscription deleted", "User unenrolled from course", "Group member removed",
+                "Role unassigned",  "Discussion subscription deleted", "Tag added to an item",
+                "Grade deleted", tail(r, n=11))
 rem_events
 
 # remove events
@@ -89,6 +105,7 @@ data_log <- data_log[!data_log$Event.name %in% rem_events, ]
 CourseID <- str_match(data_log$Description, "(?i)\\bcourse with id '?\\s*(\\d+)")[,2]
 head(CourseID)
 unique(CourseID)
+
 ```
 
 - Extract Learners ID
@@ -139,6 +156,8 @@ log_new <- log_new  %>%
 ```
 
 - rm the date before the the course started (13 Jan), and format time and date
+TODO: begining course data as parameter
+
 ```{r}
 log_new <- log_new  %>%
           mutate(Times = format(strptime(log_new$Times, "%H:%M"), format = "%H:%M"))%>%
@@ -149,7 +168,7 @@ log_new <- log_new  %>%
         
 ```
 
-- Create time range
+- Create day time range
 ```{r}
 # extract the hour and create time range. 
 t <- log_new %>%
@@ -173,9 +192,12 @@ log_new <- log_new %>%
 
 ```
 
-## Activity ID in order: ActOrder
+## Activity data set: Activity ID in order: ActOrder
+TODO: Name and date of course's activities dataset (NOW: *progress.dtv20_20210225.csv*)  
+
+
 ```{r}
-progress <- read.csv("Data/progress.dtv20_20210217.csv", header = FALSE)
+progress <- read.csv("Data/progress.dtv20_20210225.csv", header = FALSE)  # progress.dtv20_20210217.csv
 # Extract the activity names in order
 actname <- progress[1,]
 actname <- actname[colSums(is.na(actname) | actname == "") != nrow(actname)]
@@ -194,6 +216,8 @@ log_new <- log_new  %>%
 ```
 
 ## Add module ID by the name of activities
+TODO: Check the Modules ID associated with activities. 
+
 ```{r}
 log_new <- log_new %>%
             mutate(ModuleID_2 = case_when(ActOrder == 1 ~ 0,
@@ -211,7 +235,7 @@ log_new <- log_new %>%
 
 
 
-> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(ModuleID))-1`**  different activities that are reported in this log. Note that some activities are not available for learners. 
+> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(log_new$Actname))`**  different activities that are reported in this log. Note that some activities are not available for learners. 
 
 
 # Visualize some variables
@@ -260,6 +284,8 @@ log_new %>%
         panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 ```
+
+
 ###  Events conducted by date 
 
 >CB : should start **after the course starts** officially and then follow the date order
@@ -346,7 +372,7 @@ log_new %>%
 ### Table of learners activities
 Similar to the one I send but with selection of the final date; hat is thetable can be generated for any fianl date in the past. --> the idea is to do shiny app of that and change the date...
 
-- Final date: `r as.Date(paste(date), format = "%Y%m%d")' 
+- Final date: `r as.Date(paste(date), format = "%Y%m%d")` 
 
 ```{r}
 
@@ -354,7 +380,7 @@ final_date = as.Date(paste(date), format = "%Y%m%d")
 
 log_new %>%
   filter(!is.na(ActID),
-         Date == final_date) %>%
+         Date <= final_date) %>%
   mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
@@ -380,7 +406,7 @@ log_new %>%
 
 
 
-- Final data: 20210131
+- Final date: 20210131
 ```{r}
 final_date2 = as.Date(paste(date), format = "%Y%m%d")
 
@@ -426,13 +452,15 @@ log_new %>%
 #Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
 
 log_new %>%
-  filter(!is.na(ActOrder)) %>%
+  filter(!is.na(ActOrder), 
+         ModuleID_2 <= 6) %>%
   mutate(ActID.lab = paste(ActOrder,"-",Event.context, "-", ModuleID_2)) %>%
   group_by(ActID.lab, Date) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   ggplot()+
   aes(x=Date, y= ActID.lab, fill=Learners)+
   geom_tile()+
+  scale_fill_gradient()+
   labs(x="Date", y="Activities", 
        subtitle = paste("Final date ", as.Date(as.character(date),format = "%Y%m%d")))+
   ggtitle("Heatmap of the activities")+
