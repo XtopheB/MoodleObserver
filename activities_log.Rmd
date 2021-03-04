@@ -1,14 +1,14 @@
 ---
 title: "Activity Log of UNSIAP Data Visualization E-Learning Course"
-author: "Jing Zhao and Christophe Bontemps"
+author: "Christophe Bontemps and Jing Zhao"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  pdf_document: default
   html_document:  
     code_folding: hide
     highlight: tango
     number_sections: yes
     theme: lumen
-  pdf_document: default
   html_notebook: default
 ---
 
@@ -40,7 +40,7 @@ library(forcats)
 library(plotly)
 ```
 
-# Import data &  Clean data
+# Data Cleaning
 ```{r CourseParameters}
 # Course parameters
 CourseStartDate <-"2021-01-13"
@@ -48,7 +48,10 @@ FileDate <-  20210304 #20210217  #20210201     # 20210127
 
 ```
 
-## Event data set:  (*`r paste0("Data/logs_DTV20_", FileDate,".csv")`*)
+
+
+
+###  Event data set:  (*`r paste0("Data/logs_DTV20_", FileDate,".csv")`*){-}
 
 ```{r LogData}
 
@@ -60,8 +63,13 @@ FileNameLog <- paste0("Data/logs_DTV20_", FileDate,".csv")
 data_log <- data_log %>% 
   rename(Time = ï..Time ) 
 
+nrow(data_log)
+
 ```
 
+The Moodle platform allows the recording of many evetns during a course. Several data sets can then be downloaded (.csv format) for an anlysis of the activity of the learners. In fact all the events are recorded, with a time stamp, in a single log file. One field gathers the detail of each event. This field can be parded and informations on the user, the activity and the event can be extracted.
+
+For this course, we recorded **`r nrow(data_log)`** events of different nature, that have to be cleaned.   
 
 ```{r cleaning}
 ## Remove less relevant observations 
@@ -69,6 +77,8 @@ data_log <- data_log %>%
 
 data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
 ```
+
+
 
 
 ```{r RemoveEvents}
@@ -95,7 +105,7 @@ data_log <- data_log[!data_log$Event.name %in% rem_events, ]
 
 ```
 
-## Extract number and text from Description
+###  Extract numbers(ID) and text from *Description* field {-}
 
 
 ```{r ExtractIDs}
@@ -123,8 +133,8 @@ Act_type <- str_match(data_log$Event.context,  "(?<=\\[).+?(?=\\])")[,1]
 
 ```
 
- 
-##  New dataframe (course_log) 
+# Cleaned log (*course_log*) 
+
 
 ```{r CourseLogData}
 #CourseID is not added since it means this datavis course
@@ -136,7 +146,9 @@ NbLearner <- count(unique((course_log %>%
 
 ```
 
-## Fixing time data
+> The course started on **`r CourseStartDate`**. So, **`r paste0(NbLearner)`** different Learners visited the plateform and the course. 
+
+###  Extractime time event from the data {-}
 
 ```{r TimeID}
 # Main course data frame 
@@ -176,7 +188,7 @@ course_log <- course_log %>%
 ```
 
 
-## Activities names 
+## Events
 
 ```{r ActivityData}
 # Same date as Log file 
@@ -222,28 +234,31 @@ course_log <- course_log %>%
 
 ```
 
+After cleaning and refining the data we have some useful information about the course. 
+
+>   There are **`r length(unique(course_log$Actname))`**  different *activities* (resources) in the course and reported in this log. These activities can be regrouped in a typology of **`r length(unique(course_log$Event.name))-1`**  different type of events (as defined by Moodle)
 
 
-> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(course_log$Actname))`**  different activities in the course and reported in this log. 
+### Type of Events {-}
 
-
-# Visualize some variables
-
-### Events {-}
-- Events conducted by number of Learners
-```{r, eval = FALSE}
+```{r TypeEvents}
 course_log %>%
   filter(!is.na(Event.name)) %>%
-  group_by(Event.name) %>%
+  mutate(SpecificEvent = ifelse(str_detect(Event.name, "Quiz"), "Quiz",
+                                ifelse(str_detect(Event.name, "Discussion")|
+                                         str_detect(Event.name, "Post"), "Forum","Other"))) %>%
+  group_by(Event.name, SpecificEvent) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   #mutate(rank = dense_rank(desc(Learners))) %>% 
   #filter(rank <= 25) %>% 
   ggplot()+
-  aes(x=reorder(Event.name, Learners), y=Learners)+
+  aes(x=reorder(Event.name, Learners), y=Learners, fill= SpecificEvent)+
   geom_bar(stat='identity')+
   labs(x="Events", y="Number of Learners", 
-       subtitle = paste(length(unique(course_log$Event.name))-1,"events (Final date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
-  ggtitle("Events conducted by number of Learners")+
+       subtitle = paste("The course has", length(unique(course_log$Event.name))-1,"different events (Final date ",
+                        as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+  ggtitle("Total number of learners per type of activity")+
+  scale_fill_manual("Type of Event",values=c("orange", "grey", SIAP.color)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -251,10 +266,31 @@ course_log %>%
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 8))+
   coord_flip()
-  
+
+## Stat 
+foo <-course_log %>%
+  filter(
+    str_detect(Event.name, "Quiz"))%>%
+  mutate(
+    Q = n_distinct(LearnerID) )
+
+goo <-course_log %>%
+  filter(
+    str_detect(Event.name, "created"))%>%
+  mutate(
+    Q = n_distinct(LearnerID) )
+
+hoo <-course_log %>%
+  filter(
+    str_detect(Event.context, "Forum"))%>%
+  mutate(
+    Q = n_distinct(ActID) )
+
 ```
-- Learners event counts (top and bottom Learners)
+This means that among the  **`r paste0(NbLearner)`** participants that visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearner, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearner, 1)`* %)  participants posted at least one post in any of the **`r max(hoo$Q)`** forums proposed.   
+
 ```{r, eval = FALSE}
+#Learners event counts (top and bottom Learners)
 course_log %>%
   filter(!is.na(LearnerID)) %>%
   count(LearnerID) %>%
@@ -262,8 +298,8 @@ course_log %>%
   filter(row_number() >= max(row_number()) - 5 | rank <= 5) %>%
   ggplot()+
   aes(x=reorder(LearnerID, -n), y=n, 
-      fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
-      geom_bar(stat='identity')+
+      fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5"))) +
+  geom_bar(stat='identity') +
   labs(x="Learners' ID", y="Number of events", fill="",
        subtitle = paste(NbLearner,"Learners (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
   ggtitle("Learners event counts (top and bottom Learners)")+
@@ -275,17 +311,26 @@ course_log %>%
 ```
 
 
-###  Events conducted by date 
+###  Events conducted by date and time of the day{-} 
 
+We can observe the pattern of events over the whole period of the course with a clear decline of activity on Sundays, and some good response on Tuesdays, with the live lectures and webinars.  Tuesdays and wednesday seem to be the most active days.  The Chinese New Year has little direct but may have an indirect effet since the activity somehow explodes just after.       
 
 ```{r}
 
 course_log %>%
+  mutate(ParticularDays = ifelse(DayOfWeek ==7, "Sunday", 
+                                 ifelse(DayOfWeek ==2 & DayID <45, "Webinar", "Regular"))  ) %>%
   filter(!is.na(LearnerID)) %>%
   ggplot()+
   #aes(x=fct_infreq(Date))+
-  aes(x = as.factor(DayID),  fill = IsSunday)+
+  aes(x = as.factor(DayID),  fill = ParticularDays)+
   geom_bar(color = "white" )+
+   annotate("rect", xmin = 28, xmax = 37,
+                  ymin = 0, ymax = 4500,
+                  fill = "orange" , alpha = .2)+
+   annotate("text", x = 32, y = 4000,
+          color= "orange",
+          label = "Chinese \n New Year")+
   labs(x="Day since start", y="Number of events", 
        subtitle = paste("Nb of days", length(unique(course_log$Date)),"(Final date: ",
                         as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
@@ -592,8 +637,8 @@ mutate(TotalTime = TotalTime/60) %>%
  theme_minimal()+
  theme(legend.position = "bottom")
 
-#p
-ggplotly(p)
+p
+#ggplotly(p)
 
 ```
 
