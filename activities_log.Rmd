@@ -43,43 +43,40 @@ library(plotly)
 # Import data &  Clean data
 ```{r CourseParameters}
 # Course parameters
-
-date <-  20210301 #20210217  #20210201     # 20210127
+CourseStartDate <-"2021-01-13"
+FileDate <-  20210304 #20210217  #20210201     # 20210127
 
 ```
 
-## Event data set:  (*`r paste0("Data/logs_DTV20_", date,".csv")`*)
+## Event data set:  (*`r paste0("Data/logs_DTV20_", FileDate,".csv")`*)
 
 ```{r LogData}
 
-data_log <- read.csv(paste0("Data/logs_DTV20_", date,".csv"))
+data_log <- read.csv(paste0("Data/logs_DTV20_", FileDate,".csv"))
 
-file <- paste0("Data/logs_DTV20_", date,".csv") 
-
+FileNameLog <- paste0("Data/logs_DTV20_", FileDate,".csv") 
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-data_log$Time <- data_log$ï..Time #Time variable was removed when running this line
-
+data_log <- data_log %>% 
+  rename(Time = ï..Time ) 
 
 ```
 
+
+```{r cleaning}
 ## Remove less relevant observations 
-- remove administrators
-```{r}
-#remove administrator 
-data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
+#remove administrators
 
-```
-- remove less relevant events (_all the listed events below are related to learners actions since the administrators actions have been removed above_)
-```{r}
-r <- unique(data_log$Event.name)
-r
+data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
 ```
 
 
 ```{r RemoveEvents}
 #remove less relevant events
+
+r <- unique(data_log$Event.name)
 # the events to remove
+
 rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned",
                 "Course searched", "User list viewed", "User profile viewed",
                 "Subscription created", 
@@ -91,7 +88,7 @@ rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned"
                 "Subscription deleted", "User unenrolled from course", "Group member removed",
                 "Role unassigned",  "Discussion subscription deleted", "Tag added to an item",
                 "Grade deleted", tail(r, n=11))
-rem_events
+# rem_events
 
 # remove events
 data_log <- data_log[!data_log$Event.name %in% rem_events, ]
@@ -100,105 +97,92 @@ data_log <- data_log[!data_log$Event.name %in% rem_events, ]
 
 ## Extract number and text from Description
 
-- Extract course ID
-```{r}
+
+```{r ExtractIDs}
+# Extract course ID
 CourseID <- str_match(data_log$Description, "(?i)\\bcourse with id '?\\s*(\\d+)")[,2]
-head(CourseID)
-unique(CourseID)
 
-```
 
-- Extract Learners ID
-```{r}
+# Extract Learners ID
 LearnerID <- str_match(data_log$Description, "(?i)\\buser with id '?\\s*(\\d+)")[,2]
-head(LearnerID)
-```
 
-- Extract module ID
-```{r}
+# Extract module ID
 ModuleID <- str_match(data_log$Description, "(?i)\\bsection number '?\\s*(\\d+)")[,2]
-unique(ModuleID) # the actions applied on Modules that are hidden from students are from stuffs like Shimizu san, Eunkoo, and me. We are not removed before. 
 
-```
+# unique(ModuleID) # the actions applied on Modules that are hidden from students are from stuffs like Shimizu san, Eunkoo, and me. We are not removed before. 
 
-- Extract activity ID
-```{r}
+#Extract activity ID
 ActID <- str_match(data_log$Description, "(?i)\\bcourse module id '?\\s*(\\d+)")[,2]
-head(ActID)
-unique(ActID)
-```
+# unique(ActID)
 
-- Extract activity type. Note:**Many students also accessed old version such as "OLD-Video".**
-```{r}
+# Extract activity type. 
+# Note:**Many students also accessed old version such as "OLD-Video".**
 Act_type <- str_match(data_log$Event.context,  "(?<=\\[).+?(?=\\])")[,1]
-unique(Act_type)# Many students also accessed old version such as "OLD-Video".
+# unique(Act_type)# Many students also accessed old version such as "OLD-Video".
+
+
 ```
 
  
-- New dataframe with extracted ID
-```{r}
-#CourseID is not added since it means this datavis course
-log_new <- data.frame(data_log, ModuleID, LearnerID, ActID, Act_type)
+##  New dataframe (course_log) 
 
-NbLearner <- count(unique((log_new %>%
+```{r CourseLogData}
+#CourseID is not added since it means this datavis course
+course_log <- data.frame(data_log, ModuleID, LearnerID, ActID, Act_type)
+
+NbLearner <- count(unique((course_log %>%
               filter(!is.na(Event.name) & !is.na(ModuleID)) %>%
               select(LearnerID))))
 
 ```
 
 ## Fixing time data
-- Split date and time
-```{r}
-log_new <- log_new  %>%
-           mutate(Date = str_split(log_new$Time, ", " , simplify = TRUE)[,1],
-                    Times = str_split(log_new$Time, ", " , simplify = TRUE)[,2])
 
-```
+```{r TimeID}
+# Main course data frame 
+course_log <- course_log  %>%
+           mutate(Date = str_split(course_log$Time, ", " , simplify = TRUE)[,1],
+                  HoursMin = str_split(course_log$Time, ", " , simplify = TRUE)[,2])
 
-- rm the date before the the course started (13 Jan), and format time and date
-TODO: begining course data as parameter
+course_log <- course_log  %>%
+          mutate(HoursMin = format(strptime(course_log$HoursMin, "%H:%M"), format = "%H:%M"),
+          Date = as.Date(course_log$Date, "%d/%m/%y"))%>%
+          filter(Date >= CourseStartDate) # rm before the the course started (13 Jan)
 
-```{r}
-log_new <- log_new  %>%
-          mutate(Times = format(strptime(log_new$Times, "%H:%M"), format = "%H:%M"))%>%
-          mutate(Date = as.Date(log_new$Date, "%d/%m/%y"))%>%
-          filter(Date >= "2021-01-13")
-          
-  
-        
-```
 
-- Create day time range
-```{r}
+# Create day time range
 # extract the hour and create time range. 
-t <- log_new %>%
-  select(Times) %>%
-  extract(Times, 'Time_range', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
+t <- course_log %>%
+  select(HoursMin) %>%
+  extract(HoursMin, 'Time_range', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
   mutate(Time_range = as.numeric(Time_range))
 
 # a loop for time range
   for (i in list(t$Time_range)) {
   i = paste0(formatC(i, format="d",flag="0",width=2),":00", "-", formatC(i+1, format="d",flag="0",width=2), ":00")
-  log_new$Time_range <- i
+  course_log$Time_range <- i
 }
 
-unique(log_new$Time_range)
-```
-- Create date and time ID
-```{r}
-log_new <- log_new %>%
-  mutate(DateID = group_indices(., Date))%>%
-  mutate(TimeID = as.numeric(str_extract(log_new$Time_range, "([\\d.]+)")))
+# unique(course_log$Time_range)
+
+course_log <- course_log %>%
+  mutate(DayID = group_indices(., Date))%>%
+  mutate(TimeID = as.numeric(str_extract(course_log$Time_range, "([\\d.]+)")), 
+         DayOfWeek = lubridate::wday(Date), 
+         IsSunday  = as.factor(DayOfWeek ==7)) 
+
+
 
 ```
 
-## Activity data set: Activity ID in order: ActOrder
-TODO: Name and date of course's activities dataset (NOW: *progress.dtv20_20210225.csv*)  
 
+## Activities names 
 
-```{r}
-progress <- read.csv("Data/progress.dtv20_20210225.csv", header = FALSE)  # progress.dtv20_20210217.csv
-# Extract the activity names in order
+```{r ActivityData}
+# Same date as Log file 
+progress <-read.csv(paste0("Data/progress.dtv20_",FileDate,".csv"), header = FALSE) 
+
+# Extract the activity names in order (hence the Header = FALSE above!)
 actname <- progress[1,]
 actname <- actname[colSums(is.na(actname) | actname == "") != nrow(actname)]
 actname <- as.data.frame(t(actname[,-(1:2)]))
@@ -208,25 +192,23 @@ actname <- actname %>%
 
 ```
 
-```{r}
+
+``````{r ModuleNb}
 # Matching and adding columns
-log_new <- log_new  %>%
-  mutate(Actname = str_split(log_new$Event.context, ": ", simplify = TRUE)[,2])%>%
+course_log <- course_log  %>%
+  mutate(Actname = str_split(course_log$Event.context, ": ", simplify = TRUE)[,2])%>%
   left_join(actname, by = c("Actname" = "Actname2"))
-```
+
 
 ## Add module ID by the name of activities
-TODO: Check the Modules ID associated with activities. 
-
-```{r ModuleNb}
-# log_new %>% 
+# TODO: Check the Modules ID associated with activities. 
+# course_log %>% 
 #   select(ActOrder, Actname) %>%
 # unique()%>%
 #   View()
 
-### So Far 74 actiivities
-
-log_new <- log_new %>%
+### So Far 74 activities
+course_log <- course_log %>%
             mutate(ModuleID_2 = case_when(ActOrder == 1 ~ 0,
                                           between(ActOrder, 1, 13) ~ 1,
                                           between(ActOrder, 14, 22) ~ 2,
@@ -242,15 +224,15 @@ log_new <- log_new %>%
 
 
 
-> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(log_new$Actname))`**  different activities that are reported in this log. Note that some activities are not available for learners. 
+> So far, **`r paste0(NbLearner)`** different Learners visited the course.  There are **`r length(unique(course_log$Actname))`**  different activities in the course and reported in this log. 
 
 
 # Visualize some variables
 
 ### Events {-}
 - Events conducted by number of Learners
-```{r}
-log_new %>%
+```{r, eval = FALSE}
+course_log %>%
   filter(!is.na(Event.name)) %>%
   group_by(Event.name) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
@@ -260,7 +242,7 @@ log_new %>%
   aes(x=reorder(Event.name, Learners), y=Learners)+
   geom_bar(stat='identity')+
   labs(x="Events", y="Number of Learners", 
-       subtitle = paste(length(unique(log_new$Event.name))-1,"events (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
+       subtitle = paste(length(unique(course_log$Event.name))-1,"events (Final date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
   ggtitle("Events conducted by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -272,8 +254,8 @@ log_new %>%
   
 ```
 - Learners event counts (top and bottom Learners)
-```{r}
-log_new %>%
+```{r, eval = FALSE}
+course_log %>%
   filter(!is.na(LearnerID)) %>%
   count(LearnerID) %>%
   mutate(rank = dense_rank(desc(n))) %>% 
@@ -283,7 +265,7 @@ log_new %>%
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5")))+
       geom_bar(stat='identity')+
   labs(x="Learners' ID", y="Number of events", fill="",
-       subtitle = paste(NbLearner,"Learners (Final Date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
+       subtitle = paste(NbLearner,"Learners (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
   ggtitle("Learners event counts (top and bottom Learners)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
@@ -295,73 +277,44 @@ log_new %>%
 
 ###  Events conducted by date 
 
->CB : should start **after the course starts** officially and then follow the date order
 
 ```{r}
-log_new %>%
+
+course_log %>%
   filter(!is.na(LearnerID)) %>%
   ggplot()+
   #aes(x=fct_infreq(Date))+
-  aes(x = Date)+
-  geom_bar()+
-  labs(x="Date", y="Number of events", 
-       subtitle = paste(length(unique(log_new$Date)),"days (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
-  ggtitle("Number of events was conducted by date")+
+  aes(x = as.factor(DayID),  fill = IsSunday)+
+  geom_bar(color = "white" )+
+  labs(x="Day since start", y="Number of events", 
+       subtitle = paste("Nb of days", length(unique(course_log$Date)),"(Final date: ",
+                        as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+  ggtitle("Number of events recorded on the platform by date")+
+  hrbrthemes::scale_fill_ft() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
         axis.line = element_line(colour = "black"), 
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 10))
-#  coord_flip()
+
 ```
-##  Modules and activities
-
-### Activities accessed by number of Learners
-
-> I changed the variable to have the lables and "see" which are the activities the most popular.  Could be good to the Module number too (1-6)!
-
-```{r}
-log_new %>%
-  filter(!is.na(ActID)) %>%
-  mutate( ActID.lab = paste(ActID,"-",Event.context, "-", ModuleID_2)) %>%
-  group_by(ActID.lab) %>%
-  summarize(Learners = n_distinct(LearnerID)) %>% 
-  mutate(rank = dense_rank(desc(Learners))) %>% 
-  filter(rank <= 40) %>% 
-  ggplot()+
-  aes(x=reorder(ActID.lab, Learners), y=Learners)+
-  geom_bar(stat='identity')+
-  labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(length(unique(ActID))-1,"activities (Final Date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
-  ggtitle("Activities accessed by number of Learners (top 30 activities)")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-  
-```
-### Time
-- Active time by events
-
-> (I reordered here to have a distribution over the day time but do not manage to rank the date corectly... 
 
 - Active time by Learners
 
 ```{r}
-log_new %>%
+course_log %>%
   filter(!is.na(Time_range)) %>%
   group_by(Time_range) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
   ggplot()+
-  aes(x=reorder(Time_range, Time_range), y=Learners)+
+  aes(x=reorder(Time_range, Time_range), y=Learners, 
+      fill = ifelse(Learners> 100, "High", "Low"))+
   geom_bar(stat='identity')+
   labs(x="Time", y="Number of Learners", 
-       subtitle = paste("JST (Final date ", as.Date(as.character(date),format = "%Y%m%d"),")"))+
-  ggtitle("Active time by Learners")+
+       subtitle = paste("JST (Final date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+  ggtitle("Learners' Activity by Hour")+
+  scale_fill_manual("Activity",values=c("orange", SIAP.color)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -374,18 +327,55 @@ log_new %>%
   
 ```
 
+
+##  Modules and activities
+
+### Activities accessed by number of Learners
+
+> I changed the variable to have the lables and "see" which are the activities the most popular.  Could be good to the Module number too (1-6)!
+
+```{r}
+course_log %>%
+  filter(!is.na(ActID)) %>%
+  mutate( ActID.lab = paste(ActID,"-",Event.context, "-", ModuleID_2)) %>%
+  group_by(ActID.lab) %>%
+  summarize(Learners = n_distinct(LearnerID)) %>% 
+  mutate(rank = dense_rank(desc(Learners))) %>% 
+  filter(rank <= 40) %>% 
+  ggplot()+
+  aes(x=reorder(ActID.lab, Learners), y=Learners)+
+  geom_bar(stat='identity')+
+  labs(x="Activities", y="Number of Learners", 
+       subtitle = paste(length(unique(ActID))-1,"activities (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+  ggtitle("Activities accessed by number of Learners (top 30 activities)")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8), 
+        axis.line = element_line(colour = "black"), 
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))+
+  coord_flip()
+  
+```
+### Time
+
+- Active time by events
+
+> (I reordered here to have a distribution over the day time but do not manage to rank the date corectly... 
+
+
 ## Suggestions
     
 ### Table of learners activities
-Similar to the one I send but with selection of the final date; hat is thetable can be generated for any fianl date in the past. --> the idea is to do shiny app of that and change the date...
+Similar to the one I send but with selection of the final date; hat is thetable can be generated for any final date in the past. --> the idea is to do shiny app of that and change the date...
 
-- Final date: `r as.Date(paste(date), format = "%Y%m%d")` 
+- Final date: `r as.Date(paste(FileDate), format = "%Y%m%d")` 
 
 ```{r BarActivities, fig.height=8, fig.width=10, out.width = "80%"}
 
-final_date = as.Date(paste(date), format = "%Y%m%d")
+final_date = as.Date(paste(FileDate), format = "%Y%m%d")
 
-p <- log_new %>%
+p <- course_log %>%
   filter(!is.na(ActID),
          Date <= final_date, 
          ModuleID_2 !=0) %>%
@@ -399,7 +389,7 @@ p <- log_new %>%
   aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar( aes(fill = ModuleID),stat='identity')+
   labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(nrow(subset(unique(log_new[c("ActID", "Date")]), Date==final_date)),"activities (Date ", final_date,")"))+
+       subtitle = paste(nrow(subset(unique(course_log[c("ActID", "Date")]), Date==final_date)),"activities (Date ", final_date,")"))+
   ggtitle("Activities accessed by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -410,21 +400,21 @@ p <- log_new %>%
   coord_flip()
 
 p
-ggplotly(p)
+#ggplotly(p)
 
 ```
 
 
 
 
-- Final date: 20210131
+
 
 ```{r}
-final_date2 = as.Date(paste(date), format = "%Y%m%d")
+final_date2 = as.Date(paste(FileDate), format = "%Y%m%d")
 
-log_new %>%
+course_log %>%
   filter(!is.na(ActID),
-         Date == final_date2) %>%
+         Date <= final_date2) %>%
   mutate( ActID.lab = paste(ActID,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarize(Learners = n_distinct(LearnerID)) %>% 
@@ -434,7 +424,7 @@ log_new %>%
   aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar(stat='identity')+
   labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(nrow(subset(unique(log_new[c("ActID", "Date")]), Date==final_date2)),"activities (Date ", final_date2,")"))+
+       subtitle = paste(nrow(subset(unique(course_log[c("ActID", "Date")]), Date==final_date2)),"activities (Date ", final_date2,")"))+
   ggtitle("Activities accessed by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -455,7 +445,7 @@ log_new %>%
 * heat = Nb of views (nb of Learners or events) of each activity 
 
 ```{r}
-log_new %>%
+course_log %>%
   filter(!is.na(ActOrder)) %>%
   mutate(ActOrder = formatC(ActOrder, format="d",flag="0",width=2))
 ```
@@ -463,9 +453,9 @@ log_new %>%
 
 - Sort by the ActOrder in ascending order    
 ```{r, fig.width=12, fig.height=19}
-#Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
+#Both Date and Date ID work. Date: the specific date since beginning; DayID: the first date = 1, and the second = 2, ...
 
-log_new %>%
+course_log %>%
   filter(!is.na(ActOrder), 
          ModuleID_2 <= 6) %>%
   mutate(ActID.lab = paste(ActOrder,"-",Event.context, "-", ModuleID_2)) %>%
@@ -476,7 +466,7 @@ log_new %>%
   geom_tile()+
   scale_fill_gradient()+
   labs(x="Date", y="Activities", 
-       subtitle = paste("Final date ", as.Date(as.character(date),format = "%Y%m%d")))+
+       subtitle = paste("Final date ", as.Date(as.character(FileDate),format = "%Y%m%d")))+
   ggtitle("Heatmap of the activities")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=14),
@@ -490,8 +480,8 @@ log_new %>%
 ```
 - Sort by the frequency of activities 
 ```{r, fig.width=12,fig.height=18}
-#Both Date and Date ID work. Date: the specific date since beginning; DateID: the first date = 1, and the second = 2, ...
-log_new %>%
+#Both Date and Date ID work. Date: the specific date since beginning; DayID: the first date = 1, and the second = 2, ...
+course_log %>%
   filter(!is.na(ActID)) %>%
   mutate(ActID.lab = paste(ActID,"-",Event.context, "-")) %>%
   group_by(ActID.lab, Date) %>%
@@ -500,7 +490,7 @@ log_new %>%
   aes(x=Date, y=fct_rev(fct_infreq(ActID.lab)), fill=Learners)+
   geom_tile()+
   labs(x="Date", y="Activities", 
-       subtitle = paste("Final date ", as.Date(as.character(date),format = "%Y%m%d")))+
+       subtitle = paste("Final date ", as.Date(as.character(FileDate),format = "%Y%m%d")))+
   ggtitle("Heatmap of the activities")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=14),
@@ -543,7 +533,7 @@ Grades <- Grades %>%
 
 
 ```{r ActivityTime}
-# log_new <-  log_new %>%
+# course_log <-  course_log %>%
 #   group_by(User.full.name, Date, Actname) %>%
 #   mutate( TimeperActivity = lubridate::as.duration(Time)) %>%
 #   group_by(User.full.name, Date) %>%
@@ -555,7 +545,7 @@ Grades <- Grades %>%
 
 
 ```{r ActivityTime2}
-learners_Time <-  log_new %>%
+learners_Time <-  course_log %>%
   select(User.full.name, LearnerID, , Actname, ActID, Event.name,Date, Time) %>%
   mutate(RealTime = lubridate::dmy_hm(Time)) %>%
   group_by(User.full.name, Date) %>%
@@ -580,7 +570,7 @@ learners <- learners_Time %>%
 ```{r}
 learners %>%
  ggplot() +
- aes(x = NbAct, y = TotalTime, color = Country) +
+ aes(x = NbAct, y = TotalTest, color = Country) +
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  facet_wrap(vars(Country)) +
  scale_color_hue() +
@@ -594,12 +584,13 @@ p <- learners %>%
  filter(!is.na(Country)) %>%
 mutate(TotalTime = TotalTime/60) %>%
  ggplot() +
- aes(x = TotalTime, y = TotalTest, colour = Country, fill = User.full.name) +
- geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
- geom_vline (aes(xintercept =  median(TotalTime))) +
+ aes(x = NbAct, y = TotalTest, colour = Country, toto = User.full.name) +
+ geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+# geom_vline (aes(xintercept =  median(TotalTime))) +
 # facet_wrap(vars(Country)) +
  scale_color_hue() +
- theme_minimal()
+ theme_minimal()+
+ theme(legend.position = "bottom")
 
 #p
 ggplotly(p)
