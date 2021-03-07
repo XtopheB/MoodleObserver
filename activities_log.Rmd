@@ -14,9 +14,10 @@ output:
 
 ```{r setup, include=FALSE}
 # Code folding oprion needs echo = TRUE to work 
+# For pdf without code: echo = FALSE
 
 knitr::opts_chunk$set( message = FALSE, warning = FALSE, 
-                       results =FALSE, echo = TRUE, 
+                       results =FALSE, echo = FALSE, 
                        dev="png", 
                        fig.align = 'center',
                        dev.args=list(type="cairo"), dpi=96)
@@ -29,7 +30,7 @@ SIAP.color <- "#0385a8"
 
 
 ```{r libraries}
-# get knit worked for Mac
+
 library(Cairo)
 library(tidyverse)
 library(stringr)
@@ -76,7 +77,9 @@ For this course, we recorded **`r nrow(data_log)`** events of different nature, 
 ## Remove less relevant observations 
 #remove administrators
 
-data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" | data_log$User.full.name=="Ni Ni Thein" | data_log$Component=="Recycle bin"),]
+data_log <- data_log[!(data_log$User.full.name=="Christophe Bontemps" |
+                         data_log$User.full.name=="Ni Ni Thein" |
+                         data_log$Component=="Recycle bin"),]
 ```
 
 
@@ -99,7 +102,6 @@ rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned"
                 "Subscription deleted", "User unenrolled from course", "Group member removed",
                 "Role unassigned",  "Discussion subscription deleted", "Tag added to an item",
                 "Grade deleted", tail(r, n=11))
-# rem_events
 
 # remove events
 data_log <- data_log[!data_log$Event.name %in% rem_events, ]
@@ -127,7 +129,6 @@ ActID <- str_match(data_log$Description, "(?i)\\bcourse module id '?\\s*(\\d+)")
 # unique(ActID)
 
 # Extract activity type. 
-# Note:**Many students also accessed old version such as "OLD-Video".**
 Act_type <- str_match(data_log$Event.context,  "(?<=\\[).+?(?=\\])")[,1]
 # unique(Act_type)# Many students also accessed old version such as "OLD-Video".
 
@@ -307,7 +308,7 @@ course_log %>%
    annotate("rect", xmin = 25, xmax = 32,
                   ymin = 0, ymax = 4500,
                   fill = "orange" , alpha = .2)+
-   annotate("text", x = 27, y = 4000,
+   annotate("text", x = 28, y = 4000,
           color= "orange",
           label = "Chinese \n New Year")+
   labs(x="Day since start", y="Number of events", 
@@ -360,7 +361,7 @@ course_log %>%
 
 With no suprises, the top activities in terms of learners participation rank according to the modules order, with activities in module 1 on top and activities of modules 6 at the bottom. Some noticeable exceptions are the 6 quizzes, the data-based project and a homework that aremore popular than other activities of their respective modules.    
 
-`r as.Date(paste(FileDate), format = "%Y%m%d")` 
+
 
 ```{r BarActivities, fig.height=8, fig.width=10, out.width = "80%"}
 
@@ -399,14 +400,12 @@ p
  
 ### Heatmap of the activities over time: 
 
+This *heatmap* is an attempt to visualize the activities on the platform over time.  The coduing is the following:
 * Horizontally:  time since beginnig of course
 * Vertically:  activities (first activity Module 1 on top, last activity of module 6 at the bottom)
-* heat = Nb of views (nb of Learners or events) of each activity 
+* Heat = color:  Nb of views (nb of Learners or events) for each activity 
 
-
-
-- Sort by the ActOrder in ascending order    
-```{r heatMap, fig.width=12, fig.height=19}
+```{r heatMap, fig.width=12, fig.height=25}
 # course_log %>%
 #   filter(!is.na(ActOrder)) %>%
 #   mutate(ActOrder = formatC(ActOrder, format="d",flag="0",width=2))
@@ -438,7 +437,8 @@ course_log %>%
 
 ```
 
-# Grades
+# Learners & Grades
+
 
 ```{r GradesFile}
 FileDate <- 20210304
@@ -448,15 +448,17 @@ OldNames <- names(Grades.raw)[9:14]
 NewNames  <- paste0("Test", seq(1,6,1))
 
 Grades <- Grades.raw %>%
-  rename( Project = Workshop...Assessment..Personal.data.based.project..submission...Real.) %>%
-  mutate(Project = ifelse(Project == "-", NA, as.numeric(as.character(Project)))) %>%
+  rename( Project = Workshop...Assessment..Personal.data.based.project..submission...Real., 
+          Assessment = Workshop...Assessment..Personal.data.based.project..assessment...Real.)%>%
+  mutate(Project = ifelse(Project == "-", 0, as.numeric(as.character(Project))),
+         Assessment = ifelse(Assessment == "-", 0, as.numeric(as.character(Assessment)))) %>%
   rename_with(~NewNames[which(OldNames == .x)], .cols = OldNames) %>%
   mutate_at(vars(starts_with("Test")),funs(as.character)) %>%
   mutate_at(vars(starts_with("Test")),funs(as.numeric)) %>%
-  select(First.name:Country, Email.address:Test6,Project) %>%
+  select(First.name:Country, Email.address:Test6,Project, Assessment) %>%
   mutate(
     TotalTest = rowSums(dplyr::across(Test1:Test6), na.rm = T), 
-    GradeFinal = TotalTest + as.numeric(Project))
+    GradeFinal = TotalTest + as.numeric(Project)+ as.numeric(Assessment))
    
 
 ## attempt to create a merging name
@@ -468,24 +470,13 @@ StudentsNames <- read.csv("Data/progress.dtv20_20210225.csv", header = TRUE)  %>
 Grades <- Grades %>%
   left_join(StudentsNames, by = c("Email.address"))
   
-
-
 ```
+
+
+
 
 
 ```{r ActivityTime}
-# course_log <-  course_log %>%
-#   group_by(User.full.name, Date, Actname) %>%
-#   mutate( TimeperActivity = lubridate::as.duration(Time)) %>%
-#   group_by(User.full.name, Date) %>%
-#   mutate(TimeperDay = sum(TimeperActivity)) %>%
-#   ungroup()
-#  Still a problem in this computation since there may be hours btween two event...
-```
-
-
-
-```{r ActivityTime2}
 learners_Time <-  course_log %>%
   select(User.full.name, LearnerID, , Actname, ActID, Event.name,Date, Time) %>%
   mutate(RealTime = lubridate::dmy_hm(Time)) %>%
@@ -505,19 +496,31 @@ learners_Time <-  course_log %>%
 learners <- learners_Time %>%
   left_join(Grades, by = "User.full.name") 
 
-
 ```
+
+Over the `r nrow(learners)` unique learners[^MyNote] registered for the course, only **`r learners%>% filter(TotalTest >0) %>% nrow()`** attempted  to at least one test and only **`r learners%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS more than 6 times.  
+
+[^MyNote]: Some learners registered with different names, we count here **unique** learners.  
+
+
+We noticed that *some* learners (around `r learners%>% filter(TotalTest >50 & NbAct < 21) %>% nrow()`) had very good grades in their tests ( >50) while showing a very limited activity on the LMS (less than a third of available).  
 
 ```{r}
 learners %>%
  ggplot() +
  aes(x = NbAct, y = TotalTest, color = Country) +
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
+ ggtitle("Test Scores vs Number of Activities Viewed") +
+ labs(x="Nb of activities viewed", y=" Total Score (over 60)", 
+      subtitle = paste(nrow(subset(unique(course_log[c("ActID", "Date")]),
+                                   Date==final_date)),"activities (date ", final_date,")"))+
+  annotate("rect", xmin= 6, xmax = 26, 
+          ymin = 50, ymax = 62, 
+          color= SIAP.color, alpha = 0.2) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
  theme_minimal()
 ```
-
 
 ```{r}
 
@@ -525,36 +528,64 @@ p <- learners %>%
  filter(!is.na(Country)) %>%
 mutate(TotalTime = TotalTime/60) %>%
  ggplot() +
- aes(x = NbAct, y = TotalTest, colour = Country, toto = User.full.name) +
+ aes(x = NbAct, y = TotalTime, colour = Country, toto = User.full.name) +  
+  # Toto is a trick to have names in plotly
  geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+ ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
+ labs(x="Nb of activities viewed", y=" Total Time spent by learners (min)", 
+      subtitle = paste(nrow(subset(unique(course_log[c("ActID", "Date")]),
+                                   Date==final_date)),"activities (date ", final_date,")"))+
+ geom_hline (aes(yintercept =  3*6*60), color = SIAP.color) +
+ annotate("text", x = 12, y = 3*6*60 + 100,
+          color= SIAP.color,
+          label = "Course  requirement (3 hours/week)")+
 # geom_vline (aes(xintercept =  median(TotalTime))) +
 # facet_wrap(vars(Country)) +
  scale_color_hue() +
  theme_minimal()+
- theme(legend.position = "bottom")
+ theme(legend.position = "none")
 
 p
 #ggplotly(p)
 
 ```
 
+## Grades {-}
+
+We note that **`r learners%>% filter(GradeFinal >=70) %>% nrow()`** , over the **`r learners%>% filter(Project>0) %>% nrow() +6`**   who submitted a project, succeeded with a grade above 70 (over 100). 
+
+> This is a rate of ** `r round(100* (learners%>% filter(GradeFinal >=70) %>% nrow()) / (learners%>% filter(Project>0) %>% nrow() +6),1)` %.
+
+The distribution of grades is the following. 
+
+
 ```{r Grades}
 
 learners %>%
- filter(!(Country %in% "") | is.na(Country)) %>%
  ggplot() +
  aes(x = GradeFinal) +
- geom_histogram(bins = 50L, fill = SIAP.color, color = "white") +
+ geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
+  coord_cartesian(xlim=c(0,100))+
  annotate("rect", xmin = 70, xmax = 100,
-                  ymin = 0, ymax = 42,
+                  ymin = 0, ymax = 32,
                   fill = SIAP.color , alpha = .2)+
-   annotate("text", x = 75, y = 35,
+   annotate("text", x = 75, y = 25,
           color= SIAP.color,
           label = "Sucess")+
  theme_minimal()
 
 ```
 
+```{r}
+learners%>% 
+  filter(Project >0) %>%
+  nrow()
+```
+
+
+```{r}
+
+```
 
 
 ```{r}
@@ -665,5 +696,37 @@ course_log %>%
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 10))+
   coord_fixed(ratio = 0.5)
+
+```
+
+
+
+```{r }
+# course_log <-  course_log %>%
+#   group_by(User.full.name, Date, Actname) %>%
+#   mutate( TimeperActivity = lubridate::as.duration(Time)) %>%
+#   group_by(User.full.name, Date) %>%
+#   mutate(TimeperDay = sum(TimeperActivity)) %>%
+#   ungroup()
+#  Still a problem in this computation since there may be hours btween two event...
+```
+
+
+```{r}
+
+p <- learners %>%
+ filter(!is.na(Country)) %>%
+mutate(TotalTime = TotalTime/60) %>%
+ ggplot() +
+ aes(x = NbAct, y = TotalTest, colour = Country, toto = User.full.name) +
+ geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+# geom_vline (aes(xintercept =  median(TotalTime))) +
+# facet_wrap(vars(Country)) +
+ scale_color_hue() +
+ theme_minimal()+
+ theme(legend.position = "bottom")
+
+p
+#ggplotly(p)
 
 ```
