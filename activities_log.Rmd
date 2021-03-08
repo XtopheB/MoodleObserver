@@ -1,5 +1,5 @@
 ---
-title: "Analyzing the Data Visualization e-Learning Course \n *Using the Activity Log from UNSIAP LMS* "
+title: "**Analyzing the Data Visualization e-Learning Course  <br> *(Using the Activity Log from Moodle)*  ** "
 author: "Christophe Bontemps and Jing Zhao"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -50,7 +50,7 @@ FileDate <-  20210304 #20210217  #20210201     # 20210127
 
 ```
 
-This report has been **automatically generated** using the data collected on the MLS on `r as.Date(as.character(FileDate),format = "%Y%m%d")` . The first step is the data cleaning of the raw log file, or *event data set*:(*`r paste0("Data/logs_DTV20_", FileDate,".csv")`*)
+This report has been **automatically generated** using the data collected on Moodle on *`r as.Date(as.character(FileDate),format = "%Y%m%d")`* . The first step is the data cleaning of the raw log file, or *event data set* (file *`r paste0("logs_DTV20_", FileDate,".csv")`*)
 
 # Data 
 
@@ -69,9 +69,7 @@ nrow(data_log)
 
 ```
 
-The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (.csv format) for an analysis of the activity of the learners. In fact all the events are recorded, with a time stamp, in a single log file. One field gathers the detail of each event. This field can be parsed and information on the user, the activity and the event can be extracted.
-
-For this course, we recorded **`r nrow(data_log)`** events of different nature, that have to be cleaned.   
+The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. Each row of this log is an event and so all the events (course viewed, post, attempt to a test, , etc. ) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted. For this course, we recorded **`r nrow(data_log)`** events of different nature, that have to be cleaned.   
 
 ```{r cleaning}
 ## Remove less relevant observations 
@@ -107,6 +105,7 @@ data_log <- data_log[!data_log$Event.name %in% rem_events, ]
 
 ```
 
+### Cleaning and first elements
 
 > One important step is to extract sand identify activities  from  the *Description* field and to affect identification numbers (IDs) to activities, Modules, types of activities, etc.  
 
@@ -146,7 +145,7 @@ NbLearner <- count(unique((course_log %>%
 
 ```
 
-> The course started on **`r CourseStartDate`**. So far (`r as.Date(as.character(FileDate),format = "%Y%m%d")`), **`r paste0(NbLearner)`** different learners visited the platform and the course. Many different events can be extracted  from the data as well as the precise *time* of each event. We can therefore compute several information at the learner or activity level. 
+> The course started on **`r CourseStartDate`**. So far (`r as.Date(as.character(FileDate),format = "%Y%m%d")`), **`r paste0(NbLearner)`** different learners visited the platform and the course. Many different events can be extracted  from the data as well as the precise *time* of each event. We can therefore gather information at the learner or activity level. 
  
 
 ```{r TimeID}
@@ -233,18 +232,17 @@ course_log <- course_log %>%
 
 ```
 
-After cleaning and refining the data we have some useful information about the course. 
 
 ## Events {-}
 
->   There are **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, forums, articles, tests, polls, ..) in the course and reported in this log. 
+After cleaning and refining the data, we have identified the  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, forums, articles, tests, polls, ..) in the course and reported in this log. 
 
-When on the platform, the learners can  interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course_log$Event.name))-1`**  different type of events (as defined by Moodle)
+When on the platform, the learners can interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course_log$Event.name))-1`**  different type of events (as defined by Moodle)
 
 ```{r TypeEvents}
 course_log %>%
   filter(!is.na(Event.name)) %>%
-  mutate(SpecificEvent = ifelse(str_detect(Event.name, "Quiz"), "Quiz",
+  mutate(SpecificEvent = ifelse(str_detect(Event.name, "Quiz"), "Test",
                                 ifelse(str_detect(Event.name, "Discussion")|
                                          str_detect(Event.name, "Post"), "Forum","Other"))) %>%
   group_by(Event.name, SpecificEvent) %>%
@@ -287,11 +285,11 @@ hoo <-course_log %>%
     Q = n_distinct(ActID) )
 
 ```
-This means that among the  **`r paste0(NbLearner)`** participants that visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearner, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearner, 1)`* %)  participants posted at least one post in any of the **`r max(hoo$Q)`** forums proposed.   
+This graphic shows in particular that among the  **`r paste0(NbLearner)`** participants who visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearner, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearner, 1)`* %)  participants posted at least one post in any of the **`r max(hoo$Q)`** forums proposed.   
 
 ###  Events conducted by date and time of the day{-} 
 
-We can observe the pattern of events over the whole period of the course with a clear decline of activity on Sundays, and some good response on Tuesdays, with the live lectures and webinars.  Tuesdays and Wednesday seem to be the most active days.  The Chinese New Year has little direct but may have an indirect effect since the activity somehow explodes just after.       
+We observe events over the whole period of the course and represent the activities by day. Tuesdays and Wednesday seem to be the most active days. There is a clear decline of activity on Sundays, while the activity is very important on Tuesdays, with the live lectures and webinars. The Chinese New Year has had little direct effect but may had  an indirect effect since the activity somehow explodes right after.       
 
 ```{r}
 
@@ -323,7 +321,7 @@ course_log %>%
 
 ```
 
-Since there is an important time difference between the teacher and the learners, it was important to have an idea of the learner's activity on the platform by hour.  The graphic below shows the maximum number of learners for each time period over the day. 
+Since there is an important time difference between the teacher and the learners, it was important to have an idea of the learner's presence on the platform by hour.  The graphic below shows the maximum number of learners for different time periods of the day. 
 
 ```{r HourlyActivity, fig.height=3}
 #Active time by Learners
@@ -338,7 +336,7 @@ course_log %>%
   geom_bar(stat='identity')+ 
   ggtitle("Number of Unique Visitors on the Platform by Hour")+
   labs(x="Time (JST)", y="Maximum Number of Learners", 
-       subtitle = paste("JST (Final date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+       subtitle = paste("Japan Time (Final date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
  
   scale_fill_manual("Activity",values=c("orange", SIAP.color)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
@@ -358,7 +356,7 @@ course_log %>%
     
 ### Learners preferred activities {-}
 
-With no surprises, the learners' activities rank according to the modules order, with activities in module 1 on top and activities of modules 6 at the bottom. Some noticeable exceptions are the 6 quizzes, the data-based project and a homework that are more popular than other activities of their respective modules.    
+With no surprises, the learners' activities rank according to the modules order, with activities in module 1 on top and activities of modules 6 at the bottom. Some noticeable exceptions are the 6 quizzes, the data-based project and a homework,  that were more popular than other activities of their respective modules.    
 
 
 
@@ -401,17 +399,19 @@ p
 ### Heatmap of the activities over time: 
 
 This *heatmap* is an attempt to visualize the activities on the platform over time.  The coding is the following:
-* Horizontally:  time since beginning of course
-* Vertically:  activities (first activity Module 1 on top, last activity of module 6 at the bottom)
-* Heat = color:  Nb of views (Nb of Learners or events) for each activity 
 
-```{r heatMap, fig.width=12, fig.height=25, out.width = "80%"}
+-  Horizontally:  time since beginning of course
+-  Vertically:  activities (Module 1 at the bottom, module 6 at the top)
+-  Heat = color:  Nb of views (Nb of Learners) for each activity 
+
+```{r heatMap, fig.width=12, out.width = "90%"}
 # course_log %>%
 #   filter(!is.na(ActOrder)) %>%
 #   mutate(ActOrder = formatC(ActOrder, format="d",flag="0",width=2))
 
 
 #Both Date and Date ID work. Date: the specific date since beginning; DayID: the first date = 1, and the second = 2, ...
+library(colorspace)
 
 course_log %>%
   filter(!is.na(ActOrder), 
@@ -422,7 +422,7 @@ course_log %>%
   ggplot()+
   aes(x=Date, y= ActID.lab, fill=Learners)+
   geom_tile()+
-  scale_fill_gradient()+
+  scale_fill_gradientn(colours=  diverge_hcl(4))+
   labs(x="Date", y="Activities", 
        subtitle = paste("Final date ", as.Date(as.character(FileDate),format = "%Y%m%d")))+
   ggtitle("Heatmap of the activities")+
@@ -498,15 +498,16 @@ learners <- learners_Time %>%
 
 ```
 
-Over the `r nrow(learners)` unique learners[^MyNote] registered for the course, only **`r learners%>% filter(TotalTest >0) %>% nrow()`** attempted  to at least one test and only **`r learners%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS more than 6 times.  
+Over the `r nrow(learners)` unique learners[^MyNote] registered for the course, only **`r learners%>% filter(TotalTest >0) %>% nrow()`** attempted  to at least one test and only **`r learners%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS more than 6 times (the course is 6-weeks long).  
 
-[^MyNote]: We removed for the list the lecturers as well as some learners registered with different emails, we count here **unique** learners.  
+[^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
 
 We noticed that *some* learners (around `r round(learners%>% filter(TotalTest >50 & NbAct < 21) %>% nrow(), -1)` -  `r round(learners%>% filter(TotalTest >50 & NbAct < 25) %>% nrow(), -1)`) had very good grades in their tests ( >50) while showing a **very limited activity on the LMS** (less than a third of available).  
 
 ```{r}
 learners %>%
+  filter(Country != "") %>%
  ggplot() +
  aes(x = NbAct, y = TotalTest, color = Country) +
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
@@ -526,7 +527,7 @@ learners %>%
 
 The time spent by learners on the platform is, of course, proportional to the number of activities viewed, with a greater heterogeneity for the most serious learners who viewed most of the activities.[^Time] 
 
-[^Time]: We do not always observe when someone leaves the platform, and the duration reported here may reflect connections that lasted while the learner was doing something else.    
+[^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.    
 
 
 ```{r}
@@ -559,9 +560,9 @@ p
 
 ## Grades {-}
 
-We note that **`r learners%>% filter(GradeFinal >=70) %>% nrow()`**, over the **`r learners%>% filter(Project>0) %>% nrow() +6`**   who submitted a project (mandatory condition), succeeded with a grade above 70 (over 100). This is a rate of success of **`r round(100* (learners%>% filter(GradeFinal >=70) %>% nrow()) / (learners%>% filter(Project>0) %>% nrow() +6),1)`** %.[^grades]
+We note that **`r learners%>% filter(GradeFinal >=70) %>% nrow()`**, over the **`r learners%>% filter(Project>0) %>% nrow() +6`**   who submitted a project (mandatory condition), succeeded with a grade above 70 (over 100). This is a rate of success of **`r round(100* (learners%>% filter(GradeFinal >=70) %>% nrow()) / (learners%>% filter(Project>0) %>% nrow() +6),1)`** %.
 
-[^grades]: The distribution of grades excludes here the  *`r learners%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in the tests at all.  
+The distribution of grades presented below excludes here the  *`r learners%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0).  
 
 
 ```{r Grades , fig.height=3}
@@ -602,7 +603,7 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
  scale_fill_hue() +
  ggtitle("Learners origin") +
  labs(y = "Nb of learners enrolled", 
-      x = "Countries (Ordered by nb of participants)",
+      x = "Countries (Ordered by Nb of participants)",
       subtitle = paste("(date ", final_date,")"))+
  coord_flip() +
  theme_minimal() +
@@ -611,7 +612,7 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 ```
 
-```{r density, fig.height=3}
+```{r density, fig.height=4}
 library(ggridges)
 learners %>%
  filter(Country != "" | Country != "NA")%>%
