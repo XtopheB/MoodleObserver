@@ -103,18 +103,13 @@ CrossTable(processed_TOT_data$Webinar[processed_TOT_data$Day == 'Day1'],processe
 # Modules completion 
 
 
-> **Warning**: For each module, there are 3 elements on the LMS:
+> **Warning**: For each module, there are 3 elements recorded and corresponding to 3 elements on the LMS platform:
 * The Articulate file (Interactive ppt)
 * The pdf with the slides
 * The pdf with questions and answers
- The activity of main interest here is realte to the Articulate viewing. The files records the date of the last (or first) click on the file. This is the information we want. 
+ The activity of main interest here is whether there has been a view of the Articulate material, even if pdfs may have some interest too (some participants may substitute). 
  
-##  Modules activity
 
-**TBC**
- 
-## Pdfs downloads and completion for each module
- 
  
 ```{r}
 # Module related plot
@@ -155,13 +150,13 @@ CrossTable(processed_Module_data$Module, processed_Module_data$Completed, prop.r
 ```
 
 # Individual participation
-In this grahic, each line is a participant and each cell show the activity of the particpant: It could be:
+In this graphic, each line is a participant and each cell show the activity of the participant: It could be:
 *  Green = Articulate view
 *  light blue =  Pdf download
 *  white: No activity
 Ordering: 
 Horizontal: Sequence of Modules
-Vertical: Participant should be ranked according to there overall partcipation for most active to inactive.
+Vertical: Participant should be ranked according to there overall participation for most active to inactive.
  
 
 
