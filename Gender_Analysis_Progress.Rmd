@@ -1,6 +1,8 @@
 ---
 title: "Progress_Gender_Analysis"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -30,15 +32,35 @@ library(xtable)
 ```{r}
 # Sets the working directory to the file source folder
 # This can throw an error if you run all chunks, if you rerun this chunk by itself though it will work.
-setwd(dirname(getActiveDocumentContext()$path))
+## I think this is not needed,  when running notebooks thall paths are relaties to the notebook
+# setwd(dirname(getActiveDocumentContext()$path))
 # Make sure your markdown file is in the same folder as your data or modification will be needed
-raw_data <- read.csv('progress.gender_analysis.csv', stringsAsFactors = TRUE)
+## I suggest we put the data in a "Data" folder
+## Important note: Download the UTF-8.csv version 
+raw_data <- read.csv('Data/progress.gender_analysis.csv', stringsAsFactors = TRUE)
+
+```
+
+# Cleaning
+### Removing lecturers from the participants list
+
+```{r}
+## Remove less relevant observations 
+#remove administrators
+
+raw_data <- raw_data %>%
+  rename( user = X)
+  
+raw_data <- filter(raw_data, !user %in% c("Christophe Bontemps","Ni Ni Thein", "Ju Ju Dawn", "Patrick Jonsson", 
+                                      "sneha kaul", "Sharita Serraro",	"Akiyo Shibuya",  "Makoto Shimizu","
+                                      Panpaka Supakalin", "Cecilia Tinonin"))
+  
 
 ```
 
 
 
-
+# Webinars replay
 
 ```{r}
 
@@ -66,7 +88,7 @@ TOT_plot <- ggplot(processed_TOT_data, aes(Day, fill = forcats::fct_rev(Complete
   scale_fill_brewer(palette="Paired") +
   xlab('') +
   ylab('') +
-  ggtitle('Number of completed attendance in each webinar')
+  ggtitle('Number of views for webinar replay')
 
 TOT_plot
 ```
@@ -78,18 +100,39 @@ CrossTable(processed_TOT_data$Webinar[processed_TOT_data$Day == 'Day1'],processe
            dnn = c('',''))
 ```
 
+# Modules completion 
+
+
+> **Warning**: For each module, there are 3 elements on the LMS:
+* The Articulate file (Interactive ppt)
+* The pdf with the slides
+* The pdf with questions and answers
+ The activity of main interest here is realte to the Articulate viewing. The files records the date of the last (or first) click on the file. This is the information we want. 
+ 
+##  Modules activity
+
+**TBC**
+ 
+## Pdfs downloads and completion for each module
+ 
+ 
 ```{r}
 # Module related plot
 
 # Extracts module columns that does not contain question and answers, but contains download version. 
 Module_data <- raw_data %>% select(contains('Module.') & -contains('Questions.and.Answers') & contains('Download') & -contains('Annex'))
+
 # Careful here! Order of columns may vary depending on if they change name and/or if any modules are added/removed! 
-ModuleHeader = c('Module1', 'Module2', 'Module9', 'Module3', 'Module6', 'Module7', 'Module10')
+ModuleHeader = c('Module1', 'Module2', 'Module9', 'Module3', 'Module6', 'Module7',  'Module10')
 names(Module_data) = make.names(ModuleHeader)
 
 # Processes the data into a format that ggplot can handle
+## Changing the order here to reflect the module sequences
 processed_Module_data<- Module_data %>%
-  pivot_longer(Module1:Module10 , names_to = "Module", values_to = "Completed")
+  pivot_longer(Module1:Module10 , names_to = "Module", values_to = "Completed") %>%
+  mutate(Module = (fct_relevel(Module, rev(c("Module1", "Module2", "Module9",
+                                         "Module3", "Module6", "Module7",
+                                         "Module10")))))
 
 Module_plot <- ggplot(processed_Module_data, aes(x = Module, fill = fct_rev(Completed))) +
   geom_bar() +
@@ -106,7 +149,19 @@ Module_plot
 ```
 
 
-```{r}
+```{r, results== "asis" }
 # Creates a crosstable for completion of Modules
 CrossTable(processed_Module_data$Module, processed_Module_data$Completed, prop.r = T, prop.t = F, prop.c = F, prop.chisq = F, dnn = c('',''))
 ```
+
+# Individual participation
+In this grahic, each line is a participant and each cell show the activity of the particpant: It could be:
+*  Green = Articulate view
+*  light blue =  Pdf download
+*  white: No activity
+Ordering: 
+Horizontal: Sequence of Modules
+Vertical: Participant should be ranked according to there overall partcipation for most active to inactive.
+ 
+
+
