@@ -1,0 +1,112 @@
+---
+title: "Progress_Gender_Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Remember to disable png for Word export...
+knitr::opts_chunk$set( message = FALSE, warning = FALSE, 
+                       results =FALSE, echo = TRUE,
+                       fig.width=7, fig.height=4, 
+                       dev="png", 
+                       dev.args=list(type="cairo"), dpi=96)
+
+
+```
+
+
+```{r packages}
+library(forcats)
+library(tidyverse)
+library(ggplot2)
+library(rstudioapi)
+library(gmodels)
+library(RColorBrewer)
+library(xtable)
+```
+
+
+
+```{r}
+# Sets the working directory to the file source folder
+# This can throw an error if you run all chunks, if you rerun this chunk by itself though it will work.
+setwd(dirname(getActiveDocumentContext()$path))
+# Make sure your markdown file is in the same folder as your data or modification will be needed
+raw_data <- read.csv('progress.gender_analysis.csv', stringsAsFactors = TRUE)
+
+```
+
+
+
+
+
+```{r}
+
+# Webinar related plots 
+
+# Careful here! Order of columns may vary depending on if they change name and/or if any modules are added/removed! 
+header = c('Webinar1_Day1', 'Webinar1_Day2', 'Webinar2_Day1', 'Webinar2_Day2', 'Webinar3_Day1', 'Webinar3_Day2')
+TOT_data <- raw_data %>% select(contains('ToT'))
+names(TOT_data) = make.names(header)
+
+# Processes the data into a format that ggplot can handle
+processed_TOT_data <- TOT_data %>%
+  pivot_longer(Webinar1_Day1:Webinar3_Day2, names_to = "Webinar", values_to = "Completed")
+processed_TOT_data <- separate(
+  processed_TOT_data, col = Webinar, into = c('Webinar','Day'),
+  sep = "_")
+
+
+TOT_plot <- ggplot(processed_TOT_data, aes(Day, fill = forcats::fct_rev(Completed)))+
+  geom_bar(stat = 'count') +
+  facet_wrap(~Webinar) + 
+  theme_bw() + 
+  theme(legend.title = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_brewer(palette="Paired") +
+  xlab('') +
+  ylab('') +
+  ggtitle('Number of completed attendance in each webinar')
+
+TOT_plot
+```
+```{r}
+# Creates a crosstable for attendance in TOT webinars 
+# Uses only data from day 1 to not double up the data, day 1 and day 2 have identical data.
+CrossTable(processed_TOT_data$Webinar[processed_TOT_data$Day == 'Day1'],processed_TOT_data$Completed[processed_TOT_data$Day == 'Day1'],
+           prop.t = F, prop.c = F, prop.chisq = F,
+           dnn = c('',''))
+```
+
+```{r}
+# Module related plot
+
+# Extracts module columns that does not contain question and answers, but contains download version. 
+Module_data <- raw_data %>% select(contains('Module.') & -contains('Questions.and.Answers') & contains('Download') & -contains('Annex'))
+# Careful here! Order of columns may vary depending on if they change name and/or if any modules are added/removed! 
+ModuleHeader = c('Module1', 'Module2', 'Module9', 'Module3', 'Module6', 'Module7', 'Module10')
+names(Module_data) = make.names(ModuleHeader)
+
+# Processes the data into a format that ggplot can handle
+processed_Module_data<- Module_data %>%
+  pivot_longer(Module1:Module10 , names_to = "Module", values_to = "Completed")
+
+Module_plot <- ggplot(processed_Module_data, aes(x = Module, fill = fct_rev(Completed))) +
+  geom_bar() +
+  theme_bw() + 
+  theme(legend.title = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab('') +
+  ylab('') +
+  scale_fill_brewer(palette="Paired") +
+  ggtitle('Number of students that completed each module')+
+  coord_flip()
+
+Module_plot
+```
+
+
+```{r}
+# Creates a crosstable for completion of Modules
+CrossTable(processed_Module_data$Module, processed_Module_data$Completed, prop.r = T, prop.t = F, prop.c = F, prop.chisq = F, dnn = c('',''))
+```
