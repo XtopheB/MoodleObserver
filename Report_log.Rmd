@@ -32,7 +32,7 @@ opts_chunk$set(warning = FALSE, message = FALSE,
                autodep = TRUE, tidy = FALSE, cache = TRUE)
 
 # In case of "weird" problem, uncomment the line below (cache issue)
-opts_chunk$set(cache.rebuild=TRUE) 
+ opts_chunk$set(cache.rebuild=TRUE) 
 
 # My colors:
 SIAP.color <- "#0385a8"
@@ -116,9 +116,9 @@ We base our analysis on the files collected on `r FileDate` :
 * `r name_last_grades ` (latest grades compiled)
 
 
-The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. Each row of this log is an event and so all the events (course viewed, post, attempt to a test, , etc. ) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.
+The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. Each row of this log is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.
 
-> For this course, we recorded **`r nrow(data.logs)`** events of different nature, that have to be cleaned.   
+
 
 ####  Cleaning log files
 
@@ -169,12 +169,18 @@ data.logs <- data.logs[!data.logs$Event.name %in% rem_events, ]
 ```{r CourseLogData}
 course_log <- data.logs
 
-NbLearner <- as.numeric(count(unique((course_log %>%
+NbLearners <- as.numeric(count(unique((course_log %>%
               filter(!is.na(Event.name)) %>%
               select(User.full.name)))))
 ```
 
-The course *`r CourseNameLong `* started on **`r CourseStartDate`**. On `r FileDate`, **`r paste0(NbLearner)`** different learners **visited**  the course.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorderd. We can therefore gather information at the learner or activity level. 
+# Participants and activities on the LMS
+
+The course *`r CourseNameLong `* started on **`r CourseStartDate`**.
+
+>On `r FileDate`, **`r paste0(NbLearners)`** different learners **visited**  the course.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
+
+Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorderd. We can therefore gather information at the learner or activity level. After cleaning, we recorded **`r nrow(data.logs)`** events of different nature for this course
  
 
 ```{r TimeID}
@@ -213,7 +219,7 @@ course_log <- course_log %>%
 ```
 
 
-# Activities and events on the LMS
+
 
 ```{r ActivityData}
 
@@ -259,7 +265,7 @@ course_log <- course_log  %>%
 
 ```
 
-Some elements are specific to the course, such has the contain of each Module (weeks)
+
 
 ``````{r ModuleFilter}
 ### Define the Modules for each activity 
@@ -282,21 +288,25 @@ course_log <- course_log %>%
 library(data.table)
 Temp <- data.table(course_log %>% 
                      select(ModuleID_2, Actname) %>%
-                     filter(ModuleID_2 >0) %>%
+                     filter(ModuleID_2 > -1) %>%
                      unique() %>%
                      mutate(ModuleID_2 =  paste("Module ", ModuleID_2))
                    )
 tabl <-  Temp[, .N, keyby = ModuleID_2]
 names(tabl) <- c("Module", "Nb of activities")
+```
+
+Some elements are specific to the course, such has the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we have identified  **`r length(unique(course_log$Actname))`**  different *activities* (information or resources such as videos, tutorials,  forums, articles, tests, polls,..) proposed for the learners on the LMS. 
+
+Below is table summarizing the reparation of the specific pedagogical activities by Module. 
+
+
+```{r}
 tabl
 ```
 
 # Main outcomes of the course
 
-
-After cleaning and refining the data, we have identified the  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls,..) in the course and reported in this log. 
-
-## Certified people
 
 ```{r}
 # Step 1: Adding email address to course_log using data.act
@@ -318,114 +328,28 @@ course_log <- left_join(course_log ,NameSex, by = c("Email.address"))
 ```
 
 
-``````{r Certificates}
-###  Certificates (here because removed afterwards)
 
-CertifiedLearners <-  course_log %>%
-    filter(stringr::str_detect(Actname, "certificate") ) %>%
-  distinct(User.full.name, .keep_all=TRUE) %>% 
-  select(User.full.name, Email.address,  Sex, Country, TotalReal)%>%
-  unique()
-
-NbCertificates <- nrow(CertifiedLearners)
-
-
-```
-
-There are **`r NbCertificates`** certified learners in this course out of  **`r paste0(NbLearner)`** (`r round(100*NbCertificates/NbLearner, 2)` %)
+## Attendance 
 
 ```{r}
-DTCertified <- data.table(CertifiedLearners)
-                   
-CertifiedCountry<-  DTCertified[, .N, keyby = Country]
-names(CertifiedCountry) <- c("Country", "Nb of Certificates")
-CertifiedCountry[order(-`Nb of Certificates`)]
-```
-```{r}
-CertifiedSex<-  DTCertified[, .N, keyby = Sex]
-names(CertifiedSex) <- c("Sex", "Nb of Certificates")
-CertifiedSex
-```
+NbWomen <- course_log %>%
+ select(Email.address, Sex)%>%
+  unique() %>%
+  filter(Sex == "Female") %>%
+  nrow()
 
-### Attendance, Grades & Learners
-
-
-```{r GradesTotal}
-
-Grades <- data.grades %>%
-  select(!(ID.number:Department)) %>%
-  select(!(Position:Organization))%>%
-  select(!contains("download"))%>%
-  mutate_at(vars(matches("Quiz|Assign")),funs(as.numeric)) 
-
-
-Grades <- Grades %>%
-  mutate(
-    GradeFinal = rowSums(dplyr::across(c(6:12)), na.rm = T)
-  )
+NbCountries <- course_log %>%
+  select(Country) %>%
+  filter(Country != "" | Country != "NA" | Country != "Unknown")%>%
+  unique() %>%
+  nrow()
 ```
 
-
-
-
-
-```{r GradesFile}
-
-# We now have the full name in the grade file
-# Grades <- Grades %>%
-#   left_join(CertifiedLearners, by = c("Email.address"))
-```
-
-
-```{r GradesNames}
-# Join to have the  certificate Owners
-# Grades <- Grades %>%
-#   left_join( CertificatesNames, by = c("Email.address"))
-
-names(Grades)[6:12] <- c("Test1", "Test2", "Test3", "Test4", "Project", "Test5", "Test6")
-  
-```
-
-
-We note that **`r Grades %>% filter(GradeFinal >=42*0.6) %>% nrow()`** have a grade greater than 70% of the maximum. 
-
-The distribution of grades presented below excludes here the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0).  
-
-
-```{r Grades , fig.height=3}
-
-Grades %>%
-  filter(GradeFinal >0) %>%
- ggplot() +
- aes(x = GradeFinal) +
- geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
- coord_cartesian(xlim=c(0,66))+
- ggtitle("Grades distribution") +
- labs(x="Grades", y=" Nb of learners",
-      caption = paste("(as of  ", FileDate,")"),
-      subtitle = paste(Grades%>% filter(GradeFinal >=42) %>% nrow(),
-                       "successful learners")
-      )+
- annotate("rect", xmin = 42, xmax = 66,
-                  ymin = 0, ymax = 40,
-                  fill = SIAP.color , alpha = .2)+
-   annotate("text", x = 50, y = 25,
-          color= SIAP.color,
-          label = "Success")+
- theme_minimal()
-
-```
-
-
-# Success by countries
-
-## Learners
-
-Since we have the information at the participant's level, we can have some statistics on the origin of the learners as well as performances by country. 
+We have **`r NbWomen`** women participating the course (`r round(100*NbWomen/NbLearners, 2)` % ) and a diversity of origin with people from **`r NbCountries`** different countries. We present some statistics on the origin of the learners by country. 
 
 ```{r}
 
-Grades %>%
+course_log %>%
  filter(Country != "" | Country != "NA")%>%
  group_by(Country) %>%
  summarise(Learners = n_distinct(Email.address)) %>%
@@ -444,6 +368,175 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 
 ```
+
+
+
+
+## Certified people
+
+```{r}
+
+# I create a Boolean to identify Certificate
+# using  "any" returns TRUE if TRUE appears in any Actname for a participant
+
+course_log <- course_log %>%
+  group_by(Email.address, User.full.name) %>%
+  mutate(Certified = any(stringr::str_detect(Actname, "certificate") ))  %>%
+  ungroup()
+
+# Certification
+Learners <- course_log %>%
+  distinct(User.full.name, .keep_all=TRUE) %>%
+  # filter(Certified ==TRUE)%>%
+  select(User.full.name, Email.address,  Sex, Country, TotalReal, Certified)%>%
+  unique() 
+
+NbCertificates <- nrow(subset(Learners, Certified == TRUE))
+```
+
+
+``````{r Certificates}
+###  Certificates (here because removed afterwards)
+
+# CertifiedLearners <-  course_log %>%
+#   filter(stringr::str_detect(Actname, "certificate") ) %>%
+#   # filter(Certified == TRUE) %>%
+#   distinct(User.full.name, .keep_all=TRUE) %>% 
+#   select(User.full.name, Email.address,  Sex, Country, TotalReal)%>%
+#   unique()
+# 
+
+
+```
+
+There are **`r NbCertificates`** certified learners in this course out of  **`r paste0(NbLearners)`** participants (`r round(100*NbCertificates/NbLearners, 2)` %).
+
+The repartition by country is the following.
+
+```{r}
+DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
+                   
+CertifiedCountry<-  DTCertified[, .N, keyby = Country]
+names(CertifiedCountry) <- c("Country", "Nb of Certificates")
+CertifiedCountry[order(-`Nb of Certificates`)]
+```
+
+
+
+
+```{r}
+CertifiedSex<-  DTCertified[, .N, keyby = Sex]
+names(CertifiedSex) <- c("Sex", "Nb of Certificates")
+CertifiedSex
+```
+
+```{r}
+Learners %>%
+ filter(Country != "" | Country != "NA")%>%
+  mutate( One = 1) %>%
+  ggplot() +
+  aes(x = Sex , y = One , fill = Certified) +
+  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
+  ggtitle("Sucess rate by gender") +
+  labs(x="Gender", y="Percentage of sucess in each group", 
+      subtitle = paste("(date ", FileDate,")")) +
+  theme_minimal()+
+  theme(legend.position = "bottom")+ 
+  coord_flip()
+
+```
+
+
+
+```{r}
+Learners %>%
+ filter(Country != "" | Country != "NA") %>%
+  mutate( One = 1, 
+          OneC = ifelse(Certified ==TRUE, 1, 0),
+          Certified = as.factor(Certified),
+          Country = as.factor(Country)) %>%
+    group_by(Country) %>%
+  mutate (TotalC = sum(OneC), 
+          Total = sum(One), 
+          PercentC = TotalC/Total) %>%
+  ungroup() %>%
+  filter(Total >5)%>%
+  ggplot() +
+  aes(x = reorder(Country, PercentC) , y = One , fill = Certified)  +
+  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
+  ggtitle("Sucess rate by country") +
+  labs(x="Country", y="Percentage of sucess in each group", 
+      subtitle = paste("(date ", FileDate,")"), 
+      caption = " Only countries with more than 5 participants are represented") +
+  guides(fill = guide_legend(title = "Sucess")) +
+  theme_minimal()+
+   annotate("text", x = 1, y =NbCertificates/NbLearners,
+          color= "red",
+          label = "Mean", alpha = 0.7)+
+  geom_hline( yintercept = NbCertificates/NbLearners,  color = "red" ) +
+  theme(legend.position = "bottom")+ 
+  coord_flip()
+
+```
+
+
+
+
+###  Grades 
+
+
+```{r GradesTotal}
+
+Grades <- data.grades %>%
+  select(!(ID.number:Department)) %>%
+  select(!(Position:Organization))%>%
+  select(!contains("download"))%>%
+  mutate_at(vars(matches("Quiz|Assign")),funs(as.numeric)) 
+
+
+Grades <- Grades %>%
+  mutate(
+    GradeFinal = rowSums(dplyr::across(c(6:12)), na.rm = T)
+  )
+```
+
+
+```{r GradesNames}
+
+
+names(Grades)[6:12] <- c("Test1", "Test2", "Test3", "Test4", "Project", "Test5", "Test6")
+
+# We note that **`r Grades %>% filter(GradeFinal >=42*0.6) %>% nrow()`** have a grade greater than 70% of the maximum. 
+
+```
+
+The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0)].  
+
+
+```{r Grades , fig.height=3}
+Nb0 = Grades%>% filter(GradeFinal ==0) %>% nrow()
+Grades %>%
+  filter(GradeFinal >0) %>%
+ ggplot() +
+ aes(x = GradeFinal) +
+ geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
+ coord_cartesian(xlim=c(0,66))+
+ ggtitle("Grades distribution") +
+ labs(x="Grades", y=" Nb of learners",
+      caption = paste("Excluding",Nb0, "participants with grade = 0"),
+     subtitle = paste("(as of  ", FileDate,")") )+
+ annotate("rect", xmin = 42, xmax = 66,
+                  ymin = 0, ymax = 45,
+                  fill = SIAP.color , alpha = .2)+
+   annotate("text", x = 50, y = 25,
+          color= SIAP.color,
+          label = "Success")+
+ theme_minimal()
+
+```
+
+## Learners
+
 
 ```{r densitySex, fig.height=4}
 library(ggridges)
@@ -549,9 +642,9 @@ poo <-course_log %>%
 
 ```
 
-Among the  **`r paste0(NbLearner)`** participants who visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearner, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearner, 1)`* %)  participants posted at least one post in any of the **`r max(hoo$Q)`** forums proposed.   
+Among the  **`r paste0(NbLearners)`** participants who visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearners, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearners, 1)`* %)  participants posted at least one post in any of the **`r max(hoo$Q)`** forums proposed.   
 
-We can also note that **`r max(poo$Q, na.rm=TRUE)`**  ( *`r round(100* max(poo$Q)/NbLearner, 1)`* %)  participants have submitted a file for the optional data-based project.
+We can also note that **`r max(poo$Q, na.rm=TRUE)`**  ( *`r round(100* max(poo$Q)/NbLearners, 1)`* %)  participants have submitted a file for the optional data-based project.
 
 # Detailled analysis
 
@@ -758,7 +851,6 @@ Grades <- learners_Time %>%
 
 
 ```{r}
-
 Grades%>% 
   filter(Project >0) %>%
   nrow()
@@ -770,7 +862,7 @@ Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, on
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
 
-We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >50 & NbAct < 21) %>% nrow(), -1)` -  `r round(Grades%>% filter(GradeFinal >50 & NbAct < 25) %>% nrow(), -1)`) had very good grades in their tests ( >50) while showing a **very limited activity on the LMS** (less than a third of available).  
+We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >40 & NbAct < 21) %>% nrow(), -1)`) had very good grades in their testswhile showing a **very limited activity on the LMS** (less than a third of available).  
 
 ```{r}
 Grades %>%
@@ -783,8 +875,8 @@ Grades %>%
       subtitle = paste(nrow(subset(unique(course_log[c("Actname", "Date")]),
                                    Date==FileDate)),"activities (date ", FileDate,
                        "). Each dot is a participant"))+
-  annotate("rect", xmin= 0, xmax = 26, 
-          ymin = 45, ymax = 65, 
+  annotate("rect", xmin= 0, xmax = 25, 
+          ymin = 40, ymax = 65, 
           color= SIAP.color, alpha = 0.2) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
@@ -811,7 +903,7 @@ mutate(TotalTime = TotalTime/60) %>%
       subtitle = paste(nrow(subset(unique(course_log[c("Actname", "Date")]),
                                    Date==FileDate)),"activities (date ", FileDate,"). Each dot is a participant"))+
  geom_hline (aes(yintercept =  3*6*60), color = SIAP.color) +
- annotate("text", x = 12, y = 3*6*60 + 100,
+ annotate("text", x = 15, y = 3*6*60 + 100,
           color= SIAP.color,
           label = "Course  requirement (3 hours/week)")+
 # geom_vline (aes(xintercept =  median(TotalTime))) +
@@ -825,36 +917,6 @@ p
 
 ```
 
-## Grades {-}
-
-We note that **`r Grades%>% filter(GradeFinal >=70) %>% nrow()`**, over the **`r Grades%>% filter(Project>0) %>% nrow() +6`**   who submitted a project (mandatory condition), succeeded with a grade above 70 (over 100). This is a rate of success of **`r round(100* (Grades%>% filter(GradeFinal >=70) %>% nrow()) / (Grades%>% filter(Project>0) %>% nrow() +6),1)`** %.
-
-The distribution of grades presented below excludes here the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0).  
-
-
-```{r Grades1 , fig.height=3}
-
-Grades %>%
-  filter(GradeFinal >0) %>%
- ggplot() +
- aes(x = GradeFinal) +
- geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
- coord_cartesian(xlim=c(0,100))+
- ggtitle("Grades distribution") +
- labs(x="Grades", y=" Nb of learners", 
-      subtitle = paste("(date ", FileDate,")"))+
- annotate("rect", xmin = 70, xmax = 101,
-                  ymin = 0, ymax = 32,
-                  fill = SIAP.color , alpha = .2)+
-   annotate("text", x = 78, y = 25,
-          color= SIAP.color,
-          label = "Success")+
- theme_minimal()
-
-```
-
-
-> In date of `r as.Date(as.character(FileDate),format = "%Y%m%d")` ,   **`r NbCertificates`** participants have accessed the course certificate activity. 
 
 
 
@@ -879,7 +941,7 @@ course_log %>%
       fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5"))) +
   geom_bar(stat='identity') +
   labs(x="Learners' ID", y="Number of events", fill="",
-       subtitle = paste(NbLearner,"Learners (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+       subtitle = paste(NbLearners,"Learners (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
   ggtitle("Learners event counts (top and bottom Learners)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
