@@ -1194,6 +1194,7 @@ Grades %>%
 
 
 ```{r}
+<<<<<<< HEAD
 # Graphics on special activities
 
 Special <- "Satellite"
@@ -1201,6 +1202,11 @@ Special <- "Satellite"
 toto <-  course_log %>%
   filter(!is.na(Event.name)) %>%
   filter(str_detect(Event.context, Special))%>%
+=======
+toto <-  course_log %>%
+  filter(!is.na(Event.name)) %>%
+  filter(str_detect(Event.context, "Satellite"))%>%
+>>>>>>> 431c7ebe5462969ce538619ffc17116f55b06d10
   group_by(Event.context)%>%
   summarise(Learners = n_distinct(User.full.name), 
             Module = max(ModuleID_2))
@@ -1209,11 +1215,15 @@ toto <-  course_log %>%
 ggplot(toto) +
   aes(x = Event.context, y =  Learners) +
   geom_bar(aes(fill = Event.context), stat = "identity", alpha = 0.5) +
+<<<<<<< HEAD
   ggtitle(paste(Special, "activities")) +
  labs(y = "Nb of learners enrolled", 
       subtitle = paste("(date ", FileDate,")"))+
   coord_flip() +
   
+=======
+  coord_flip() +
+>>>>>>> 431c7ebe5462969ce538619ffc17116f55b06d10
   theme_minimal()+
  theme(legend.position = "none")
 ```
