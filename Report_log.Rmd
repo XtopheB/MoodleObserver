@@ -1,5 +1,5 @@
 ---
-title: "**Analyzing the Machine Learning e-Learning Course  <br> *(Using the Activity Log from Moodle)*  ** "
+title: "Analyzing the *Machine Learning* Course  <br> *(Using the Activity Log from Moodle)* "
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -430,7 +430,7 @@ names(CertifiedSex) <- c("Sex", "Nb of Certificates")
 CertifiedSex
 ```
 
-```{r}
+```{r, fig.height= 3}
 Learners %>%
  filter(Country != "" | Country != "NA")%>%
   mutate( One = 1) %>%
@@ -749,35 +749,37 @@ With no surprises, the learners' activities rank according to the modules order,
 
 #final_date = as.Date(paste(FileDate), format = "%Y%m%d")
 
+myPaletteModules <- c('#b3e2cd','#fdcdac','#cbd5e8','#f4cae4','#e6f5c9','#fff2ae','#f1e2cc')
+
 course_log %>%
-  filter(!is.na(Event.context),
-         Date <= FileDate) %>%
+  filter(!is.na(Event.context), 
+         ModuleID_2 >=0, 
+         !is.na(ModuleID_2)) %>%
   mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
-            ModuleID = as.factor(unique(Actname))) %>%
+            ModuleID = as.factor(unique(Actname)),
+            ModuleID_2 = as.factor(unique(ModuleID_2))) %>%
   # mutate(rank = dense_rank(desc(Learners))) %>% 
   # filter(rank <= 30) %>% 
   mutate(ActID.lab = fct_reorder(ActID.lab, Learners, min)) %>%
-ggplot() +
-  aes(x = ActID.lab, fill = ModuleID, weight = Learners) +
-  geom_bar() +
- # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) )+
-  labs(x="Activities", y="Number of Learners")
+  ggplot() +
+  aes(x = ActID.lab,  y = Learners, fill = ModuleID_2) +
+  geom_bar(stat='identity') + 
+  # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
+  scale_fill_manual(values = myPaletteModules ) +
+  labs(x="Activities", y="Number of Learners") +
   ggtitle("Activities accessed by number of Learners")+
   coord_flip() +
   theme_minimal() +
-  theme(legend.position = "none")
-  
-  
+ # theme(legend.position = "none") +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=12),
+        panel.background = element_blank(), text = element_text(size=8),
+        axis.line = element_line(colour = "black"),
+        plot.subtitle = element_text(hjust = 0.5, size=8),
+        axis.title.y = element_text(size = 8))
 
-  # theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-  #       plot.title = element_text(hjust = 0.5, size=12),
-  #       panel.background = element_blank(), text = element_text(size=8),
-  #       axis.line = element_line(colour = "black"),
-  #       plot.subtitle = element_text(hjust = 0.5, size=8),
-  #       axis.title.y = element_text(size = 8))+
- 
 
 #p
 #ggplotly(p)
@@ -803,16 +805,19 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 library(colorspace)
 
 course_log %>%
-  filter(!is.na(ActNb)) %>%
-  mutate(ActID.lab = paste(Actname,"-",Event.context, "-", ModuleID_2)) %>%
+  filter(!is.na(ActNb),
+          ModuleID_2 >=0, 
+         !is.na(ModuleID_2))  %>%
+  # mutate(ActID.lab = paste(Actname,"-",Event.context, "-", ModuleID_2)) %>%
+  mutate(ActID.lab = paste("Mod-", ModuleID_2,"-",str_trunc(Actname, 15, "right") )) %>%
   group_by(ActID.lab, Date) %>%
   summarise(Learners = n_distinct(User.full.name)) %>% 
   ggplot()+
-  aes(x=Date, y= ActID.lab, fill=Learners)+
+  aes(x=Date, y= reorder(ActID.lab, Learners), fill=Learners)+
   geom_tile()+
   scale_fill_gradientn(colours=  diverge_hcl(4))+
   labs(x="Date", y="Activities", 
-       subtitle = paste("Final date ", as.Date(as.character(FileDate),format = "%Y%m%d")))+
+       subtitle = paste("Final date ", FileDate))+
   ggtitle("Heatmap of the activities")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=14),
@@ -849,12 +854,6 @@ Grades <- learners_Time %>%
 
 ```
 
-
-```{r}
-Grades%>% 
-  filter(Project >0) %>%
-  nrow()
-```
 
 
 Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, only **`r Grades%>% filter(GradeFinal >0) %>% nrow()`** attempted  to at least one test and only **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS more than 6 times (the course is 6-weeks long).  
