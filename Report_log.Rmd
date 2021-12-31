@@ -1193,5 +1193,29 @@ Grades %>%
 ```
 
 
+```{r}
+# Graphics on special activities
+
+Special <- "Satellite"
+
+toto <-  course_log %>%
+  filter(!is.na(Event.name)) %>%
+  filter(str_detect(Event.context, Special))%>%
+  group_by(Event.context)%>%
+  summarise(Learners = n_distinct(User.full.name), 
+            Module = max(ModuleID_2))
+
+
+ggplot(toto) +
+  aes(x = Event.context, y =  Learners) +
+  geom_bar(aes(fill = Event.context), stat = "identity", alpha = 0.5) +
+  ggtitle(paste(Special, "activities")) +
+ labs(y = "Nb of learners enrolled", 
+      subtitle = paste("(date ", FileDate,")"))+
+  coord_flip() +
+  
+  theme_minimal()+
+ theme(legend.position = "none")
+```
 
 
