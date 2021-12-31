@@ -941,18 +941,22 @@ knitr::knit_exit()
 
 
 ```{r, eval = FALSE}
+
+NbSelect <- 10  # Best and worst students (in terms of events)
+
 #Learners event counts (top and bottom Learners)
 course_log %>%
-  filter(!is.na(User.full.name)) %>%
+  filter(!is.na(User.full.name), 
+         User.full.name != "-") %>%
   count(User.full.name) %>%
   mutate(rank = dense_rank(desc(n))) %>% 
-  filter(row_number() >= max(row_number()) - 5 | rank <= 5) %>%
+  filter(row_number() >= max(row_number()) - NbSelect | rank <= NbSelect) %>%
   ggplot()+
-  aes(x=reorder(User.full.name, -n), y=n, 
-      fill=factor(ifelse(rank <= 5,"Top 5","Bottom 5"))) +
+  aes(x=reorder(User.full.name, n), y=n, 
+      fill=factor(ifelse(rank <= NbSelect, paste("Top", NbSelect),paste("Bottom", NbSelect)))) +
   geom_bar(stat='identity') +
   labs(x="Learners' ID", y="Number of events", fill="",
-       subtitle = paste(NbLearners,"Learners (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
+       subtitle = paste(NbLearners,"Learners (Final Date ", FileDate,")"))+
   ggtitle("Learners event counts (top and bottom Learners)")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12), 
@@ -1109,7 +1113,7 @@ Grades %>%
   filter(GradeFinal > 0) %>%
   group_by(Country) %>%
   mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(User.full.name))  %>%
+         NbLearners = n_distinct(Email.address))  %>%
   ungroup() %>%
   filter(NbLearners >5) %>%
   ggplot() +
@@ -1163,7 +1167,7 @@ Grades %>%
   filter(GradeFinal > 0) %>%
   group_by(Country) %>%
   mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(User.full.name))  %>%
+         NbLearners = n_distinct(Email.address))  %>%
   ungroup() %>%
   filter(NbLearners >5) %>%
   ggplot() +
