@@ -3,13 +3,6 @@ title: "Analyzing the *Machine Learning* Course  <br> *(Using the Activity Log f
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: ["float"]
   html_document:
     df_print: paged
     toc: yes
@@ -17,6 +10,13 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: ["float"]
 ---
 
 
@@ -792,7 +792,7 @@ course_log %>%
   # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
   scale_fill_manual("Module", values = myPaletteModules ) +
   labs(x="Activities", y="Number of Learners") +
-  ggtitle("Activities accessed by number of Learners")+
+  ggtitle("Activities accessed by Learners")+
   coord_flip() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5, size=12),
