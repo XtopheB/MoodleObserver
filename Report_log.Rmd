@@ -1,15 +1,8 @@
 ---
-title: "Analyzing the *Machine Learning* Course  <br> *(Using the Activity Log from Moodle)* "
+title: "Analyzing the *Machine Learning* Course Using Moodle Data"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  html_document:
-    df_print: paged
-    toc: yes
-    keep_md: yes
-    code_folding: show
-    fig_width: 6.5
-    fig_height: 4
   pdf_document:
     df_print: kable
     toc: yes
@@ -17,6 +10,13 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: ["float"]
+  html_document:
+    df_print: paged
+    toc: yes
+    keep_md: yes
+    code_folding: show
+    fig_width: 6.5
+    fig_height: 4
 ---
 
 
@@ -121,22 +121,24 @@ data.Pansy <- data.Pansy %>%
   filter(!is.na(Email.address), 
          Email.address != "" )%>%
   unique()
-
-  
+# * `r name_last_logs` (*Logs on the LMS^[Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.] *)
+#   
 ```
 
-We base our analysis on the files collected on `r FileDate` :
+The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. 
 
-* `r name_last_logs` (Logs on the LMS)
-* `r name_last_act `  (Learners activities)
-* `r name_last_grades ` (latest grades compiled)
+We base our analysis on the **data collected on `r FileDate`** recorded on the  following files:
 
 
-The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. Each row of this log is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.
+* `r name_last_logs` (*Logs on the LMS[^FileNote]*)
+* `r name_last_act `  (*Learners activities*)
+* `r name_last_grades ` (*latest grades compiled*)
 
 
+[^FileNote]: Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.
 
-####  Cleaning log files
+### Cleaning log files
+
 
 We have to perform several tasks before having some data to analyse. These task are generic to any course:
 
@@ -179,7 +181,7 @@ data.logs <- data.logs[!data.logs$Event.name %in% rem_events, ]
 
 * Extract and identify activities from the log
 
-> One important step is to extract and identify activities  from  the *Description* field and to affect identification numbers (IDs) to activities, Modules, types of activities, etc.  
+> One important step is to extract and identify activities  from  the *Description* field and to affect identification numbers (IDs) to activities, modules, types of activities, etc.  
 
 
 ```{r CourseLogData}
@@ -312,9 +314,9 @@ tabl <-  Temp[, .N, keyby = ModuleID_2]
 names(tabl) <- c("Module", "Nb of activities")
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course_log$Actname))`**  different *activities* (information or resources such as videos, tutorials,  forums, articles, tests, polls,..) proposed for the learners in **7** modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
 
-Below is table summarizing the repartition of the specific pedagogical activities by Module. 
+Below is a table summarizing the repartition of the specific pedagogical activities by Module. 
 
 
 ```{r}
@@ -819,6 +821,16 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 
 ```{r HeatMap, fig.width=13,fig.height=18}
 
+# Openings of Modules:
+
+Opening1 <- as_date("2021-11-12")
+Opening2 <- as_date("2021-11-19")
+Opening3 <- as_date("2021-11-25")
+Opening4 <- as_date("2021-12-03")
+Opening5 <- as_date("2021-12-10")
+
+
+
 library(colorspace)
 course_log %>%
  filter(!is.na(ActNb),
@@ -832,8 +844,14 @@ course_log %>%
   geom_tile()+
   scale_fill_gradientn(colours=  diverge_hcl(4))+
   labs(x="Date", y="Activities", 
-       subtitle = paste("Final date ", FileDate))+
+       subtitle = paste("Final date ", FileDate), 
+       caption = " Vertical lines indicate module opening")+
   ggtitle("Heatmap of the activities")+
+  geom_vline (aes(xintercept = Opening1 ), color = "black", alpha = 0.5, size = 1) +
+  geom_vline (aes(xintercept = Opening2 ), color = "black", alpha = 0.5, size = 1) +
+  geom_vline (aes(xintercept = Opening3 ), color = "black", alpha = 0.5, size = 1) +
+  geom_vline (aes(xintercept = Opening4 ), color = "black", alpha = 0.5, size = 1) +
+  geom_vline (aes(xintercept = Opening5 ), color = "black", alpha = 0.5, size = 1) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=14),
         panel.background = element_blank(), text = element_text(size=10), 
@@ -870,12 +888,12 @@ Grades <- learners_Time %>%
 
 
 
-Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, only **`r Grades%>% filter(GradeFinal >0) %>% nrow()`** attempted  to at least one test and only **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS more than 6 times (the course is 6-weeks long).  
+Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, only **`r Grades%>% filter(GradeFinal >0) %>% nrow()`** attempted  to at least one test and only **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS at more than 6 different dates (some learners have completed several modules within the same day).  
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
 
-We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >40 & NbAct < 21) %>% nrow(), -1)`) had very good grades in their tests while showing a **very limited activity on the LMS** (less than a third of available).  
+We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >40 & NbAct < 21) %>% nrow(), -1)`) had very good grades in their tests while showing a very limited activity on the LMS (less than a third of available).  
 
 ```{r}
 Grades %>%
@@ -884,8 +902,9 @@ Grades %>%
  aes(x = NbAct, y = GradeFinal, color = Country) +
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  ggtitle("Test Scores vs Number of Activities Viewed") +
- labs(x="Nb of activities viewed", y=" Total Grade (over 65)", 
-      subtitle = paste0("Each dot is a participant, coloured by country (", FileDate,")" ))+
+ labs(x="Nb of activities viewed", y=" Total Grade (max= 65)", 
+      subtitle = paste0("Each dot is a participant, coloured by country (", FileDate,")" ),
+       caption=  paste("Date", FileDate) )+
   annotate("rect", xmin= 0, xmax = 25, 
           ymin = 40, ymax = 65, 
           color= SIAP.color, alpha = 0.2) +
@@ -912,7 +931,7 @@ mutate(TotalTime = TotalTime/60) %>%
  ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total time spent by learners (Duration, in min)", 
       subtitle = paste0("Each dot is a participant, coloured by country. Size is proportional to time spent"), 
-      caption=  paste0(" Date", FileDate) )+
+      caption=  paste("Date", FileDate) )+
  geom_hline (aes(yintercept =  3*6*60), color = SIAP.color) +
  annotate("text", x = 15, y = 3*6*60 + 100,
           color= SIAP.color,
