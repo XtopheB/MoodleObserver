@@ -217,7 +217,7 @@ course_log <- course_log  %>%
 # unique()%>%
 #   View()
 
-###  Certificates
+###  Certificates (here because removed afterwards)
 
 mycertificate <-  course_log %>%
   filter(ActOrder == 97) 
