@@ -3,13 +3,6 @@ title: "Analyzing the *Machine Learning* Course Using Moodle Data"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: ["float"]
   html_document:
     df_print: paged
     toc: yes
@@ -17,6 +10,13 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: ["float"]
 ---
 
 
@@ -452,6 +452,7 @@ The  success rate (`r round(100*NbCertificates/NbLearners, 1)` %) can be analyse
 
 
 ```{r}
+MinLearners <- 2
 Learners %>%
  filter(Country != "" | Country != "NA") %>%
   mutate( One = 1, 
@@ -463,14 +464,14 @@ Learners %>%
           Total = sum(One), 
           PercentC = TotalC/Total) %>%
   ungroup() %>%
-  filter(Total >1)%>%
+  filter(Total >= MinLearners)%>%
   ggplot() +
   aes(x = reorder(Country, PercentC) , y = One , fill = Certified)  +
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by country") +
   labs(x="Country", y="Percentage of sucess in each group", 
       subtitle = paste("(date ", FileDate,")"), 
-      caption = " Only countries with more than 2 participants are represented") +
+      caption = paste(" Only countries with more than", MinLearners, "participants are represented")) +
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
    annotate("text", x = 1, y =NbCertificates/NbLearners,
@@ -896,7 +897,7 @@ Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, on
 We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >40 & NbAct < 21) %>% nrow(), -1)`) had very good grades in their tests while showing a very limited activity on the LMS (less than a third of available).  
 
 ```{r}
-Grades %>%
+p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
  aes(x = NbAct, y = GradeFinal, color = Country) +
@@ -911,6 +912,9 @@ Grades %>%
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
  theme_minimal()
+p
+#Interactive plot
+ggplotly(p)
 ```
 
 
@@ -943,7 +947,8 @@ mutate(TotalTime = TotalTime/60) %>%
  theme(legend.position = "none")
 
 p
-#ggplotly(p)
+#Interactive plot
+ggplotly(p)
 
 ```
 
