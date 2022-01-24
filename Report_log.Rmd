@@ -16,7 +16,9 @@ output:
     keep_tex: yes
     fig_width: 6.5
     fig_height: 4
-    extra_dependencies: ["float"]
+    extra_dependencies: float
+  word_document:
+    toc: yes
 ---
 
 
@@ -68,7 +70,7 @@ library(wesanderson)
 
 ```{r CourseParameters}
 # Course specific parameters
-CourseName <- "MLOS"     ##  "DTV20"
+CourseName <- "MLOS"     ##  "DTV20"  or DV22
 CourseNameLong <- "Machine Learning for Official Statistics and SDGs"
 CourseStartDate <-"2021-11-08"
 ```
@@ -76,12 +78,19 @@ CourseStartDate <-"2021-11-08"
 
 # Data 
 
+
+>The data can be downloaded for the Course management page> reports or that the ardress
+ https://siap-elearning.org/report/log/index.php?id=**XXX**  where **XXX** is the course id (ex: 158 for Data visualization, 129 for ML, ... )
+
+
 ```{r LoadData}
 # Parse the data folder to find the latest files 
 
 #### Logs File
 #  Logs from https://siap-elearning.org/report/log/index.php?chooselog=1&showusers=0&showcourses=0&id=129&user=0&date=&modid=&modaction=&origin=&edulevel=-1&logreader=logstore_standard
 # --> use Comma separated values
+
+# Generic interface for Data 
 # Also https://siap-elearning.org/report/log/index.php?id=129
 
 list.logs<- list.files(path="Data/",pattern="logs",full.names = TRUE,recursive = TRUE)
@@ -121,8 +130,7 @@ data.Pansy <- data.Pansy %>%
   filter(!is.na(Email.address), 
          Email.address != "" )%>%
   unique()
-# * `r name_last_logs` (*Logs on the LMS^[Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.] *)
-#   
+
 ```
 
 The Moodle platform allows the recording of many events during a course. Several data sets can then be downloaded (in *.csv* format) for an analysis of the activity of the learners. 
@@ -159,7 +167,7 @@ data.logs <- data.logs[!(data.logs$User.full.name=="Christophe Bontemps" |
 ```{r RemoveEvents}
 #remove less relevant events
 
-r <- unique(data.logs$Event.name)
+All.Events <- unique(data.logs$Event.name)
 # the events to remove
 
 rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned",
@@ -172,7 +180,7 @@ rem_events <- c("Tour ended", "Tour ended", "Group member added","Role assigned"
                 "Step shown", "Tour started", "Tour reset", "Quiz report viewed",
                 "Subscription deleted", "User unenrolled from course", "Group member removed",
                 "Role unassigned",  "Discussion subscription deleted", "Tag added to an item",
-                "Grade deleted", tail(r, n=11))
+                "Grade deleted", tail(All.Events, n=11))
 
 # remove events
 data.logs <- data.logs[!data.logs$Event.name %in% rem_events, ]
@@ -274,12 +282,15 @@ ActivityTable <-  kable(actname, row.names = FALSE)
 
 ``````{r ModuleNb}
 # Matching and adding columns
+# Some activities ave : in the name so Actname must be adjusted
 course_log <- course_log  %>%
-  mutate(Actname = str_split(course_log$Event.context, ": ",
-                             simplify = TRUE)[,2],
+  mutate(Actname = paste0(str_split(course_log$Event.context, ": ",
+                             simplify = TRUE)[,2],": ",
+                          str_split(course_log$Event.context, ": ",
+                             simplify = TRUE)[,3]),
          Acttype = str_split(course_log$Event.context, ": ",
                              simplify = TRUE)[,1]         ) %>%
-  left_join(actname, by = c("Actname" = "Activity"))
+  left_join(actname, by = c("Actname" = "Activity")) 
 
 ```
 
