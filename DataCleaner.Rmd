@@ -93,12 +93,15 @@ CourseStartDate <-"2022-01-24"
 # Parse the data folder to find the latest files 
 
 #### Logs File
-# --> use Comma separated values when donwloading
+#  Logs from https://siap-elearning.org/report/log/index.php?chooselog=1&showusers=0&showcourses=0&id=129&user=0&date=&modid=&modaction=&origin=&edulevel=-1&logreader=logstore_standard
+# --> use Comma separated values
 
-list.logs<- list.files(path="Data/",
-                       pattern=paste0("logs_",CourseName),
+# Generic interface for Data 
+# Also https://siap-elearning.org/report/log/index.php?id=129
+
+# list.logs<- list.files(path="Data/",pattern="logs",full.names = TRUE,recursive = TRUE)
+list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,"*")),
                        full.names = TRUE,recursive = TRUE)
-
 name_last_logs <- list.logs[which.max(file.mtime(list.logs))]
 data.logs <- read.csv(name_last_logs)
 
@@ -110,23 +113,23 @@ data.logs <- data.logs %>%
 # UTF-8.csv (= with comma separating)
 # From https://siap-elearning.org/report/progress/index.php?course=129
 
-list.act<- list.files(path="Data/",
-                      pattern=paste0("progress.",tolower(CourseName)),
-                      full.names = TRUE,recursive = TRUE)
 
+#list.act<- list.files(path="Data/",pattern="progress",full.names = TRUE,recursive = TRUE)
+list.act<- list.files(path="Data/",pattern = glob2rx(paste0("progress*",tolower(CourseName),"*")),
+                       full.names = TRUE,recursive = TRUE)
 name_last_act <- list.act[which.max(file.mtime(list.act))]
 data.act <- read.csv(name_last_act)
 
 ###  Grade File
-# Select "Plain text file"
-list.grades<- list.files(path="Data/",
-                         pattern=paste0(CourseName," Grades"),
-                         full.names = TRUE, recursive = TRUE)
-                         
+#list.grades<- list.files(path="Data/",pattern="Grades",full.names = TRUE,recursive = TRUE)
+list.grades<-list.files(path="Data/",pattern = glob2rx(paste0("*",CourseName,"*Grades*")),
+                        full.names = TRUE,recursive = TRUE)
+
 name_last_grades <- list.grades[which.max(file.mtime(list.grades))]
 data.grades <- read.csv(name_last_grades)
 
 FileDate <-as_date(file.mtime(name_last_logs))
+
 
 ```
 
@@ -157,6 +160,7 @@ We have to perform several tasks before having some data to analyse. These task 
 data.logs <- data.logs[!(data.logs$User.full.name=="Christophe Bontemps" |
                           data.logs$User.full.name=="Xtophe Bontemps" |
                          data.logs$User.full.name=="Ni Ni Thein" |
+                         data.logs$User.full.name=="LMS SIAP" |
                          data.logs$Component=="Recycle bin"),]
 ```
 
@@ -354,7 +358,7 @@ names(tabl) <- c("Module", "Nb of activities")
 
 Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
 
-Below is a table summarizing the repartition of the specific pedagogical activities by Module. 
+Below is a table summarizing the number of the specific pedagogical activities by Module. 
 
 
 ```{r}
@@ -364,7 +368,7 @@ tabl
 # Participants
 
 
-```{r}
+```{r geolocate, eval=FALSE}
 library(rgeolocate)
 # From here
 
@@ -456,7 +460,7 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 course_log <- course_log %>%
   group_by(Email.address, User.full.name) %>%
-  mutate(Certified = any(stringr::str_detect(Actname, "certificate") ))  %>%
+  mutate(Certified = any(stringr::str_detect(Actname, "Certificate") ))  %>%
   ungroup()
 
 # Certification
@@ -508,7 +512,7 @@ The  success rate (`r round(100*NbCertificates/NbLearners, 1)` %) can be analyse
 
 
 ```{r}
-MinLearners <- 2
+MinLearners <- 5
 Learners %>%
  filter(Country != "" | Country != "NA") %>%
   mutate( One = 1, 
