@@ -76,10 +76,25 @@ There are some elements that are really specific to a curse:
 * CourseStartDate: in a standard format *YYYY-MM-DD*
 
 ```{r CourseParameters}
-# Course specific parameters
+# Course general parameters
 CourseName <- "DV22"     ##  "DTV20"  or DV22
 CourseNameLong <- "Principle of Data Visualization for Official Statistics and SDG Indicators"
 CourseStartDate <-"2022-01-24"
+NbModules <- 6   # Not used 
+
+# Specific parameters
+WebinarDay = 3 # Sunday is 1
+CourseLength = 7 * (NbModules +1)  # adjusted
+
+# Minimum to get the certificate
+GradeThreshold <- 70   
+### Define the Modules for each activity 
+ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
+
+
+
+
+
 ```
 
 
@@ -148,7 +163,6 @@ We base our analysis on the **data collected on `r FileDate`** recorded on the  
 
 ## log files
 
-
 We have to perform several tasks before having some data to analyse. These task are generic to any course:
 
 * Remove lecturers from the record
@@ -200,9 +214,10 @@ course_log <- data.logs
 NbLearners <- as.numeric(count(unique((course_log %>%
               filter(!is.na(Event.name)) %>%
               select(User.full.name)))))
+
 ```
 
-# Participants and activities on the LMS
+## Participants and activities on the LMS
 
 The course *`r CourseNameLong `* started on **`r CourseStartDate`**.
 
@@ -278,13 +293,8 @@ actname <-  actname %>%
 
 ### List of all activities proposed on the course: 
 
-
-
 ``````{r ModuleFilter}
-### Define the Modules for each activity 
-
-ModStartIdx <- c(1,13,22,33,46,61,74)  # For Data Visualization
-
+# Based on Course parameters  ModStartIdx
 actname <- actname %>%
             mutate(ModuleID_2 = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 2,
@@ -322,25 +332,6 @@ course_log <- course_log  %>%
 #          Acttype = str_split(course_log$Event.context, ": ",
 #                              simplify = TRUE)[,1]         ) %>%
 #   left_join(actname, by = c("Actname" = "Activity")) 
-
-```
-
-
-``````{r ModuleFilterMLOS}
-
-# For MLOS, list of activities by module (OLD version)
-# course_log <- course_log %>%
-#             mutate(ModuleID_2 = case_when(ActNb == 1 ~ -1,
-#                                           between(ActNb, 4, 11) ~ 0,
-#                                           between(ActNb, 12, 18) ~ 1,
-#                                           between(ActNb, 19, 27) ~ 2,
-#                                           between(ActNb, 28, 35) ~ 3,
-#                                           between(ActNb, 36, 50) ~ 4,
-#                                           between(ActNb, 51, 59) ~ 5,
-#                                           between(ActNb, 60, 68) ~ 6,
-#                                             )) %>%
-#    mutate(ActNb = formatC(ActNb, format="d",flag="0",width=2)) %>%
-#   filter(ActNb != "1")
 
 ```
 
@@ -447,16 +438,31 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 ```
 
+## Grades
+
+```{r GradesTotal}
+
+Grades <- data.grades %>%
+  select(!(ID.number:Department)) %>%
+  select(!(Position:Organization))%>%
+  select(!contains("download"))%>%
+  mutate_at(vars(matches("Quiz|Assign|Assess")),funs(as.numeric)) 
+
+
+Grades <- Grades %>%
+  mutate(
+   GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
+  )
+```
+
 
 
 
 ## Certified people
 
 ```{r Certified}
-
 # I create a Boolean to identify Certificate
 # using  "any" returns TRUE if TRUE appears in any Actname for a participant
-
 
 course_log <- course_log %>%
   group_by(Email.address, User.full.name) %>%
@@ -470,14 +476,26 @@ Learners <- course_log %>%
   select(User.full.name, Email.address,  Sex, Country, TotalReal, Certified)%>%
   unique()
 
-
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
 
+```{r AboveThreshold }
+StudentsAboveThreshold <-  Grades %>%
+  filter(GradeFinal >= GradeThreshold )
 
-There are **`r NbCertificates`** certified learners in this course out of  **`r paste0(NbLearners)`** participants. The  success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**.
+StudentsInWorkshop <-  Grades %>%
+  filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
 
-The repartition by country  and by gender is the following.
+```
+
+
+There are currently (`r FileDate`)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and should get the certificate).
+
+**`r nrow(StudentsInWorkshop)`** participants submitted a project in the mandatory data-based project. 
+
+The raw success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**. 
+
+The repartition of certificates delivered by country  and by gender is the following.
 
 ```{r}
 DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
@@ -558,45 +576,36 @@ Learners %>%
 ###  Grades 
 
 
-```{r GradesTotal}
-
-Grades <- data.grades %>%
-  select(!(ID.number:Department)) %>%
-  select(!(Position:Organization))%>%
-  select(!contains("download"))%>%
-  mutate_at(vars(matches("Quiz|Assign|Assess")),funs(as.numeric)) 
-
-
-Grades <- Grades %>%
-  mutate(
-   GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
-  )
-```
-
-
 The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0)].  
 
 
 ```{r Grades , fig.height=3}
 
-GradeThreshold <- 70   # To put in the parameters
+# Automatic vertical scale
+GradesPositive <- Grades%>% filter(GradeFinal > 0) 
+  
+histdata <- hist(GradesPositive$GradeFinal,
+                 freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
+HistHeight <- max(histdata$counts)
 
-Nb0 = Grades%>% filter(GradeFinal ==0) %>% nrow()
+# Parameters for the plot
+Ymax <- round(1.5*HistHeight, 0)
+Nb0 = nrow(Grades) - nrow(GradesPositive)
 
-Grades %>%
-  filter(GradeFinal >0) %>%
+GradesPositive %>%
  ggplot() +
  aes(x = GradeFinal) +
  geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
 # coord_cartesian(xlim=c(0,66))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of learners",
-      caption = paste("Excluding",Nb0, "participants with grade = 0"),
-     subtitle = paste("(as of  ", FileDate,")") )+
- annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal),
-                  ymin = 0, ymax = 45,
+      caption = paste("(Excluding",Nb0, "participants with grade = 0)"),
+     subtitle = paste("(as of ", FileDate,",",
+                      nrow(StudentsAboveThreshold)," learners are above the threshold)") )+
+ annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal)+1,
+                  ymin = 0, ymax = Ymax,
                   fill = SIAP.color , alpha = .2)+
-   annotate("text", x = GradeThreshold+10, y = 25,
+   annotate("text", x = GradeThreshold+10, y = Ymax*0.75,
           color= SIAP.color,
           label = "Success")+
  theme_minimal()
@@ -608,9 +617,8 @@ Grades %>%
 
 ```{r densitySex, fig.height=3}
 library(ggridges)
-Grades %>%
+GradesPositive %>%
  filter(Country != "" | Country != "NA")%>%
-  filter(GradeFinal > 0) %>%
   group_by(Sex) %>%
   mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
          NbLearners = n_distinct(Email.address))  %>%
@@ -640,9 +648,8 @@ Grades %>%
 
 ```{r densityCountry, fig.height=3}
 #library(ggridges)
-Grades %>%
+GradesPositive %>%
  filter(Country != "" | Country != "NA")%>%
-  filter(GradeFinal > 0) %>%
   group_by(Country) %>%
   mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
          NbLearners = n_distinct(Email.address))  %>%
@@ -703,8 +710,9 @@ hoo <-course_log %>%
 # Subset of Projects (for counts below)
 poo <-course_log %>%
   filter(
-    str_detect(Event.context, "Assignment") &
-    str_detect(Description, "submitted") )%>%
+    str_detect(Event.context, "Ass")  )%>%
+  count(n_distinct(User.full.name) )
+  
   mutate(
      Q = n_distinct(User.full.name) )
 
@@ -752,13 +760,11 @@ course_log %>%
 
 We observe events over the whole period of the course and represent the activities by day. Thursdays and Wednesday seem to be the most active days. There is a clear decline of activity on Sundays, while the activity is very important on Thursdays, with the live lectures and webinars. 
 
-```{r}
-
-# TODO Day of Webinar...
-
+```{r ActivityByDate}
 course_log %>%
-  mutate(ParticularDays = ifelse(DayOfWeek ==7, "Sunday", 
-                                 ifelse(DayOfWeek ==5 & DayID <30 | Date =="2021-12-16" , "Webinar day", "Regular"))  ) %>%
+  mutate(ParticularDays = ifelse(DayOfWeek ==1, "Sunday", 
+                                 ifelse(DayOfWeek ==WebinarDay & DayID < 7 * NbModules,
+                                        "Webinar day", "Regular"))  ) %>%
   filter(!is.na(User.full.name)) %>%
   ggplot()+
   #aes(x=fct_infreq(Date))+
