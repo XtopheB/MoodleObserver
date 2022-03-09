@@ -3,13 +3,6 @@ title: "Cleaning Moodle Data"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  html_document:
-    df_print: paged
-    toc: yes
-    keep_md: yes
-    code_folding: show
-    fig_width: 6.5
-    fig_height: 4
   pdf_document:
     df_print: kable
     toc: yes
@@ -17,6 +10,13 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
+  html_document:
+    df_print: paged
+    toc: yes
+    keep_md: yes
+    code_folding: show
+    fig_width: 6.5
+    fig_height: 4
   word_document:
     toc: yes
 ---
@@ -82,16 +82,29 @@ CourseName <- "DV22"     ##  "DTV20"  or DV22
 CourseNameLong <- "Principle of Data Visualization for Official Statistics and SDG Indicators"
 CourseStartDate <-"2022-01-24"
 NbModules <- 6   
+# Minimum to get the certificate
+GradeThreshold <- 70  
+# Dates parameters
 
-# Specific parameters
 WebinarDay = 3 # Sunday is 1
 CourseLength = 7 * (NbModules +1)  # adjusted
 
-# Minimum to get the certificate
-GradeThreshold <- 70   
-### Define the Modules for each activity 
-ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
+# Dates of Modules opening MLOS 22
+# Opening1 <- as_date("2021-11-12")
+# Opening2 <- as_date("2021-11-19")
+# Opening3 <- as_date("2021-11-25")
+# Opening4 <- as_date("2021-12-03")
+# Opening5 <- as_date("2021-12-10")
 
+# Dates of Modules opening MLOS 22
+Opening1 <- as_date(CourseStartDate)
+Opening2 <- as_date(CourseStartDate)
+Opening3 <- as_date("2022-02-30")
+Opening4 <- as_date("2022-03-06")
+Opening5 <- as_date("2022-03-13")
+
+### Define the Starting activity nb for each Modules  
+ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
 
 
 ```
@@ -143,7 +156,6 @@ name_last_grades <- list.grades[which.max(file.mtime(list.grades))]
 data.grades <- read.csv(name_last_grades)
 
 FileDate <-as_date(file.mtime(name_last_logs))
-
 
 ```
 
@@ -497,9 +509,7 @@ Grades <- Grades %>%
 ```
 
 
-
-
-
+### Time spent 
 
 ```{r Certified}
 # I create a Boolean to identify Certificate
@@ -519,6 +529,30 @@ Learners <- course.log %>%
 
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
+
+
+```{r ActivityTime}
+learners_Time <-  course.log %>%
+  select(Email.address,  Actname, ActNb,Date, Time) %>%
+  mutate(RealTime = lubridate::dmy_hm(Time)) %>%
+  group_by(Email.address, Date) %>%
+  arrange(RealTime) %>%
+  mutate(RawDiff = RealTime - lag(RealTime))  %>%
+  filter(RawDiff < 3600)%>%
+  group_by(Email.address)%>%  
+  summarise(TotalTime = sum(RawDiff, na.rm = TRUE), 
+            NbAct = length(unique(Actname)), 
+            NbDays = length(unique(Date))) %>%
+  ungroup()
+```
+
+
+```{r LearnersFile}
+Grades <- learners_Time %>%
+  left_join(Grades, by = "Email.address") 
+
+```
+
 
 ```{r AboveThreshold }
 StudentsAboveThreshold <-  Grades %>%
@@ -618,7 +652,7 @@ GradesPositive <- Grades%>% filter(GradeFinal > 0)
 histdata <- hist(GradesPositive$GradeFinal,
                  freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
 HistHeight <- max(histdata$counts)
-
+rm("histdata")
 # Parameters for the plot
 Ymax <- round(1.5*HistHeight, 0)
 Nb0 = nrow(Grades) - nrow(GradesPositive)
@@ -773,7 +807,7 @@ course.log %>%
 
 ```
 
-> Seminar days (Thurdays) seem to be the most active ones
+> Seminar days seem to be the most active ones
 
 Since there is an important time difference between the teacher and the learners, it was important to have an idea of the learner's presence on the platform by hour.  The graphic below shows the maximum number of learners for different time periods of the day. 
 
@@ -850,9 +884,37 @@ course.log %>%
 #p
 #ggplotly(p)
 
+
+
 ```
 
- > *The graphic exhibits few access differences among activities, except webinar's videos (replays) and optional activities such as the project.  Most activities were accessed by 300 or more learners.*
+```{r LearnersByActivity}
+LearnersByActivity <- course.log %>%
+  filter(!is.na(Event.context), 
+         ModuleID_2 >=0, 
+         !is.na(ModuleID_2)) %>%
+  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
+  group_by(ActID.lab) %>%
+  summarise(Learners = n_distinct(User.full.name),
+            ModuleID = as.factor(unique(Actname)),
+            ModuleID_2 = as.factor(unique(ModuleID_2))) 
+
+MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
+```
+
+ > *The graphic exhibits few access differences among activities, except webinar's videos (replays) and optional activities such as the project.  Most activities were accessed by `r MedianLearnersActivity` or more learners.*
+ 
+```{r TableLearnersByActivity}
+
+DTActivities <- data.table(LearnersByActivity %>%
+                             slice_max(Learners, n = 10)%>%
+                             select(ModuleID_2, ModuleID, Learners))
+                   
+names(DTActivities) <- c("Module", "Activity", "Nb Learners")
+DTActivities
+
+```
+
  
 ### Heatmap of the activities over time: 
 
@@ -860,19 +922,10 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 
 -  Horizontally:  Nb of days since beginning of course
 -  Vertically:  Activities (Module 1 at the bottom, module 6 at the top)
--  Heat = color:  Nb of views (Nb of Learners) for each activity each day
+-  Cells (color):  Nb of views (Nb of Learners) for each activity each day
 
-```{r HeatMap, fig.width=13,fig.height=18}
-
-# Openings of Modules: COURSE SPECIFIC
-
-Opening1 <- as_date("2021-11-12")
-Opening2 <- as_date("2021-11-19")
-Opening3 <- as_date("2021-11-25")
-Opening4 <- as_date("2021-12-03")
-Opening5 <- as_date("2021-12-10")
-
-
+```{r HeatMap}
+# ```{r HeatMap, fig.width=13,fig.height=18}
 library(colorspace)
 course.log %>%
  filter(!is.na(ActNb),
@@ -906,50 +959,31 @@ course.log %>%
 
 # Time and activities
 
-```{r ActivityTime}
-learners_Time <-  course.log %>%
-  select(Email.address,  Actname, ActNb,Date, Time) %>%
-  mutate(RealTime = lubridate::dmy_hm(Time)) %>%
-  group_by(Email.address, Date) %>%
-  arrange(RealTime) %>%
-  mutate(RawDiff = RealTime - lag(RealTime))  %>%
-  filter(RawDiff < 3600)%>%
-  group_by(Email.address)%>%  
-  summarise(TotalTime = sum(RawDiff, na.rm = TRUE), 
-            NbAct = length(unique(Actname)), 
-            NbDays = length(unique(Date))) %>%
-  ungroup()
-```
 
-
-```{r LearnersFile}
-Grades <- learners_Time %>%
-  left_join(Grades, by = "Email.address") 
-
-```
-
-
-
-Over the `r nrow(Grades)` unique learners[^MyNote] registered for the course, only **`r Grades%>% filter(GradeFinal >0) %>% nrow()`** attempted  to at least one test and only **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS at more than 6 different dates (some learners have completed several modules within the same day).  
+Over the **`r NbLearners`** unique learners[^MyNote] registered for the course,  **`r NbLearnersQuiz`** attempted  to at least one test and  **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS at more than **6 different dates** (some learners have completed several modules within the same day).  
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
-
-We noticed that *some* learners (around `r round(Grades%>% filter(GradeFinal >40 & NbAct < 21) %>% nrow(), -1)`) had very good grades in their tests while showing a very limited activity on the LMS (less than a third of available).  
+In the graphic below we highlight learners (around `r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), -1)`) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
 
 ```{r}
+
+# Here we put the points AFTER the annotation for Plotly... 
 p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
- aes(x = NbAct, y = GradeFinal, color = Country) +
- geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  ggtitle("Test Scores vs Number of Activities Viewed") +
- labs(x="Nb of activities viewed", y=" Total Grade (max= 65)", 
+ labs(x="Nb of activities viewed", y=" Total Grade ", 
       subtitle = paste0("Each dot is a participant, coloured by country (", FileDate,")" ),
        caption=  paste("Date", FileDate) )+
-  annotate("rect", xmin= 0, xmax = 25, 
-          ymin = 40, ymax = 65, 
+  annotate("rect", 
+           xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
+           xmax = max(Grades$NbAct, na.rm = TRUE)+1,
+           ymin = GradeThreshold,
+           ymax = max(Grades$GradeFinal, na.rm = TRUE)+1, 
           color= SIAP.color, alpha = 0.2) +
+ aes(x = NbAct, y = GradeFinal, color = Country) +
+ geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
  theme_minimal()
@@ -972,13 +1006,13 @@ mutate(TotalTime = TotalTime/60) %>%
  ggplot() +
  aes(x = NbAct, y = TotalTime, colour = Country, toto = Email.address) +  
   # Toto is a trick to have names in plotly
-  geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+ geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
  ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total time spent by learners (Duration, in min)", 
       subtitle = paste0("Each dot is a participant, coloured by country. Size is proportional to time spent"), 
       caption=  paste("Date", FileDate) )+
  geom_hline (aes(yintercept =  3*6*60), color = SIAP.color) +
- annotate("text", x = 15, y = 3*6*60 + 100,
+ annotate("text", x = 15, y = 3*6*60 + 200,
           color= SIAP.color,
           label = "Course  requirement (3 hours/week)")+
 # geom_vline (aes(xintercept =  median(TotalTime))) +
