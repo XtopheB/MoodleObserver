@@ -346,14 +346,14 @@ course_log <- course_log  %>%
 
 ```{r}
 library(data.table)
-Temp <- data.table(course_log %>% 
+module.act<- data.table(course_log %>% 
                      select(ModuleID_2, Actname) %>%
                      filter(!is.na(ModuleID_2))%>%
                      unique() %>%
                      mutate(ModuleID_2 =  paste("Module ", ModuleID_2))
                    )
-tabl <-  Temp[, .N, keyby = ModuleID_2]
-names(tabl) <- c("Module", "Nb of activities")
+tabl.act <-  module.act[, .N, keyby = ModuleID_2]
+names(tabl.act) <- c("Module", "Nb of activities")
 ```
 
 Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
@@ -362,7 +362,7 @@ Below is a table summarizing the number of the specific pedagogical activities b
 
 
 ```{r}
-tabl
+tabl.act
 ```
 
 # Participants
@@ -456,7 +456,7 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 # I create a Boolean to identify Certificate
 # using  "any" returns TRUE if TRUE appears in any Actname for a participant
-# USE THIS and NOT  Pansy's !!!
+
 
 course_log <- course_log %>%
   group_by(Email.address, User.full.name) %>%
@@ -469,15 +469,6 @@ Learners <- course_log %>%
   # filter(Certified ==TRUE)%>%
   select(User.full.name, Email.address,  Sex, Country, TotalReal, Certified)%>%
   unique()
-
-#######  PANSY'S TABLE  USED XXXX
-
-# Certification
-# Learners <- data.Pansy %>%
-#   distinct(Email.address, .keep_all=TRUE) %>%
-#   # filter(Certified ==TRUE)%>%
-#   select(Email.address,  Sex, Country,  Certified)%>%
-#   unique()
 
 
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
@@ -563,10 +554,6 @@ Learners %>%
 
 
 
-```{r}
-knitr::knit_exit()
-```
-
 
 ###  Grades 
 
@@ -577,29 +564,23 @@ Grades <- data.grades %>%
   select(!(ID.number:Department)) %>%
   select(!(Position:Organization))%>%
   select(!contains("download"))%>%
-  mutate_at(vars(matches("Quiz|Assign")),funs(as.numeric)) 
+  mutate_at(vars(matches("Quiz|Assign|Assess")),funs(as.numeric)) 
 
 
 Grades <- Grades %>%
   mutate(
-    GradeFinal = rowSums(dplyr::across(c(6:12)), na.rm = T)
+   GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
   )
 ```
 
-
-```{r GradesNames}
-
-
-names(Grades)[6:12] <- c("Test1", "Test2", "Test3", "Test4", "Project", "Test5", "Test6")
-
-# We note that **`r Grades %>% filter(GradeFinal >=42*0.6) %>% nrow()`** have a grade greater than 70% of the maximum. 
-
-```
 
 The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0)].  
 
 
 ```{r Grades , fig.height=3}
+
+GradeThreshold <- 70   # To put in the parameters
+
 Nb0 = Grades%>% filter(GradeFinal ==0) %>% nrow()
 
 Grades %>%
@@ -607,15 +588,15 @@ Grades %>%
  ggplot() +
  aes(x = GradeFinal) +
  geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
- coord_cartesian(xlim=c(0,66))+
+# coord_cartesian(xlim=c(0,66))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of learners",
       caption = paste("Excluding",Nb0, "participants with grade = 0"),
      subtitle = paste("(as of  ", FileDate,")") )+
- annotate("rect", xmin = 42, xmax = 66,
+ annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal),
                   ymin = 0, ymax = 45,
                   fill = SIAP.color , alpha = .2)+
-   annotate("text", x = 50, y = 25,
+   annotate("text", x = GradeThreshold+10, y = 25,
           color= SIAP.color,
           label = "Success")+
  theme_minimal()
@@ -772,6 +753,8 @@ course_log %>%
 We observe events over the whole period of the course and represent the activities by day. Thursdays and Wednesday seem to be the most active days. There is a clear decline of activity on Sundays, while the activity is very important on Thursdays, with the live lectures and webinars. 
 
 ```{r}
+
+# TODO Day of Webinar...
 
 course_log %>%
   mutate(ParticularDays = ifelse(DayOfWeek ==7, "Sunday", 
