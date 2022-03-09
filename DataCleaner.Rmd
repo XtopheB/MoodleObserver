@@ -34,7 +34,7 @@ opts_chunk$set(warning = FALSE, message = FALSE,
                autodep = TRUE, tidy = FALSE, cache = TRUE)
 
 # In case of "weird" problem, uncomment the line below (cache issue)
- opts_chunk$set(cache.rebuild=TRUE) 
+opts_chunk$set(cache.rebuild=TRUE) 
 
 # My colors:
 SIAP.color <- "#0385a8"
@@ -57,6 +57,7 @@ library(lubridate)
 library(Cairo)
 library(papeR)
 library(xtable)
+library(data.table)
 library(kableExtra)
 library(modelsummary)
 
@@ -80,7 +81,7 @@ There are some elements that are really specific to a curse:
 CourseName <- "DV22"     ##  "DTV20"  or DV22
 CourseNameLong <- "Principle of Data Visualization for Official Statistics and SDG Indicators"
 CourseStartDate <-"2022-01-24"
-NbModules <- 6   # Not used 
+NbModules <- 6   
 
 # Specific parameters
 WebinarDay = 3 # Sunday is 1
@@ -90,8 +91,6 @@ CourseLength = 7 * (NbModules +1)  # adjusted
 GradeThreshold <- 70   
 ### Define the Modules for each activity 
 ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
-
-
 
 
 
@@ -209,12 +208,13 @@ data.logs <- data.logs[!data.logs$Event.name %in% rem_events, ]
 
 
 ```{r CourseLogData}
-course_log <- data.logs
+course.log <- data.logs
 
-NbLearners <- as.numeric(count(unique((course_log %>%
+NbLearners <- as.numeric(count(unique((course.log %>%
               filter(!is.na(Event.name)) %>%
               select(User.full.name)))))
 
+rm("data.logs")
 ```
 
 ## Participants and activities on the LMS
@@ -223,24 +223,24 @@ The course *`r CourseNameLong `* started on **`r CourseStartDate`**.
 
 > *On `r FileDate`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
 
-Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorderd. We can therefore gather information at the learner or activity level. After cleaning, we recorded **`r nrow(data.logs)`** events of different nature for this course
+Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorderd. We can therefore gather information at the learner or activity level. After cleaning, we recorded **`r nrow(course.log)`** events of different nature for this course
  
 
 ```{r TimeID}
 # Main course data frame 
-course_log <- course_log  %>%
-           mutate(Date = str_split(course_log$Time, ", " , simplify = TRUE)[,1],
-                  HoursMin = str_split(course_log$Time, ", " , simplify = TRUE)[,2])
+course.log <- course.log  %>%
+           mutate(Date = str_split(course.log$Time, ", " , simplify = TRUE)[,1],
+                  HoursMin = str_split(course.log$Time, ", " , simplify = TRUE)[,2])
 
-course_log <- course_log  %>%
-          mutate(HoursMin = format(strptime(course_log$HoursMin, "%H:%M"), format = "%H:%M"),
-          Date = as.Date(course_log$Date, "%d/%m/%y"))%>%
+course.log <- course.log  %>%
+          mutate(HoursMin = format(strptime(course.log$HoursMin, "%H:%M"), format = "%H:%M"),
+          Date = as.Date(course.log$Date, "%d/%m/%y"))%>%
           filter(Date >= CourseStartDate) # rm before the the course started (13 Jan)
 
 
 # Create day time range
 # extract the hour and create time range. 
-t <- course_log %>%
+t <- course.log %>%
   select(HoursMin) %>%
   extract(HoursMin, 'Time_range', regex = "([\\d.]+)[^\\d.]", remove = FALSE) %>%
   mutate(Time_range = as.numeric(Time_range))
@@ -248,14 +248,15 @@ t <- course_log %>%
 # a loop for time range
   for (i in list(t$Time_range)) {
   i = paste0(formatC(i, format="d",flag="0",width=2),":00", "-", formatC(i+1, format="d",flag="0",width=2), ":00")
-  course_log$Time_range <- i
+  course.log$Time_range <- i
 }
 
-# unique(course_log$Time_range)
+rm("t")
+# unique(course.log$Time_range)
 
-course_log <- course_log %>%
+course.log <- course.log %>%
   mutate(DayID = group_indices(., Date))%>%
-  mutate(TimeID = as.numeric(str_extract(course_log$Time_range, "([\\d.]+)")), 
+  mutate(TimeID = as.numeric(str_extract(course.log$Time_range, "([\\d.]+)")), 
          DayOfWeek = lubridate::wday(Date), 
          IsSunday  = as.factor(DayOfWeek ==7)) 
 
@@ -278,6 +279,8 @@ actname <-  actname %>%
   filter(stringr::str_detect(Activity, "") )%>%
   filter(!row_number() %in% c(1,2)) %>%
   mutate(ActNb = row_number())
+
+rm("data.act.temp")
 
 ## Attempt to a newer version (but names of activities arewith dots "General.Information"
 # Extract the activity names in order (hence the Header = FALSE above!)
@@ -306,8 +309,6 @@ actname <- actname %>%
   filter(!is.na(ModuleID_2))
 ```
 
-
-
 ```{r TableAct, echo=FALSE, results=TRUE}
 ActivityTable <-  kable(actname, row.names = FALSE)
 ```
@@ -315,29 +316,28 @@ ActivityTable <-  kable(actname, row.names = FALSE)
 ``````{r ModuleNb}
 # Matching and adding columns
 
-course_log <- course_log  %>%
-  mutate(Actname = str_split(course_log$Event.context, ": ",
+course.log <- course.log  %>%
+  mutate(Actname = str_split(course.log$Event.context, ": ",
                              simplify = TRUE)[,2],
-         Acttype = str_split(course_log$Event.context, ": ",
+         Acttype = str_split(course.log$Event.context, ": ",
                              simplify = TRUE)[,1] ) %>%
   left_join(actname, by = c("Actname" = "Activity")) 
 
 # For MLOS, Some activities have : in the name so Actname must be adjusted 
 # Hence the "paste0" commands  options here to recover the full name of the activity
-# course_log <- course_log  %>%
-#   mutate(Actname = paste0(str_split(course_log$Event.context, ": ",
+# course.log <- course.log  %>%
+#   mutate(Actname = paste0(str_split(course.log$Event.context, ": ",
 #                              simplify = TRUE)[,2],": ",
-#                           str_split(course_log$Event.context, ": ",
+#                           str_split(course.log$Event.context, ": ",
 #                              simplify = TRUE)[,3]),
-#          Acttype = str_split(course_log$Event.context, ": ",
+#          Acttype = str_split(course.log$Event.context, ": ",
 #                              simplify = TRUE)[,1]         ) %>%
 #   left_join(actname, by = c("Actname" = "Activity")) 
 
 ```
 
 ```{r}
-library(data.table)
-module.act<- data.table(course_log %>% 
+module.act<- data.table(course.log %>% 
                      select(ModuleID_2, Actname) %>%
                      filter(!is.na(ModuleID_2))%>%
                      unique() %>%
@@ -347,7 +347,7 @@ tabl.act <-  module.act[, .N, keyby = ModuleID_2]
 names(tabl.act) <- c("Module", "Nb of activities")
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course_log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
 
 Below is a table summarizing the number of the specific pedagogical activities by Module. 
 
@@ -369,45 +369,87 @@ library(rgeolocate)
 # https://cran.r-project.org/web/packages/ipaddress/vignettes/ipaddress-classes.html
 
 
-MyIP <- unique(course_log$IP.address)
+MyIP <- as.vector(unique(course.log$IP.address))
 geo_results <- ip_api(MyIP,
                       as_data_frame = TRUE, delay = FALSE)
+file <- system.file("extdata","ip2_sample.bin", package = "rgeolocate")
+example.IP <-"2001:44c8:4170:8733:f84b:93e8:caa0:f3c3"
+geo_results2  <-ip2location(example.IP, file, c("country_code", "country_name", "region", "city"))
 
 ```
 
 
 
 ```{r}
-# Step 1: Adding email address to course_log using data.act
+# Step 1: Adding email address to course.log using data.act
 
 StudentsNames <- data.act  %>%
   select(X, Email.address) %>%
   rename( User.full.name = X)
 
-course_log <- left_join(course_log ,StudentsNames, by = c("User.full.name"))
+course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 
-# Step 2: Adding Sex and Country  to course_log using 
+# Step 2: Adding Sex and Country  to course.log using 
 NameSex <- data.grades %>%
   mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
   select(Email.address, Sex, Country, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
-course_log <- left_join(course_log ,NameSex, by = c("Email.address"))
+course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
 
 ```
 
+```{r StatsEvents}
+## Stat 
+Qoo <-course.log %>%
+  filter(
+    str_detect(Event.name, "Quiz"))%>%  
+  count(n_distinct(User.full.name) )
 
+NbLearnersQuiz <- Qoo$`n_distinct(User.full.name)`
+
+# Subset of posts on Forums (for counts below)
+Foo <-course.log %>%
+  filter(
+    str_detect(Event.context, "Forum") &
+    str_detect(Event.name, "posted"))%>%  
+  count(n_distinct(User.full.name) )
+
+NbLearnersPost <- Foo$`n_distinct(User.full.name)`
+
+# Subset of Projects workshops (for counts below)
+Woo <-course.log %>%
+  filter(
+    str_detect(Event.context, "Workshop") &
+    str_detect(Event.name, "uploaded"))%>%  
+  count(n_distinct(User.full.name) )
+
+NbLearnersProject <-Woo$`n_distinct(User.full.name)`
+
+NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
+
+# Cleaning unnecessary file
+rm("Qoo", "Foo", "Woo")
+```
+
+Among the  **`r paste0(NbLearners)`** participants who visited the course:
+
+- only  **`r NbLearnersQuiz`**  ( *`r round(100* NbLearnersQuiz/NbLearners, 1)`* %)   viewed or attempted a quiz at least once.  
+- **`r NbLearnersPost`**  ( *`r round(100* NbLearnersPost/NbLearners, 1)`* %)  participants posted at least one question or comment in any of the  forums proposed.   
+-  **`r NbLearnersProject`**  ( *`r round(100* NbLearnersProject/NbLearners, 1)`* %)  participants have submitted a file for the optional data-based project
+
+> We can reasonably say that `r NbLearnersActive`  participants have been really active on this course ( *`r round(100* NbLearnersActive/NbLearners, 1)`* %)
 
 ## Attendance 
 
 ```{r}
-NbWomen <- course_log %>%
+NbWomen <- course.log %>%
  select(Email.address, Sex)%>%
   unique() %>%
   filter(Sex == "Female") %>%
   nrow()
 
-NbCountries <- course_log %>%
+NbCountries <- course.log %>%
   select(Country) %>%
   filter(Country != "" | Country != "NA" | Country != "Unknown")%>%
   unique() %>%
@@ -418,7 +460,7 @@ NbCountries <- course_log %>%
 
 ```{r}
 
-course_log %>%
+course.log %>%
  filter(Country != "" | Country != "NA")%>%
  group_by(Country) %>%
  summarise(Learners = n_distinct(Email.address)) %>%
@@ -438,7 +480,7 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 ```
 
-## Grades
+## Certified people
 
 ```{r GradesTotal}
 
@@ -447,7 +489,6 @@ Grades <- data.grades %>%
   select(!(Position:Organization))%>%
   select(!contains("download"))%>%
   mutate_at(vars(matches("Quiz|Assign|Assess")),funs(as.numeric)) 
-
 
 Grades <- Grades %>%
   mutate(
@@ -458,19 +499,19 @@ Grades <- Grades %>%
 
 
 
-## Certified people
+
 
 ```{r Certified}
 # I create a Boolean to identify Certificate
 # using  "any" returns TRUE if TRUE appears in any Actname for a participant
 
-course_log <- course_log %>%
+course.log <- course.log %>%
   group_by(Email.address, User.full.name) %>%
   mutate(Certified = any(stringr::str_detect(Actname, "Certificate") ))  %>%
   ungroup()
 
 # Certification
-Learners <- course_log %>%
+Learners <- course.log %>%
   distinct(User.full.name, .keep_all=TRUE) %>%
   # filter(Certified ==TRUE)%>%
   select(User.full.name, Email.address,  Sex, Country, TotalReal, Certified)%>%
@@ -488,12 +529,11 @@ StudentsInWorkshop <-  Grades %>%
 
 ```
 
-
-There are currently (`r FileDate`)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and should get the certificate).
+There are currently (`r format(FileDate, "%a %d %B ")`)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and should get the certificate).
 
 **`r nrow(StudentsInWorkshop)`** participants submitted a project in the mandatory data-based project. 
 
-The raw success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**. 
+The *raw* success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**, if we consider only active learners, the success rates among *active learners* is  **`r round(100*NbCertificates/NbLearnersActive, 1)` %**,
 
 The repartition of certificates delivered by country  and by gender is the following.
 
@@ -505,9 +545,6 @@ names(CertifiedCountry) <- c("Country", "Nb of Certificates")
 CertifiedCountry[order(-`Nb of Certificates`)]
 ```
 
-
-
-
 ```{r}
 CertifiedSex<-  DTCertified[, .N, keyby = Sex]
 names(CertifiedSex) <- c("Sex", "Nb of Certificates")
@@ -517,7 +554,6 @@ CertifiedSex
 ##  Success rate
 
 The  success rate (`r round(100*NbCertificates/NbLearners, 1)` %) can be analysed by country and gender.
-
 
 
 ```{r}
@@ -570,11 +606,7 @@ Learners %>%
 
 ```
 
-
-
-
-###  Grades 
-
+###  Grades distribution
 
 The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (Grade =0)].  
 
@@ -583,7 +615,6 @@ The distribution of grades presented below  shows the high quality of the learne
 
 # Automatic vertical scale
 GradesPositive <- Grades%>% filter(GradeFinal > 0) 
-  
 histdata <- hist(GradesPositive$GradeFinal,
                  freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
 HistHeight <- max(histdata$counts)
@@ -612,8 +643,7 @@ GradesPositive %>%
 
 ```
 
-## Learners
-
+###  Grades distribution by sex and country
 
 ```{r densitySex, fig.height=3}
 library(ggridges)
@@ -679,55 +709,14 @@ GradesPositive %>%
 
 
 
-
-
-## Events {-}
-
-When on the platform, the learners can interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course_log$Event.name))-1`**  different type of events (as defined by Moodle)
-
-```{r StatsEvents}
-## Stat 
-foo <-course_log %>%
-  filter(
-    str_detect(Event.name, "Quiz"))%>%
-  mutate(
-    Q = n_distinct(User.full.name) )
-
-# Subset of posts CREATED on Forums (for counts below)
-goo <-course_log %>%
-  filter(
-    str_detect(Event.name, "created"))%>%
-  mutate(
-    Q = n_distinct(User.full.name) )
-
-# Subset of posts on Forums (for counts below)
-hoo <-course_log %>%
-  filter(
-    str_detect(Event.context, "Forum"))%>%
-  mutate(
-    Q = n_distinct(ActNb) )
-
-# Subset of Projects (for counts below)
-poo <-course_log %>%
-  filter(
-    str_detect(Event.context, "Ass")  )%>%
-  count(n_distinct(User.full.name) )
-  
-  mutate(
-     Q = n_distinct(User.full.name) )
-
-```
-
-Among the  **`r paste0(NbLearners)`** participants who visited the course, only  **`r max(foo$Q)`**  ( *`r round(100* max(foo$Q)/NbLearners, 1)`* %)   viewed or attempted a quiz at least once.  We can also note that **`r max(goo$Q)`**  ( *`r round(100* max(goo$Q)/NbLearners, 1)`* %)  participants posted at least one question or comment in any of the **`r max(hoo$Q)`** forums proposed.   
-
-We can also note that **`r max(poo$Q, na.rm=TRUE)`**  ( *`r round(100* max(poo$Q)/NbLearners, 1)`* %)  participants have submitted a file for the optional data-based project.
-
 # Detailled analysis
 
 ## Learners views and completion by type of event
 
+When on the platform, the learners can interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course.log$Event.name))-1`**  different type of events (as defined by Moodle)
+
 ```{r TypeEvents}
-course_log %>%
+course.log %>%
   filter(!is.na(Event.name)) %>%
   mutate(SpecificEvent = 
            ifelse(str_detect(Event.name, "Quiz"), "Test",
@@ -741,7 +730,7 @@ course_log %>%
   aes(x=reorder(Event.name, Learners), y=Learners, fill= SpecificEvent)+
   geom_bar(stat='identity')+
   labs(x="Events", y="Number of Learners", 
-       subtitle = paste("The course has", length(unique(course_log$Event.name))-1,"different events (Final date ",
+       subtitle = paste("The course has", length(unique(course.log$Event.name))-1,"different events (Final date ",
                         FileDate,")"))+
   ggtitle("Total number of learners per type of event")+
   scale_fill_manual("Type of Event",values=c("orange", "grey", SIAP.color)) +
@@ -761,7 +750,7 @@ course_log %>%
 We observe events over the whole period of the course and represent the activities by day. Thursdays and Wednesday seem to be the most active days. There is a clear decline of activity on Sundays, while the activity is very important on Thursdays, with the live lectures and webinars. 
 
 ```{r ActivityByDate}
-course_log %>%
+course.log %>%
   mutate(ParticularDays = ifelse(DayOfWeek ==1, "Sunday", 
                                  ifelse(DayOfWeek ==WebinarDay & DayID < 7 * NbModules,
                                         "Webinar day", "Regular"))  ) %>%
@@ -771,7 +760,7 @@ course_log %>%
   aes(x = as.factor(DayID),  fill = ParticularDays)+
   geom_bar(color = "white" )+
   labs(x="Day since start", y="Number of events", 
-       subtitle = paste("Nb of days", length(unique(course_log$Date)),"(Final date: ",
+       subtitle = paste("Nb of days", length(unique(course.log$Date)),"(Final date: ",
                         FileDate,")"))+
   ggtitle("Number of events recorded on the platform by date")+
   hrbrthemes::scale_fill_ft() +
@@ -791,7 +780,7 @@ Since there is an important time difference between the teacher and the learners
 ```{r HourlyActivity, fig.height=3}
 #Active time by Learners
 
-course_log %>%
+course.log %>%
   filter(!is.na(Time_range)) %>%
   group_by(Time_range) %>%
   summarise(Learners = n_distinct(User.full.name)) %>% 
@@ -830,7 +819,7 @@ With no surprises, the learners' activities rank according to the modules order,
 
 myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
 
-course_log %>%
+course.log %>%
   filter(!is.na(Event.context), 
          ModuleID_2 >=0, 
          !is.na(ModuleID_2)) %>%
@@ -885,7 +874,7 @@ Opening5 <- as_date("2021-12-10")
 
 
 library(colorspace)
-course_log %>%
+course.log %>%
  filter(!is.na(ActNb),
           ModuleID_2 >=0, 
          !is.na(ModuleID_2))  %>%
@@ -918,7 +907,7 @@ course_log %>%
 # Time and activities
 
 ```{r ActivityTime}
-learners_Time <-  course_log %>%
+learners_Time <-  course.log %>%
   select(Email.address,  Actname, ActNb,Date, Time) %>%
   mutate(RealTime = lubridate::dmy_hm(Time)) %>%
   group_by(Email.address, Date) %>%
@@ -1021,7 +1010,7 @@ knitr::knit_exit()
 NbSelect <- 10  # Best and worst students (in terms of events)
 
 #Learners event counts (top and bottom Learners)
-course_log %>%
+course.log %>%
   filter(!is.na(User.full.name), 
          User.full.name != "-") %>%
   count(User.full.name) %>%
@@ -1046,7 +1035,7 @@ course_log %>%
 
 
 ```{r}
-course_log %>%
+course.log %>%
   filter(!is.na(ActNb)) %>%
   mutate( ActID.lab = paste(ActNb,"-",Event.context, "-", ModuleID_2)) %>%
   group_by(ActID.lab) %>%
@@ -1073,7 +1062,7 @@ course_log %>%
 
 
 ```{r}
-course_log %>%
+course.log %>%
   filter(!is.na(ActNb),
          Date <= FileDate) %>%
   mutate( ActID.lab = paste(ActNb,"-",Event.context)) %>%
@@ -1085,7 +1074,7 @@ course_log %>%
   aes(x=reorder(ActID.lab, Learners), y=Learners)+
   geom_bar(stat='identity')+
   labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(nrow(subset(unique(course_log[c("ActNb", "Date")]), Date==FileDate)),"activities (Date ", FileDate,")"))+
+       subtitle = paste(nrow(subset(unique(course.log[c("ActNb", "Date")]), Date==FileDate)),"activities (Date ", FileDate,")"))+
   ggtitle("Activities accessed by number of Learners")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -1100,7 +1089,7 @@ course_log %>%
  - Sort by the frequency of activities 
 ```{r, fig.width=12,fig.height=18}
 #Both Date and Date ID work. Date: the specific date since beginning; DayID: the first date = 1, and the second = 2, ...
-course_log %>%
+course.log %>%
   filter(!is.na(ActNb)) %>%
   mutate(ActID.lab = paste(ActNb,"-",Event.context, "-")) %>%
   group_by(ActID.lab, Date) %>%
@@ -1124,7 +1113,7 @@ course_log %>%
 
 
 ```{r }
-# course_log <-  course_log %>%
+# course.log <-  course.log %>%
 #   group_by(User.full.name, Date, Actname) %>%
 #   mutate( TimeperActivity = lubridate::as.duration(Time)) %>%
 #   group_by(User.full.name, Date) %>%
@@ -1219,7 +1208,7 @@ Grades %>%
 Grades %>%
  filter(Country != "" | Country != "NA")%>%
  group_by(Country) %>%
- summarise(Learners = n_distinct(User.full.name)) %>%
+ summarise(Learners = n_distinct(Email.address)) %>%
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
@@ -1275,7 +1264,7 @@ Grades %>%
 
 Special <- "Satellite"
 
-toto <-  course_log %>%
+toto <-  course.log %>%
   filter(!is.na(Event.name)) %>%
   filter(str_detect(Event.context, Special))%>%
   group_by(Event.context)%>%
