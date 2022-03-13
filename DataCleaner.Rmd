@@ -77,7 +77,7 @@ library(wesanderson)
 There are some elements that are really specific to a course: 
 
 * CourseNameLong:for example "Machine Learning for Official Statistics and SDGs"
-* CourseName used: in the name of the files (such as *MLOS* or *DV22*
+* CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
 * CourseStartDate: in a standard format *YYYY-MM-DD*
 
 ```{r CourseParameters}
@@ -242,11 +242,11 @@ The course *`r CourseNameLong `* started on **`r format(as_date(CourseStartDate)
 
 ## Participants and activities on the LMS
 
-> As of *r format(FileDate, "%A %d %B ")`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
+> As of *`r format(FileDate, "%A %d %B ")`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
 
 Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorded. We can therefore gather information at the learner or activity level. 
 
-> After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course *`r CourseNameLong `*
+> After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course ***`r CourseNameLong `***
  
 
 ```{r TimeID}
@@ -367,7 +367,7 @@ tabl.act <-  module.act[, .N, keyby = ModuleID_2]
 names(tabl.act) <- c("Module", "Nb of activities")
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **7** modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in ** `r NbModules`** modules. 
 
 Below is a table summarizing the number of the specific pedagogical activities by Module. 
 
