@@ -1,5 +1,6 @@
 ---
 title: "Learner's Analytics"
+subtitle: "*Preliminary analysis*"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -246,7 +247,9 @@ The course *`r CourseNameLong `* started on **`r format(as_date(CourseStartDate)
 
 Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorded. We can therefore gather information at the learner or activity level. 
 
-> After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course ***`r CourseNameLong `***
+> After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course:
+
+***`r CourseNameLong `***
  
 
 ```{r TimeID}
@@ -367,7 +370,7 @@ tabl.act <-  module.act[, .N, keyby = ModuleID_2]
 names(tabl.act) <- c("Module", "Nb of activities")
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in ** `r NbModules`** modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **`r NbModules`** modules. 
 
 Below is a table summarizing the number of the specific pedagogical activities by Module. 
 
@@ -397,8 +400,6 @@ example.IP <-"2001:44c8:4170:8733:f84b:93e8:caa0:f3c3"
 geo_results2  <-ip2location(example.IP, file, c("country_code", "country_name", "region", "city"))
 
 ```
-
-
 
 ```{r}
 # Step 1: Adding email address to course.log using data.act
@@ -454,11 +455,11 @@ rm("Qoo", "Foo", "Woo")
 
 Among the  **`r paste0(NbLearners)`** participants who visited the course:
 
-- only  **`r NbLearnersQuiz`**  ( *`r round(100* NbLearnersQuiz/NbLearners, 1)`* %)   viewed or attempted a quiz at least once.  
-- **`r NbLearnersPost`**  ( *`r round(100* NbLearnersPost/NbLearners, 1)`* %)  participants posted at least one question or comment in any of the  forums proposed.   
--  **`r NbLearnersProject`**  ( *`r round(100* NbLearnersProject/NbLearners, 1)`* %)  participants have submitted a file for the optional data-based project
+- only  **`r NbLearnersQuiz`**  (*`r round(100* NbLearnersQuiz/NbLearners, 1)`* %)   viewed or attempted a quiz at least once.  
+- **`r NbLearnersPost`**  (*`r round(100* NbLearnersPost/NbLearners, 1)`* %)  participants posted at least one question or comment in any of the  forums proposed.   
+-  **`r NbLearnersProject`**  (*`r round(100* NbLearnersProject/NbLearners, 1)`* %)  participants have submitted a file for the optional data-based project
 
-> We can reasonably say that `r NbLearnersActive`  participants have been really active on this course ( *`r round(100* NbLearnersActive/NbLearners, 1)`* %)
+> We can reasonably say that **`r NbLearnersActive`** (*`r round(100* NbLearnersActive/NbLearners, 1)`* %) participants have been really ***active*** on this course.^[We can define as *active* a learner in many different ways. Here we consider that a learner is active if he/she has complied with one of the 3 following requirement:  viewed or attempted a quiz at least once, posted at least one question or comment in any of the  forums proposed, submitted a file for the optional data-based project.]
 
 ## Attendance 
 
@@ -560,6 +561,9 @@ learners_Time <-  course.log %>%
 Grades <- learners_Time %>%
   left_join(Grades, by = "Email.address") 
 
+StudentsNoShow <-  Grades %>%
+  filter(GradeFinal ==0)
+
 ```
 
 
@@ -567,16 +571,20 @@ Grades <- learners_Time %>%
 StudentsAboveThreshold <-  Grades %>%
   filter(GradeFinal >= GradeThreshold )
 
+StudentsNoShow <-  Grades %>%
+  filter(GradeFinal ==0)
+
 StudentsInWorkshop <-  Grades %>%
   filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
 
 ```
 
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and should get the certificate).
+There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
 
 **`r nrow(StudentsInWorkshop)`** participants submitted a project in the mandatory data-based project (*`r round(100*nrow(StudentsInWorkshop)/NbLearners, 1)` %*). 
 
-> The *raw* success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**. However,  if we consider that we have *no-shows*,  the success rates among **active learners** (`r NbLearnersActive`), is  **`r round(100*NbCertificates/NbLearnersActive, 1)` %**.
+> *The "raw" success rate  is **`r round(100*NbCertificates/NbLearners, 1)` %**. However,  note that **`r nrow(StudentsNoShow)`**  participants have a grade of 0 (*no-shows*). 
+So, we can laos consider the success rates among **active learners** (`r NbLearnersActive`), which is  **`r round(100*NbCertificates/NbLearnersActive, 1)` %**.*
 
 The distribution of certificates delivered by country  and by gender is the following.
 
@@ -923,7 +931,7 @@ LearnersByActivity <- course.log %>%
 MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```
 
- > *The graphic exhibits few access differences among activities, except webinar's videos (replays) and optional activities such as the project.  Most activities were accessed by **`r MedianLearnersActivity`** or more learners.*
+ > *The graphic exhibits few access differences among tye **`r length(unique(course.log$Actname))`** activities proposed, except webinar's videos (replays) and optional activities such as the project.  Most activities were accessed by **`r MedianLearnersActivity`** or more learners.*
  
 ### 10 most viewed activities
  
@@ -941,14 +949,15 @@ DTActivities
 
 ### 10 least viewed activities
  
-```{r Bottomop10Activities}
+```{r Bottom10Activities}
 
-DTActivities <- data.table(LearnersByActivity %>%
+DTActivitiesLeast <- data.table(LearnersByActivity %>%
                              slice_min(Learners, n = 10)%>%
                              select(ModuleID_2, ModuleID, Learners))
-                   
-names(DTActivities) <- c("Module", "Activity", "Nb Learners")
-DTActivities
+
+DTActivitiesLeast <-  DTActivitiesLeast[order(-Learners)]                  
+names(DTActivitiesLeast) <- c("Module", "Activity", "Nb Learners")
+DTActivitiesLeast
 
 ```
 
@@ -1002,7 +1011,7 @@ Over the **`r NbLearners`** unique learners[^MyNote] registered for the course, 
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
-In the graphic below we highlight learners (around `r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), -1)`) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
+In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)`participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
 
 ```{r}
 
@@ -1012,22 +1021,23 @@ p <-Grades %>%
  ggplot() +
  ggtitle("Test Scores vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total Grade ", 
-      subtitle = paste0("Each dot is a participant, coloured by country (", FileDate,")" ),
+      subtitle = paste0("Each dot is a participant, coloured by country" ),
        caption=  paste("Date", FileDate) )+
   annotate("rect", 
            xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
-           xmax = max(Grades$NbAct, na.rm = TRUE)+1,
+           xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
            ymin = GradeThreshold,
-           ymax = max(Grades$GradeFinal, na.rm = TRUE)+1, 
+           ymax = max(Grades$GradeFinal + 1, na.rm = TRUE)+1, 
           color= SIAP.color, alpha = 0.2) +
  aes(x = NbAct, y = GradeFinal, color = Country) +
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
- theme_minimal()
+ theme_minimal()+
+ theme(legend.position = "none")
 p
 #Interactive plot
-ggplotly(p)
+#ggplotly(p)
 ```
 
 ## Activities viewed and time spent by learners 
@@ -1050,7 +1060,7 @@ rm("Too")
 
 The time spent by learners on the platform is, of course, proportional to the number of activities viewed, with a greater heterogeneity for the most serious learners who viewed most of the activities.[^Time] 
 
-> *It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent  more than 3 hours/week on the course ( `r round(100*NbLearners3hours/NbLearnersActive, 1)`  % of *active* learners).*
+> *It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent  more than 3 hours/week on the course (`r round(100*NbLearners3hours/NbLearnersActive, 1)`  % of "active" learners).*
 
 [^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.  
 
@@ -1080,7 +1090,7 @@ mutate(TotalTime = TotalTime/60) %>%
 
 p
 #Interactive plot
-ggplotly(p)
+#ggplotly(p)
 
 
 ```
@@ -1088,7 +1098,7 @@ ggplotly(p)
 
 
 
-```{r}
+```{r exit}
 knitr::knit_exit()
 ```
 
