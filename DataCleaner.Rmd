@@ -886,6 +886,7 @@ course.log %>%
   filter(!is.na(Event.context), 
          ModuleID_2 >=0, 
          !is.na(ModuleID_2)) %>%
+  filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
@@ -922,6 +923,7 @@ LearnersByActivity <- course.log %>%
   filter(!is.na(Event.context), 
          ModuleID_2 >=0, 
          !is.na(ModuleID_2)) %>%
+  # filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
@@ -1106,10 +1108,10 @@ knitr::knit_exit()
 # Leftovers
 
 
-```{r}
+```{r specific }
 # Catching information on a specific user 
 toto <- course.log %>% 
-  filter(str_detect(User.full.name, "Than")) %>%
+  filter(str_detect(User.full.name, "Fangcao")) %>%
   select( User.full.name, Date, ModuleID_2,  Actname)%>%
   unique()
 
