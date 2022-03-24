@@ -368,9 +368,11 @@ module.act<- data.table(course.log %>%
                    )
 tabl.act <-  module.act[, .N, keyby = ModuleID_2]
 names(tabl.act) <- c("Module", "Nb of activities")
+
+NbActivities <- length(unique(course.log$Actname))
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r length(unique(course.log$Actname))`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **`r NbModules`** modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r NbActivities`**  different *activities* (resources such as videos, tutorials,  forums, articles, tests, polls, quizzes, ..) proposed for the learners in **`r NbModules`** modules. 
 
 Below is a table summarizing the number of the specific pedagogical activities by Module. 
 
@@ -602,11 +604,16 @@ names(CertifiedSex) <- c("Sex", "Nb of Certificates")
 CertifiedSex
 ```
 ```{r ExportShuji}
-library(writexlx)
+library(openxlsx)
 
-write_xlsx(DTCertified, path=paste(CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
+# Define sheet names for each data frame
+MyDataFrames <- list('Global' = DTCertified%>% arrange(desc(TotalReal)),
+                     'ByCountry' = CertifiedCountry%>% arrange(desc(.[[2]])),
+                     'BySex' = CertifiedSex)
+
+write.xlsx(MyDataFrames,
+           file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
 # save the file 
-
 
 ```
 
@@ -1083,18 +1090,22 @@ The time spent by learners on the platform is, of course, proportional to the nu
 [^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.  
 
 
-```{r}
+```{r TimeVsActivities}
 
 p <- Grades %>%
  filter(!is.na(Country)) %>%
-mutate(TotalTime = TotalTime/60) %>%
+mutate(TotalTime = TotalTime/60, 
+       Sucess = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
  ggplot() +
- aes(x = NbAct, y = TotalTime, colour = Country, toto = Email.address) +  
+ aes(x = NbAct, y = TotalTime,
+     colour = Sucess ,
+     toto = Email.address) +   # for plotly
   # Toto is a trick to have names in plotly
- geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+ # geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
+ geom_jitter(size = 3,  alpha = 0.6) +
  ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total time spent by learners (Duration, in min)", 
-      subtitle = paste0("Each dot is a participant, coloured by country. Size is proportional to time spent"), 
+      subtitle = paste0("Each dot is a participant. ", NbLearners3hours," learners spent more than 3 hours/week"), 
       caption=  paste("Date", FileDate) )+
  geom_hline (aes(yintercept = 3*NbModules*60), color = SIAP.color) +
  annotate("text", x = 15, y = 3*NbModules*60 + 200,
@@ -1104,7 +1115,7 @@ mutate(TotalTime = TotalTime/60) %>%
 # facet_wrap(vars(Country)) +
  scale_color_hue() +
  theme_minimal()+
- theme(legend.position = "none")
+ theme(legend.position = "bottom")
 
 p
 #Interactive plot
@@ -1118,6 +1129,53 @@ p
 
 ```{r exit}
 knitr::knit_exit()
+```
+
+
+# Lernear's paths
+
+
+## Activities viewed and time spent by learners 
+
+```{r}
+
+
+Grades %>%
+ filter(!is.na(Country)) %>%
+ mutate( 
+       Certification = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
+ ggplot() +
+ aes(x= NbDays, y = NbAct, 
+     colour = Certification)+
+ geom_jitter(size = 3,  alpha = 0.6) +
+ ggtitle("Activity of learners and visits to the LMS") +
+ labs(x="Nb of visits on the LMS (days)", 
+      y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
+      subtitle = paste0("Each dot is a participant, couloured by success"), 
+      caption=  paste("Date", FileDate) )+
+ theme_minimal()+
+ theme(legend.position =  c(0.8, 0.2))
+
+
+
+```
+
+
+
+```{r LearnersTracks}
+# Creating Learners Chronology
+
+
+# 
+
+
+
+
+```
+
+
+```{r LearnersPath}
+
 ```
 
 
