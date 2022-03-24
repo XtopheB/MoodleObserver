@@ -590,7 +590,7 @@ The distribution of certificates delivered by country  and by gender is the foll
 
 ```{r}
 DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
-                   
+
 CertifiedCountry<-  DTCertified[, .N, keyby = Country]
 names(CertifiedCountry) <- c("Country", "Nb of Certificates")
 CertifiedCountry[order(-`Nb of Certificates`)]
@@ -600,6 +600,14 @@ CertifiedCountry[order(-`Nb of Certificates`)]
 CertifiedSex<-  DTCertified[, .N, keyby = Sex]
 names(CertifiedSex) <- c("Sex", "Nb of Certificates")
 CertifiedSex
+```
+```{r ExportShuji}
+library(writexlx)
+
+write_xlsx(DTCertified, path=paste(CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
+# save the file 
+
+
 ```
 
 ##  Success rate
