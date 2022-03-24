@@ -301,7 +301,6 @@ actname <- data.frame(t(data.act.temp[1,]))
 names(actname) <- "Activity"
 actname <-  actname %>%
   filter(!stringr::str_detect(Activity, "X") )%>%
-  filter(!stringr::str_detect(Activity, "20") )%>%
   filter(stringr::str_detect(Activity, "") )%>%
   filter(!row_number() %in% c(1,2)) %>%
   mutate(ActNb = row_number())
@@ -345,6 +344,7 @@ course.log <- course.log  %>%
          Acttype = str_split(course.log$Event.context, ": ",
                              simplify = TRUE)[,1] ) %>%
   left_join(actname, by = c("Actname" = "Activity")) 
+
 
 # For MLOS, Some activities have : in the name so Actname must be adjusted 
 # Hence the "paste0" commands  options here to recover the full name of the activity
@@ -794,7 +794,7 @@ course.log %>%
        subtitle = paste("The course has", length(unique(course.log$Event.name))-1,"different events (Final date ",
                         FileDate,")"))+
   ggtitle("Total number of learners per type of event")+
-  scale_fill_manual("Type of Event",values=c("orange", "grey", SIAP.color)) +
+  scale_fill_manual("Type of Event",values=c(SIAP.color, "grey", "darkred")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -824,7 +824,7 @@ course.log %>%
        subtitle = paste("Nb of days", length(unique(course.log$Date)),"(Final date: ",
                         FileDate,")"))+
   ggtitle("Number of events recorded on the platform by date")+
-  hrbrthemes::scale_fill_ft() +
+  scale_fill_manual("Activity",values=c( SIAP.color, "grey", "orange")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
         panel.background = element_blank(), text = element_text(size=8), 
@@ -854,7 +854,7 @@ course.log %>%
   ggtitle("Number of Unique Visitors on the Platform by Hour")+
   labs(x="Time (JST)", y="Maximum Number of Learners", 
        subtitle = paste("Japan Time (Final date ", FileDate,")"))+
-  scale_fill_manual("Activity",values=c("orange", SIAP.color)) +
+  scale_fill_manual("Activity",values=c("pink","grey")) +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=12),
@@ -875,13 +875,26 @@ course.log %>%
 With no surprises, the learners' activities rank according to the modules order, with activities in module 1 on top and activities of modules 6 at the bottom. Some noticeable exceptions are the 6 quizzes, the data-based project and a homework,  that were more popular than other activities of their respective modules.    
 
 
+```{r LearnersByActivity}
+LearnersByActivity <- course.log %>%
+  filter(!is.na(Event.context), 
+         ModuleID_2 >=0, 
+         !is.na(ModuleID_2)) %>%
+  filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
+  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
+  group_by(ActID.lab) %>%
+  summarise(Learners = n_distinct(User.full.name),
+            ModuleID = as.factor(unique(Actname)),
+            ModuleID_2 = as.factor(unique(ModuleID_2))) 
+
+MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
+```
+
 
 ```{r BarActivities, fig.height=8, fig.width=10, out.width = "80%"}
 
-#final_date = as.Date(paste(FileDate), format = "%Y%m%d")
-
 myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
-
+#myPaletteModules <- c("lightyellow", "yellow",'#b2df8a','#33a02c','#fb9a99','#e31a1c', "orange")
 course.log %>%
   filter(!is.na(Event.context), 
          ModuleID_2 >=0, 
@@ -892,7 +905,7 @@ course.log %>%
   summarise(Learners = n_distinct(User.full.name),
             ModuleID = as.factor(unique(Actname)),
             ModuleID_2 = as.factor(unique(ModuleID_2))) %>%
-  # mutate(rank = dense_rank(desc(Learners))) %>% 
+  # mutate(rank = dense_rank(desc(Learners))) %>
   # filter(rank <= 30) %>% 
   mutate(ActID.lab = fct_reorder(ActID.lab, Learners, min)) %>%
   ggplot() +
@@ -900,15 +913,21 @@ course.log %>%
   geom_bar(stat='identity') + 
   # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
   scale_fill_manual("Module", values = myPaletteModules ) +
-  labs(x="Activities", y="Number of Learners") +
+  labs(x="Activities", y="Number of Learners per activity") +
   ggtitle("Activities accessed by Learners")+
   coord_flip() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8),
+        panel.background = element_blank(), 
+        text = element_text(size=8),
         axis.line = element_line(colour = "black"),
         plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))
+        axis.title.y = element_text(size = 8))+
+   annotate("text", x = 1, y = MedianLearnersActivity,
+          color= "red",
+          label = "Median", alpha = 0.7)+
+  geom_hline( yintercept = MedianLearnersActivity,  color = "red" ) 
 
 
 #p
@@ -918,22 +937,7 @@ course.log %>%
 
 ```
 
-```{r LearnersByActivity}
-LearnersByActivity <- course.log %>%
-  filter(!is.na(Event.context), 
-         ModuleID_2 >=0, 
-         !is.na(ModuleID_2)) %>%
-  # filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
-  group_by(ActID.lab) %>%
-  summarise(Learners = n_distinct(User.full.name),
-            ModuleID = as.factor(unique(Actname)),
-            ModuleID_2 = as.factor(unique(ModuleID_2))) 
-
-MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
-```
-
- > *The graphic exhibits few access differences among tye **`r length(unique(course.log$Actname))`** activities proposed, except webinar's videos (replays) and optional activities such as the project.  Most activities were accessed by **`r MedianLearnersActivity`** or more learners.*
+ > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** activities proposed, with a slight decrease for end-of-course modules (5 and 6). Webinar's videos (replays) and optional activities were among the least viewed while the tests and data-based project are among the hightest.  Most activities were accessed by **`r MedianLearnersActivity`** or more learners.*
  
 ### 10 most viewed activities
  
@@ -979,15 +983,17 @@ course.log %>%
  filter(!is.na(ActNb),
           ModuleID_2 >=0, 
          !is.na(ModuleID_2))  %>%
- mutate(ActID.lab = paste("Mod-", ModuleID_2,"-",str_trunc(Actname, 15, "right") )) %>%
+  mutate(ActID.lab = paste("Mod-", ModuleID_2,"-",str_trunc(Actname, 15, "right") )) %>%
   group_by(ActID.lab, Date) %>%
   summarise(Learners = n_distinct(User.full.name)) %>% 
   ggplot()+
   aes(x=Date, y=fct_rev(fct_infreq(ActID.lab)), fill=Learners)+
-  geom_tile()+
-  scale_fill_gradientn(colours= diverge_hcl(4), trans = "log")+
+  geom_tile( )+
+  scale_fill_gradientn(colours= diverge_hcl(14), trans = "log", 
+                      labels =  scales::comma_format(accuracy=1))+
+  scale_y_discrete(label=function(x) abbreviate(x, minlength=15))+
   labs(x="Date", y="Activities", 
-       fill = "Log counts", 
+       fill = "Nb of learners", 
        subtitle = paste("Final date ", FileDate), 
        caption = " Vertical lines indicate module opening")+
   ggtitle("Heatmap of the activities")+
@@ -997,10 +1003,12 @@ course.log %>%
   geom_vline (aes(xintercept = Opening4 ), color = "grey", alpha = 0.5, size = 1) +
   geom_vline (aes(xintercept = Opening5 ), color = "grey", alpha = 0.5, size = 1) +
   geom_vline (aes(xintercept = Opening6 ), color = "grey", alpha = 0.5, size = 1) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
         plot.title = element_text(hjust = 0.5, size=14),
         panel.background = element_blank(), text = element_text(size=10), 
         axis.line = element_line(colour = "black"), 
+        axis.text.y = element_text(face= "plain", size=4.5, color="black"),
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 8))+
   coord_fixed(ratio = 0.5 )
@@ -1013,7 +1021,7 @@ Over the **`r NbLearners`** unique learners[^MyNote] registered for the course, 
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
-In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)`participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
+In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)` participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
 
 ```{r}
 
