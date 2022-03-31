@@ -415,7 +415,7 @@ course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 # Step 2: Adding Sex and Country  to course.log using 
 NameSex <- data.grades %>%
   mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
-  select(Email.address, Sex, Country, TotalReal ) %>%
+  select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
 course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
@@ -535,7 +535,7 @@ course.log <- course.log %>%
 Learners <- course.log %>%
   distinct(User.full.name, .keep_all=TRUE) %>%
   # filter(Certified ==TRUE)%>%
-  select(User.full.name, Email.address,  Sex, Country, TotalReal, Certified)%>%
+  select(User.full.name, Email.address,  Sex, Country, Position, Organization, TotalReal, Certified)%>%
   unique()
 
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
@@ -593,9 +593,17 @@ The distribution of certificates delivered by country  and by gender is the foll
 ```{r}
 DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
 
-CertifiedCountry<-  DTCertified[, .N, keyby = Country]
-names(CertifiedCountry) <- c("Country", "Nb of Certificates")
-CertifiedCountry[order(-`Nb of Certificates`)]
+CertifiedCountryL<-  DTCertified[, .N, keyby = c("Country", "Sex")]
+CertifiedCountryL$N <- as.numeric(CertifiedCountryL$N)
+CertifiedCountryW <- reshape(CertifiedCountryL, idvar = "Country", timevar = "Sex", direction = "wide")
+
+
+CertifiedCountryW  <- CertifiedCountryW %>%
+  replace(is.na(.), 0) %>%
+  rowwise()%>%
+  mutate(Total = sum(c(N.Female,N.Male)))%>%
+  arrange(desc(Total))
+  
 ```
 
 ```{r}
@@ -603,18 +611,20 @@ CertifiedSex<-  DTCertified[, .N, keyby = Sex]
 names(CertifiedSex) <- c("Sex", "Nb of Certificates")
 CertifiedSex
 ```
+
+
 ```{r ExportShuji}
 library(openxlsx)
 
 # Define sheet names for each data frame
-MyDataFrames <- list('Global' = DTCertified%>% arrange(desc(TotalReal)),
-                     'ByCountry' = CertifiedCountry%>% arrange(desc(.[[2]])),
+MyDataFrames <- list('Grades' = DTCertified%>% arrange(desc(TotalReal)),
+                     'ByCountry' = CertifiedCountryW%>% arrange(desc(.[[2]])),
                      'BySex' = CertifiedSex)
 
 write.xlsx(MyDataFrames,
            file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
 # save the file 
-
+rm("CertifiedCountryL", "CertifiedCountryW", "CertifiedSex")
 ```
 
 ##  Success rate
@@ -1038,7 +1048,7 @@ Over the **`r NbLearners`** unique learners[^MyNote] registered for the course, 
 
 In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)` participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
 
-```{r}
+```{r GradesVsActivities}
 
 # Here we put the points AFTER the annotation for Plotly... 
 p <-Grades %>%
@@ -1095,10 +1105,10 @@ The time spent by learners on the platform is, of course, proportional to the nu
 p <- Grades %>%
  filter(!is.na(Country)) %>%
 mutate(TotalTime = TotalTime/60, 
-       Sucess = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
+        Certification = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
  ggplot() +
  aes(x = NbAct, y = TotalTime,
-     colour = Sucess ,
+     colour =  Certification,
      toto = Email.address) +   # for plotly
   # Toto is a trick to have names in plotly
  # geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
@@ -1124,21 +1134,9 @@ p
 
 ```
 
+## Activities viewed and visits on the LMS
 
-
-
-```{r exit}
-knitr::knit_exit()
-```
-
-
-# Lernear's paths
-
-
-## Activities viewed and time spent by learners 
-
-```{r}
-
+```{r VisitsVsActivities}
 
 Grades %>%
  filter(!is.na(Country)) %>%
@@ -1147,7 +1145,7 @@ Grades %>%
  ggplot() +
  aes(x= NbDays, y = NbAct, 
      colour = Certification)+
- geom_jitter(size = 3,  alpha = 0.6) +
+ geom_jitter(size = 3,  alpha = 0.5) +
  ggtitle("Activity of learners and visits to the LMS") +
  labs(x="Nb of visits on the LMS (days)", 
       y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
@@ -1162,19 +1160,87 @@ Grades %>%
 
 
 
+
+```{r exit}
+knitr::knit_exit()
+```
+
+
+# Lerner's paths
+
 ```{r LearnersTracks}
 # Creating Learners Chronology
 
+LearnersPaths <- course.log %>%
+  filter(!is.na(ActNb)) %>%
+  distinct(User.full.name, Time,.keep_all = TRUE) %>%
+  group_by(User.full.name) %>%
+  arrange(Time) %>%
+  mutate( seq_idx  = row_number()
+  ) %>%
+  ungroup()
 
-# 
+# Sequence of steps by learners 
+LearnersPaths <- LearnersPaths   %>%
+  group_by(User.full.name) %>%
+  arrange(seq_idx) %>%
+  mutate( 
+    Increasing  =  !is.unsorted(ActNb), 
+    Nbre_Steps = n(), 
+    next_step = c(ActNb[-1], NA ),
+    step_diff = (next_step - ActNb)-1, 
+    
+    sum_neg_diff = sum( ifelse(step_diff < 0 , step_diff + 1, 0) ),
+    I_back = ifelse(step_diff < 0 , 1, 0), 
+    Nbre_back = sum(I_back, na.rm =TRUE),
+    Tx_back =  Nbre_back /Nbre_Steps,
+    
+    total_diff = sum(step_diff , na.rm =TRUE),
+    abs_tot_diff = sum(abs(step_diff) , na.rm =TRUE),
+    rel_diff = abs_tot_diff/Nbre_Steps, 
+    max_diff = max(abs(step_diff) , na.rm =TRUE)
+  ) %>%
+  ungroup() 
 
-
-
+# some stats to do here...
 
 ```
 
 
 ```{r LearnersPath}
+# maybe change the definition of "clicks"  --> seq_idx
+## Trajectories of learners....
+
+NminStep <- 200    #Selecting learners for  graph
+df <- LearnersPaths  %>%
+  filter(Certified == TRUE,
+         Nbre_Steps >= NminStep ) %>%
+  group_by(User.full.name) %>%
+  select(User.full.name, ActNb, Actname, ModuleID_2, Certified, Country,
+         seq_idx, Nbre_Steps, Increasing, next_step, step_diff) %>% 
+  ungroup() %>%
+  arrange(User.full.name, seq_idx)
+
+# Jitter plot 
+
+p <- ggplot(df, aes(x = seq_idx,
+                    y= ActNb,
+                    group = User.full.name,
+                    Act = Actname
+                    # colour =  User.full.name
+                    )) +
+  geom_line(alpha = 0.2, size = 0.8,
+            show.legend = FALSE,
+            aes(y = ActNb, 
+                x = jitter(as.numeric(seq_idx, 0.5)) ,
+                group=factor(User.full.name))) +
+  labs(title= paste("Trajectory of",length(unique(df$User.full.name)),"learners clicking at least", NminStep,"times"  ), 
+       y = "Course activity", x = "Learners chronological sequence (clics)") +
+  theme_minimal()
+
+# p
+
+ggplotly(p)
 
 ```
 
