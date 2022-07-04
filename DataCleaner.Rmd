@@ -1,6 +1,6 @@
 ---
 title: "Learner's Analytics"
-subtitle: "*Preliminary analysis*"
+subtitle: "*Based on Moodle Data*"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -1145,7 +1145,8 @@ Grades %>%
  ggplot() +
  aes(x= NbDays, y = NbAct, 
      colour = Certification)+
- geom_jitter(size = 3,  alpha = 0.5) +
+ geom_jitter(size = 3,  alpha = 0.5, width = 0.1) +
+ scale_x_continuous(breaks=seq(from = 0, to = max(Grades$NbAct)+2, by =2))+
  ggtitle("Activity of learners and visits to the LMS") +
  labs(x="Nb of visits on the LMS (days)", 
       y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
