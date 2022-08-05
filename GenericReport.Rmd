@@ -4,15 +4,6 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  word_document:
-    toc: yes
-  html_document:
-    df_print: paged
-    toc: yes
-    keep_md: yes
-    code_folding: show
-    fig_width: 6.5
-    fig_height: 4
   pdf_document:
     df_print: kable
     toc: yes
@@ -20,6 +11,15 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
+  html_document:
+    df_print: paged
+    toc: yes
+    keep_md: yes
+    code_folding: show
+    fig_width: 6.5
+    fig_height: 4
+  word_document:
+    toc: yes
 ---
 
 
@@ -82,12 +82,28 @@ There are some elements that are really specific to a course:
 * CourseStartDate: in a standard format *YYYY-MM-DD*
 
 ```{r CourseParameters}
-# Course general parameters
-CourseName <- "Gender_Self_1"     ##  "DTV20"  or DV22
-CourseNameLong <- "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond"
+# List of courses
 
-CourseStartDate <-"2022-05-25"
-NbModules <-3    # 6   
+AllCoursesRef <- c("Gender_Self_1",
+                   "DTV20_S",
+                   "MLOS_S")
+
+AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
+                        "Principles of Data Visualization for Official Statistics and SDG Indicators",
+                        "Principles of Machine Learning for Official Statistics and SDGs")
+
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06")
+AllCoursesNbModules <-c(3, 6, 6)
+
+# Course Index <<<<<< =====  Choose the course here
+i.course <- 1  # Gender
+
+# Course general parameters
+CourseName <- AllCoursesRef[i.course]    # Gender Self
+CourseNameLong <- AllCoursesNameLong[i.course]
+CourseStartDate <-AllCoursesStartDate[i.course]
+NbModules <- AllCoursesNbModules[i.course]              
+
 # Minimum to get the certificate
 GradeThreshold <- 70  
 
@@ -127,7 +143,6 @@ GradeThreshold <- 70
 # Parse the data folder to find the latest files 
 
 #### Logs File
-#  Logs from https://siap-elearning.org/report/log/index.php?chooselog=1&showusers=0&showcourses=0&id=129&user=0&date=&modid=&modaction=&origin=&edulevel=-1&logreader=logstore_standard
 # --> use Comma separated values
 
 # Generic interface for Data 
@@ -342,7 +357,7 @@ actname <-  actname %>%
   filter(!row_number() %in% c(1,2)) %>%
   mutate(ActNb = row_number())
 
-rm("data.act.temp")
+#rm("data.act.temp")
 
 ## Attempt to a newer version (but names of activities arewith dots "General.Information"
 # Extract the activity names in order (hence the Header = FALSE above!)
@@ -532,12 +547,14 @@ Grades <- data.grades %>%
   select(!contains("download"))%>%
   mutate_at(vars(matches("Quiz|Assign|Assess|Test")),funs(as.numeric)) 
 
+## Pb here for courses  2 &  3 ======
+
 Grades <- Grades %>%
   mutate(
     # Here it depends on the type of exam..)
     # GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
     # This is for a Final exam type of assessment
-   GradeFinal = Quiz..Final.Test..Real. 
+   GradeFinal = Quiz..Final.Test..Real.
   )
 ```
 
