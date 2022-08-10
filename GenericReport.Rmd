@@ -96,7 +96,10 @@ AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06")
 AllCoursesNbModules <-c(3, 6, 6)
 
 # Course Index <<<<<< =====  Choose the course here
-i.course <- 1  # Gender
+ i.course <- 1  # Gender
+# i.course <- 2  # Dataviz
+# i.course <- 3  # MLOS
+
 
 # Course general parameters
 CourseName <- AllCoursesRef[i.course]    # Gender Self
@@ -549,13 +552,16 @@ Grades <- data.grades %>%
 
 ## Pb here for courses  2 &  3 ======
 
-Grades <- Grades %>%
-  mutate(
-    # Here it depends on the type of exam..)
-    # GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
-    # This is for a Final exam type of assessment
-   GradeFinal = Quiz..Final.Test..Real.
-  )
+#Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
+Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
+
+# Grades <- Grades %>%
+#   mutate(
+#     # Here it depends on the type of exam..)
+#     # GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
+#     # This is for a Final exam type of assessment
+#    GradeFinal = Quiz...Final.Test..Real.
+# )
 ```
 
 
@@ -564,10 +570,11 @@ Grades <- Grades %>%
 ```{r Certified}
 # I create a Boolean to identify Certificate
 # using  "any" returns TRUE if TRUE appears in any Actname for a participant
+# Some courses have a different type of certificate in Actname --> tolower
 
 course.log <- course.log %>%
   group_by(Email.address, User.full.name) %>%
-  mutate(Certified = any(stringr::str_detect(Actname, "Certificate") ))  %>%
+  mutate(Certified = any(stringr::str_detect(tolower(Actname), "certificate") ))  %>%
   ungroup()
 
 # Certification
