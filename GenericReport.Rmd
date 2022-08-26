@@ -81,26 +81,34 @@ There are some elements that are really specific to a course:
 * CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
 * CourseStartDate: in a standard format *YYYY-MM-DD*
 
-```{r CourseParameters}
+```{r AllCourseParameters}
 # List of courses
 
 AllCoursesRef <- c("Gender_Self_1",
                    "DTV20_S",
-                   "MLOS_S")
+                   "MLOS_S", 
+                   "HealthStats2")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
-                        "Principles of Machine Learning for Official Statistics and SDGs")
+                        "Principles of Machine Learning for Official Statistics and SDGs", 
+                        "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06")
-AllCoursesNbModules <-c(3, 6, 6)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04")
+AllCoursesNbModules <-c(3, 6, 6,5)
+```
 
+
+```{r CourseChoice}
 # Course Index <<<<<< =====  Choose the course here
- i.course <- 1  # Gender
-# i.course <- 2  # Dataviz
+#i.course <- 1  # Gender
+ i.course <- 2  # Dataviz
 # i.course <- 3  # MLOS
+# i.course <- 4  # Health
+```
 
 
+```{r CourseParameters}
 # Course general parameters
 CourseName <- AllCoursesRef[i.course]    # Gender Self
 CourseNameLong <- AllCoursesNameLong[i.course]
@@ -661,18 +669,30 @@ CertifiedSex
 ```
 
 
-```{r ExportShuji}
+```{r ExportData}
 library(openxlsx)
-
+# For Shuji
 # Define sheet names for each data frame
-MyDataFrames <- list('Grades' = DTCertified%>% arrange(desc(TotalReal)),
+CourseListExport <- list('Grades' = DTCertified%>% arrange(desc(TotalReal)),
                      'ByCountry' = CertifiedCountryW%>% arrange(desc(.[[2]])),
                      'BySex' = CertifiedSex)
-
-write.xlsx(MyDataFrames,
-           file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
 # save the file 
+write.xlsx(CourseListExport,
+           file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
+```
+
+```{r}
 rm("CertifiedCountryL", "CertifiedCountryW", "CertifiedSex")
+```
+
+
+```{r ExportDataReport}
+#For report
+CourseReportExport <- data.frame(NbLearners, NbCertificates)
+write.xlsx(CourseReportExport,
+           file=paste("Output/",CourseName,"-Report-",ymd(Sys.Date()),".xlsx", sep=""))
+
+
 ```
 
 ##  Success rate
@@ -1201,10 +1221,23 @@ Grades %>%
 
 ```
 
+```{r reportexport}
+# library(here)
+# Report.name <- paste0("Report-", CourseName,"-", FileDate)
+# 
+# # Export
+# file.copy(from = here("GenericReport.pdf"),
+#           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
 
 
 
-```{r exit}
+
+
+```
+
+
+
+```{r EXIT}
 knitr::knit_exit()
 ```
 
