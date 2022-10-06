@@ -11,6 +11,8 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
+  word_document:
+    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -18,8 +20,6 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
-  word_document:
-    toc: yes
 ---
 
 
@@ -45,7 +45,6 @@ SIAP.color <- "#0385a8"
 
 
 ```{r libraries}
-
 # Analysis
 library(tidyverse)
 library(stringr)
@@ -63,7 +62,6 @@ library(kableExtra)
 library(modelsummary)
 
 # Graphics 
-library(ggplot2)
 
 library(plotly)
 library(wesanderson)
@@ -87,24 +85,27 @@ There are some elements that are really specific to a course:
 AllCoursesRef <- c("Gender_Self_1",
                    "DTV20_S",
                    "MLOS_S", 
-                   "HealthStats2")
+                   "HealthStats2",
+                   "SEEA_CF_2022")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
                         "Principles of Machine Learning for Official Statistics and SDGs", 
-                        "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022")
+                        "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
+                        "Introduction to the System of Environmental Economic Accounting-Central Framework")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04")
-AllCoursesNbModules <-c(3, 6, 6,5)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01")
+AllCoursesNbModules <-c(3, 6, 6,5, 5)
 ```
 
 
 ```{r CourseChoice}
 # Course Index <<<<<< =====  Choose the course here
 #i.course <- 1  # Gender
- i.course <- 2  # Dataviz
+# i.course <- 2  # Dataviz
 # i.course <- 3  # MLOS
 # i.course <- 4  # Health
+ i.course <- 5 # SEEA Central Framework
 ```
 
 
@@ -166,8 +167,8 @@ name_last_logs <- list.logs[which.max(file.mtime(list.logs))]
 data.logs <- read.csv(name_last_logs)
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
-data.logs <- data.logs %>% 
-  rename(Time = ï..Time ) 
+# data.logs <- data.logs %>%
+#   rename(Time = ï..Time ) 
 
 ###  activity File:  Admin>Reports>Statistics> (select course and  period) activity completion 
 # UTF-8.csv (= with comma separating)
@@ -218,6 +219,7 @@ data.logs <- data.logs[!(data.logs$User.full.name=="Christophe Bontemps" |
                          data.logs$User.full.name=="Ni Ni Thein" |
                          data.logs$User.full.name=="LMS SIAP" |
                          data.logs$User.full.name=="Sinovia Moonie" |
+                        data.logs$User.full.name=="Sokol Vako" |
                          data.logs$Component=="Recycle bin"),]
 ```
 
@@ -631,8 +633,8 @@ StudentsAboveThreshold <-  Grades %>%
 StudentsNoShow <-  Grades %>%
   filter(GradeFinal ==0)
 
-StudentsInWorkshop <-  Grades %>%
-  filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
+# StudentsInWorkshop <-  Grades %>%
+#   filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
 
 ```
 
@@ -1222,7 +1224,7 @@ Grades %>%
 ```
 
 ```{r reportexport}
-# library(here)
+library(here)
 # Report.name <- paste0("Report-", CourseName,"-", FileDate)
 # 
 # # Export
