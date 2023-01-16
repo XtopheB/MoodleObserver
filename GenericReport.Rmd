@@ -148,6 +148,7 @@ Opening6 <- as_date("2022-12-19")
 
 ### Define the Starting activity nb for each Modules  
 # ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
+ModStartIdx <- c(1,6,16,23,33,42,58,68)  # Parameters for ForMLOS22
 
 
 ```
@@ -401,15 +402,22 @@ actname <-  actname %>%
 
 ``````{r ModuleFilter}
 # Based on Course parameters  ModStartIdx
-# actname <- actname %>%
-#             mutate(ModuleID_2 = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
-#                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 2,
-#                                           between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 3,
-#                                           between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 4,
-#                                           between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 5,
-#                                           between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 6,
-#                                             )) %>%
-#   filter(!is.na(ModuleID_2))
+actname <- actname %>%
+            mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
+                                          between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 2,
+                                          between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 3,
+                                          between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 4,
+                                          between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 5,
+                                          between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 6,
+                                          between(ActNb, ModStartIdx[7], ModStartIdx[8]-1) ~ 7,
+                                          between(ActNb, ModStartIdx[8], ModStartIdx[9]-1) ~ 8,
+                                          
+                                            )) %>%
+  filter(!is.na(ModuleID))
+# Specific to MLOS22
+actname <- actname %>%
+            mutate(ModuleID = ModuleID -2)
+
 ```
 
 
@@ -441,18 +449,19 @@ course.log <- course.log  %>% filter(Actname != CourseNameLong)
 ```
 
 ```{r}
-module.act<- data.table(actname %>% 
-                     filter(!stringr::str_detect(Activity, "pdf") )%>%
+module.tab<- data.table(actname %>% 
+                     filter(!stringr::str_detect(Activity, "pdf") )    %>%
                      mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
                      arrange(ActNb) %>%
-                     select(Actname2) %>%
+                     select(Actname2, ModuleID) %>%
+                       filter(ModuleID >=0) %>%
                      unique() 
                    )
-names(module.act) <- c("Module name")
-NbActivities <- nrow(module.act)
+names(module.tab) <- c("Module name","Module")
+NbActivities <- nrow(module.tab)
 
 # Not used
-# tabl.act <-  module.act[, .N, keyby = Actname2]
+# tabl.act <-  module.tab[, .N, keyby = Actname2]
 # names(tabl.act) <- c("Module", "Nb of activities")
 
 # NbActivities <- length(unique(course.log$Actname))
@@ -464,10 +473,10 @@ Below is a table with the specific pedagogical activities of the course, excludi
 
 
 ```{r}
-module.act
-kable(module.act, "latex", longtable = T, booktabs = T) %>%
-  kable_styling(latex_options = c("repeat_header"), font_size = 7) %>%
-  landscape()
+# module.tab
+# Better looking if long list of Modules
+kable(module.tab, "latex", longtable = T, booktabs = T) %>%
+  kable_styling(latex_options = c("repeat_header"), font_size = 7)
 
 
 ```
@@ -666,22 +675,27 @@ StudentsNoShow <-  Grades %>%
 
 
 ```{r AboveThreshold }
-StudentsAboveThreshold <-  Grades %>%
-  filter(GradeFinal >= GradeThreshold )
+NbStudentsAboveThreshold <-  Grades %>%
+  filter(GradeFinal >= GradeThreshold ) %>% nrow()
 
-StudentsNoShow <-  Grades %>%
-  filter(GradeFinal ==0 | is.na(GradeFinal))
+NbStudentsNoShow <-  Grades %>%
+  filter(GradeFinal ==0 | is.na(GradeFinal)) %>% nrow()
 
 # StudentsInWorkshop <-  Grades %>%
 #   filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
 
+# Success Rates
+RawSuccessRate <- round(100*NbCertificates/NbLearners, 1)
+RealSuccessRate <-round(100*NbCertificates/(NbLearners - NbStudentsNoShow) , 1)
+
+
 ```
 
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
+There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
 
  
 
-> The "raw" success rate  is **`r round(100*NbCertificates/NbLearners, 1)`** %. However,  note that **`r nrow(StudentsNoShow)`**  participants have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r round(100*NbCertificates/(NbLearners -nrow(StudentsNoShow)) , 1)`** %.
+> The "raw" success rate  is **`r RawSuccessRate`** %. However,  note that **`r paste0(NbStudentsNoShow)`**  participants have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r RealSuccessRate`** %.
 
 
 The distribution of certificates delivered by country  and by gender is the following.
@@ -738,7 +752,7 @@ write.xlsx(CourseReportExport,
 
 ##  Success rate
 
-The  success rate (`r round(100*NbCertificates/NbLearners, 1)` %) can be analysed by country and gender.
+The success rate (`r RealSuccessRate` %) can be analysed by country and gender.
 
 
 ```{r}
@@ -794,13 +808,13 @@ Learners %>%
 
 ##  Grades distribution
 
-The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r Grades%>% filter(GradeFinal ==0) %>% nrow()`* participants that did not participate in any of the tests (grade =0)].  
+The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r paste0(NbStudentsNoShow)`* participants that did not participate in any of the tests (grade =0)].  
 
 
 ```{r Grades , fig.height=3}
 
 # Automatic vertical scale
-GradesPositive <- Grades%>% filter(GradeFinal > 0) 
+GradesPositive <- Grades%>% filter(GradeFinal > 0 | !is.na(GradeFinal)) 
 histdata <- hist(GradesPositive$GradeFinal,
                  freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
 HistHeight <- max(histdata$counts)
@@ -818,7 +832,7 @@ GradesPositive %>%
  labs(x="Grades", y=" Nb of sucessful learners",
       caption = paste("(Excluding",Nb0, "participants with grade = 0)"),
       subtitle = paste("(as of ", FileDate,",",
-                      nrow(StudentsAboveThreshold)," learners are above the threshold)") )+
+                      NbStudentsAboveThreshold," learners are above the threshold)") )+
  annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
                   ymin = 0, ymax = Ymax,
                   fill = SIAP.color , alpha = .2)+
@@ -851,6 +865,8 @@ GradesPositive %>%
                         point_shape = '|', point_size = 2, point_alpha = 0.3, 
                        alpha = 0.3
                       ) +
+  scale_fill_viridis_d(name = "Quintiles") +
+  
   #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
   ggtitle("Distribution of grades by Sex ") +
   labs(x="Final Grades", y=" Sex ", 
@@ -1019,33 +1035,42 @@ LearnersByActivity <- course.log %>%
   mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
-            ModuleID = as.factor(unique(Actname))) 
+            ModuleName = as.factor(unique(Actname))) 
 
 MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```
 
 
-```{r BarActivities, fig.height=8, fig.width=10, out.width = "80%"}
+```{r BarActivities, fig.height=10, fig.width=10, out.width = "80%"}
 
-myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
+# myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
+myPaletteModules <- c("lightgrey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
+myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
+
 #myPaletteModules <- c("lightyellow", "yellow",'#b2df8a','#33a02c','#fb9a99','#e31a1c', "orange")
+
 course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(Actname != CourseNameLong) %>%
+  filter(ModuleID >= 0) %>% 
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(ActID.lab = paste(ActNb,"-",str_trunc(Event.context, 20, "right"))) %>%
   group_by(ActID.lab) %>%
-  summarise(Learners = n_distinct(User.full.name),
-            ModuleID = as.factor(unique(Actname))) %>%
-  # mutate(rank = dense_rank(desc(Learners))) %>
+  summarise(NbLearners = n_distinct(User.full.name),
+            ModuleName = as.factor(unique(Actname)),
+            ModuleID = as.factor(unique(ModuleID)))  %>%
+  # mutate(rank = dense_rank(desc(NbLearners))) %>
   # filter(rank <= 30) %>% 
-  mutate(ActID.lab = fct_reorder(ActID.lab, Learners, min)) %>%
-  arrange(ActID.lab) %>%
+  mutate(ActID.lab = fct_reorder(ActID.lab, NbLearners, min)) %>%
+  arrange(ActID.lab) %>%  
   ggplot() +
-  aes(x = ActID.lab,  y = Learners) +
-  geom_bar(stat='identity') + 
+  aes(x = ActID.lab,  y = NbLearners, fill = ModuleID) +
+  geom_bar(stat='identity') +
+  scale_fill_manual("ModuleID", values = myPaletteModules ) +
   # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
-  # scale_fill_manual("Module", values = myPaletteModules ) +
+  geom_text(aes(label= NbLearners, color = ModuleID),
+            vjust= 0.5, hjust = -0.5,  size=3.5)+
+   scale_color_manual("ModuleID", values = myPaletteModulesDark ) +
   labs(x="Activities", y="Number of Learners per activity") +
   ggtitle("Activities accessed by Learners")+
   coord_flip() +
@@ -1070,15 +1095,15 @@ course.log %>%
 
 ```
 
- > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** activities proposed*. 
+ > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** original activities proposed* ^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.] . 
  
-### 10 most viewed activities
+### 10 **most viewed** activities
  
 ```{r Top10Activities}
 
 DTActivities <- data.table(LearnersByActivity %>%
                           slice_max(Learners, n = 10)%>%
-                          select(ModuleID, Learners))
+                          select(ModuleName, Learners))
                    
 names(DTActivities) <- c( "Activity", "Nb Learners")
 DTActivities
@@ -1086,13 +1111,13 @@ DTActivities
 ```
 
 
-### 10 least viewed activities
+### 10 **least viewed** activities
  
 ```{r Bottom10Activities}
 
 DTActivitiesLeast <- data.table(LearnersByActivity %>%
                              slice_min(Learners, n = 10)%>%
-                             select( ModuleID, Learners))
+                             select( ModuleName, Learners))
 
 DTActivitiesLeast <-  DTActivitiesLeast[order(-Learners)]                  
 names(DTActivitiesLeast) <- c( "Activity", "Nb Learners")
@@ -1333,7 +1358,7 @@ df <- LearnersPaths  %>%
   filter(Certified == TRUE,
          Nbre_Steps >= NminStep ) %>%
   group_by(User.full.name) %>%
-  select(User.full.name, ActNb, Actname, ModuleID_2, Certified, Country,
+  select(User.full.name, ActNb, Actname, ModuleID, Certified, Country,
          seq_idx, Nbre_Steps, Increasing, next_step, step_diff) %>% 
   ungroup() %>%
   arrange(User.full.name, seq_idx)
@@ -1369,7 +1394,7 @@ ggplotly(p)
 # Catching information on a specific user 
 toto <- course.log %>% 
   filter(str_detect(User.full.name, "Fangcao")) %>%
-  select( User.full.name, Date, ModuleID_2,  Actname)%>%
+  select( User.full.name, Date, ModuleID,  Actname)%>%
   unique()
 
 unique(toto$Date) 
@@ -1408,7 +1433,7 @@ course.log %>%
 ```{r}
 course.log %>%
   filter(!is.na(ActNb)) %>%
-  mutate( ActID.lab = paste(ActNb,"-",Event.context, "-", ModuleID_2)) %>%
+  mutate( ActID.lab = paste(ActNb,"-",Event.context, "-", ModuleID)) %>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name)) %>% 
   mutate(rank = dense_rank(desc(Learners))) %>% 
@@ -1640,7 +1665,7 @@ toto <-  course.log %>%
   filter(str_detect(Event.context, Special))%>%
   group_by(Event.context)%>%
   summarise(Learners = n_distinct(User.full.name), 
-            Module = max(ModuleID_2))
+            Module = max(ModuleID))
 
 
 ggplot(toto) +
