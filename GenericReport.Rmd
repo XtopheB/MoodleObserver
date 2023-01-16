@@ -86,16 +86,20 @@ AllCoursesRef <- c("Gender_Self_1",
                    "DTV20_S",
                    "MLOS_S", 
                    "HealthStats2",
-                   "SEEA_CF_2022")
+                   "SEEA_CF_2022", 
+                   "SBR22", 
+                   "MLOS22")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
                         "Principles of Machine Learning for Official Statistics and SDGs", 
                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
-                        "Introduction to the System of Environmental Economic Accounting-Central Framework")
+                        "Introduction to the System of Environmental Economic Accounting-Central Framework", 
+                        "Statistical Business Registers", 
+                        "Machine Learning for Official Statistics and SDGs-2022")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01")
-AllCoursesNbModules <-c(3, 6, 6,5, 5)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8)
 ```
 
 
@@ -105,7 +109,10 @@ AllCoursesNbModules <-c(3, 6, 6,5, 5)
 # i.course <- 2  # Dataviz
 # i.course <- 3  # MLOS
 # i.course <- 4  # Health
- i.course <- 5 # SEEA Central Framework
+# i.course <- 5 # SEEA Central Framework
+# i.course <- 6 # SBR
+i.course <- 7 # MLOS22
+
 ```
 
 
@@ -117,26 +124,27 @@ CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
 
 # Minimum to get the certificate
-GradeThreshold <- 70  
+GradeThreshold <- 42
+GradeMax = 65
 
 # Dates parameters
- WebinarDay = 1 # Sunday is 1
+ WebinarDay = 4 # Sunday is 1
 # CourseLength = 7 * (NbModules +1)  # adjusted
 
-# Dates of Modules opening MLOS 22
+# Dates of Modules opening MLOS 
 # Opening1 <- as_date("2021-11-12")
 # Opening2 <- as_date("2021-11-19")
 # Opening3 <- as_date("2021-11-25")
 # Opening4 <- as_date("2021-12-03")
 # Opening5 <- as_date("2021-12-10")
 
-# Dates of Modules opening MLOS 22
-# Opening1 <- as_date(CourseStartDate)
-# Opening2 <- as_date(CourseStartDate)
-# Opening3 <- as_date("2022-01-30")
-# Opening4 <- as_date("2022-02-06")
-# Opening5 <- as_date("2022-02-13")
-# Opening6 <- as_date("2022-02-20")
+# Dates of Modules opening MLOS22
+Opening1 <- as_date(CourseStartDate)
+Opening2 <- as_date("2022-11-28")
+Opening3 <- as_date("2022-12-05")
+Opening4 <- as_date("2022-12-12")
+Opening5 <- as_date("2022-12-19")
+Opening6 <- as_date("2022-12-19")
 
 ### Define the Starting activity nb for each Modules  
 # ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
@@ -214,13 +222,15 @@ We have to perform several tasks before having some data to analyse. These task 
 ## Remove less relevant observations 
 #remove administrators
 
-data.logs <- data.logs[!(data.logs$User.full.name=="Christophe Bontemps" |
+data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
                           data.logs$User.full.name=="Xtophe Fairweather" |
-                         data.logs$User.full.name=="Ni Ni Thein" |
-                         data.logs$User.full.name=="LMS SIAP" |
-                         data.logs$User.full.name=="Sinovia Moonie" |
-                        data.logs$User.full.name=="Sokol Vako" |
-                         data.logs$Component=="Recycle bin"),]
+                          data.logs$User.full.name=="Ni Ni Thein" |
+                          data.logs$User.full.name=="LMS SIAP" |
+                          data.logs$User.full.name=="Sinovia Moonie" |
+                          data.logs$User.full.name=="Sokol Vako" |
+                          data.logs$User.full.name=="Pinar Ucar" |
+                          data.logs$User.full.name=="Shuji Fukuyama"|
+                          data.logs$Component=="Recycle bin"),]
 ```
 
 * Remove events recorded but not useful
@@ -266,10 +276,11 @@ course.log <- course.log  %>%
            mutate(Date = str_split(course.log$Time, ", " , simplify = TRUE)[,1],
                   HoursMin = str_split(course.log$Time, ", " , simplify = TRUE)[,2])
 
+# TO Review: Should we start at start date?  Affects the cumulative 
 course.log <- course.log  %>%
           mutate(HoursMin = format(strptime(course.log$HoursMin, "%H:%M"), format = "%H:%M"),
           Date = as.Date(course.log$Date, "%d/%m/%y"))%>%
-          filter(Date >= CourseStartDate) # rm before the the course started (13 Jan)
+          filter(Date >= CourseStartDate) # rm before the the course started 
 
 
 # Create day time range
@@ -298,9 +309,11 @@ course.log <- course.log %>%
 
 \newpage
 
-# ***`r CourseNameLong `***:  Main figures
+# ***`r CourseNameLong `***:  
+## Main figures
 
-The course *`r CourseNameLong `* started on *`r format(as_date(CourseStartDate), "%A %d %B ")`.* The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B ")`.**
+The course *`r CourseNameLong `* started on *`r format(as_date(CourseStartDate), "%A %d %B ")`.* 
+The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B ")`.**
 
 ## Registration process
 
@@ -323,7 +336,7 @@ course.registration %>%
 ggplot() +
  aes(x = Date, weight = registered) +
  geom_bar(fill = SIAP.color, alpha = 0.5) +
- ggtitle("Learners registered by date (Cumulative)") +
+ ggtitle("Learners registered by date sincer begining of the course (Cumulative)") +
 scale_x_date(date_breaks = "weeks" , date_labels = "%e-%b-%y")+
  labs(y = "Total nb of learners enrolled", 
       x = "Date",
@@ -372,7 +385,7 @@ actname <-  actname %>%
 
 #rm("data.act.temp")
 
-## Attempt to a newer version (but names of activities arewith dots "General.Information"
+## Attempt to a newer version (but names of activities are with dots "General.Information"
 # Extract the activity names in order (hence the Header = FALSE above!)
 # actname <- data.frame(names(data.act), check.names=FALSE)
 # names(actname) <- "Activity"
@@ -408,10 +421,10 @@ course.log <- course.log  %>%
                              simplify = TRUE)[,2],
          Acttype = str_split(course.log$Event.context, ": ",
                              simplify = TRUE)[,1] ) %>%
-  left_join(actname, by = c("Actname" = "Activity")) 
+  left_join(actname, by = c("Actname" = "Activity"))
 
-# Removing "Course activity" from log 
-course.log <- course.log  %>% filter(Actname != CourseNameLong) 
+# Removing "Course activity" from log
+course.log <- course.log  %>% filter(Actname != CourseNameLong)
 
 
 # For MLOS, Some activities have : in the name so Actname must be adjusted 
@@ -423,7 +436,7 @@ course.log <- course.log  %>% filter(Actname != CourseNameLong)
 #                              simplify = TRUE)[,3]),
 #          Acttype = str_split(course.log$Event.context, ": ",
 #                              simplify = TRUE)[,1]         ) %>%
-#   left_join(actname, by = c("Actname" = "Activity")) 
+#   left_join(actname, by = c("Actname" = "Activity"))
 
 ```
 
@@ -452,6 +465,11 @@ Below is a table with the specific pedagogical activities of the course, excludi
 
 ```{r}
 module.act
+kable(module.act, "latex", longtable = T, booktabs = T) %>%
+  kable_styling(latex_options = c("repeat_header"), font_size = 7) %>%
+  landscape()
+
+
 ```
 
 
@@ -495,14 +513,15 @@ Foo <-course.log %>%
 NbLearnersPost <- Foo$`n_distinct(User.full.name)`
 
 # Subset of Projects workshops (for counts below)
-# Woo <-course.log %>%
-#   filter(
-#     str_detect(Event.context, "Workshop") &
-#     str_detect(Event.name, "uploaded"))%>%  
-#   count(n_distinct(User.full.name) )
-# 
-# NbLearnersProject <-Woo$`n_distinct(User.full.name)`
-#NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
+Woo <-course.log %>%
+  filter(
+    (str_detect(Event.context, "Workshop")  |
+    str_detect(Event.context, "Assignment:") )   &
+    str_detect(Event.name, "uploaded"))%>%
+  count(n_distinct(User.full.name) )
+
+NbLearnersProject <-Woo$`n_distinct(User.full.name)`
+NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
 
 # Cleaning unnecessary file
 rm("Qoo", "Foo", "Woo")
@@ -540,9 +559,9 @@ course.log %>%
 geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
  scale_fill_hue() +
  ggtitle("Learners origin") +
- labs(y = "Nb of learners enrolled by country", 
-      x = "Countries (Ordered by Nb of participants)",
-      subtitle = paste("(date ", FileDate,")"))+
+ labs(y = paste("Learners enrolled  by country (total =" ,NbLearners ,")" ), 
+      x = paste("Countries (total =" ,NbCountries , ")"),
+      caption = paste("(date ", FileDate,")"))+
  coord_flip() +
  theme_minimal() +
  theme(legend.position = "none")
@@ -550,20 +569,23 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 ```
 
+
 ## Certified people
 
 ```{r GradesTotal}
-
+# We remove grades from SCORM here (some courses need that)
 Grades <- data.grades %>%
   select(!(ID.number:Department)) %>%
   select(!(Position:Organization))%>%
   select(!contains("download"))%>%
-  mutate_at(vars(matches("Quiz|Assign|Assess|Test")),funs(as.numeric)) 
+  select(!contains("SCORM"))%>%
+  mutate_at(vars(matches("Quiz|Assign|Assess|Test")),funs(as.numeric))
 
-## Pb here for courses  2 &  3 ======
+# Total or Final grade
 
-#Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
-Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
+Grades$GradeFinal <- as.numeric(Grades[ , grep(c("total", "Final"), colnames(Grades))])  # Find matches
+# Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
+# Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
 
 # Grades <- Grades %>%
 #   mutate(
@@ -599,6 +621,23 @@ NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
 
 
+
+```{r ExportParticipants}
+library(openxlsx)
+# For Shuji
+CourseListParticipants <- Learners %>% 
+  filter( Certified =="TRUE") %>%
+  select (User.full.name, Sex, Country)
+ 
+
+# save the file 
+write.xlsx(CourseListParticipants,
+           file=paste("Output/",CourseName,"-Participants-",ymd(Sys.Date()),".xlsx", sep=""))
+```
+
+
+
+
 ```{r ActivityTime}
 ### Time spent computation 
 learners_Time <-  course.log %>%
@@ -631,18 +670,18 @@ StudentsAboveThreshold <-  Grades %>%
   filter(GradeFinal >= GradeThreshold )
 
 StudentsNoShow <-  Grades %>%
-  filter(GradeFinal ==0)
+  filter(GradeFinal ==0 | is.na(GradeFinal))
 
 # StudentsInWorkshop <-  Grades %>%
 #   filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
 
 ```
 
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates`** certified learners in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
+There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r nrow(StudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
 
  
 
-> The "raw" success rate  is **`r round(100*NbCertificates/NbLearners, 1)`** %. However,  note that **`r nrow(StudentsNoShow)`**  participants have a grade of 0 (*no-shows*). 
+> The "raw" success rate  is **`r round(100*NbCertificates/NbLearners, 1)`** %. However,  note that **`r nrow(StudentsNoShow)`**  participants have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r round(100*NbCertificates/(NbLearners -nrow(StudentsNoShow)) , 1)`** %.
 
 
 The distribution of certificates delivered by country  and by gender is the following.
@@ -774,7 +813,7 @@ GradesPositive %>%
  ggplot() +
  aes(x = GradeFinal) +
  geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
- coord_cartesian(xlim=c(50,100))+
+ coord_cartesian(xlim=c(0,GradeMax))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
       caption = paste("(Excluding",Nb0, "participants with grade = 0)"),
@@ -1119,12 +1158,12 @@ p <-Grades %>%
  labs(x="Nb of activities viewed", y=" Total Grade ", 
       subtitle = paste0("Each dot is a participant, coloured by country" ),
        caption=  paste("Date", FileDate) )+
-  ylim( c(50,100))+
+  ylim( c(0,GradeMax))+
   annotate("rect", 
            xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
            xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
            ymin = GradeThreshold,
-           ymax = 100, 
+           ymax = GradeMax, 
            fill = "grey",  alpha = 0.1, 
           color= SIAP.color, alpha = 0.1) +
  aes(x = NbAct, y = GradeFinal, color = Country) +
