@@ -349,7 +349,7 @@ scale_x_date(date_breaks = "weeks" , date_labels = "%e-%b-%y")+
 ## Participants and activities on the LMS
 
 
-```{r U}
+```{r NbLearners}
 ListUser <-   unique((course.log %>%
               filter(!is.na(Event.name)) %>%
               filter(User.full.name != "-" )%>%
@@ -400,7 +400,7 @@ actname <-  actname %>%
 
 ### List of all activities proposed on the course: 
 
-``````{r ModuleFilter}
+``````{r Modules}
 # Based on Course parameters  ModStartIdx
 actname <- actname %>%
             mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
@@ -448,7 +448,7 @@ course.log <- course.log  %>% filter(Actname != CourseNameLong)
 
 ```
 
-```{r}
+```{r TabModules}
 module.tab<- data.table(actname %>% 
                      filter(!stringr::str_detect(Activity, "pdf") )    %>%
                      mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
@@ -457,7 +457,7 @@ module.tab<- data.table(actname %>%
                        filter(ModuleID >=0) %>%
                      unique() 
                    )
-names(module.tab) <- c("Module name","Module")
+names(module.tab) <- c("Activity name","Module")
 NbActivities <- nrow(module.tab)
 
 # Not used
@@ -472,19 +472,18 @@ Each course is specific in its form and in the organisation of each Module and t
 Below is a table with the specific pedagogical activities of the course, excluding pdfs and other resources to download. 
 
 
-```{r}
+```{r TablePrint}
 # module.tab
 # Better looking if long list of Modules
 kable(module.tab, "latex", longtable = T, booktabs = T) %>%
   kable_styling(latex_options = c("repeat_header"), font_size = 7)
-
 
 ```
 
 
 
 
-```{r}
+```{r MergeLogsGrades}
 # Step 1: Adding email address to course.log using data.act
 
 StudentsNames <- data.act  %>%
@@ -503,7 +502,7 @@ course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
 
 ```
 
-```{r StatsEvents}
+```{r CourseStats}
 ## Stat 
 Qoo <-course.log %>%
   filter(
@@ -540,7 +539,7 @@ rm("Qoo", "Foo", "Woo")
 
 ## Attendance 
 
-```{r}
+```{r WomenCountries}
 NbWomen <- course.log %>%
  select(Email.address, Sex)%>%
   unique() %>%
@@ -556,7 +555,7 @@ NbCountries <- course.log %>%
 
 **`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. 
 
-```{r}
+```{r GraphBycountry}
 
 course.log %>%
  filter(Country != "" | Country != "NA")%>%
@@ -695,12 +694,12 @@ There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertific
 
  
 
-> The "raw" success rate  is **`r RawSuccessRate`** %. However,  note that **`r paste0(NbStudentsNoShow)`**  participants have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r RealSuccessRate`** %.
+> The "raw" success rate  is **`r RawSuccessRate`** %. However,  note that **`r paste0(NbStudentsNoShow)`**  participants did not participante in any test and have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r RealSuccessRate`** %.
 
 
 The distribution of certificates delivered by country  and by gender is the following.
 
-```{r}
+```{r CertifiedbyCountry}
 DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
 
 CertifiedCountryL<-  DTCertified[, .N, keyby = c("Country", "Sex")]
@@ -717,7 +716,7 @@ CertifiedCountryW <- reshape(CertifiedCountryL, idvar = "Country", timevar = "Se
   
 ```
 
-```{r}
+```{r TableCertifiedSex}
 CertifiedSex<-  DTCertified[, .N, keyby = Sex]
 names(CertifiedSex) <- c("Sex", "Nb of Certificates")
 CertifiedSex
@@ -755,10 +754,11 @@ write.xlsx(CourseReportExport,
 The success rate (`r RealSuccessRate` %) can be analysed by country and gender.
 
 
-```{r}
+```{r GraphSuccessByCountry}
 MinLearners <- 5
 Learners %>%
  filter(Country != "" | Country != "NA") %>%
+ filter(TotalReal > 0 | !is.na(TotalReal)) %>%
   mutate( One = 1, 
           OneC = ifelse(Certified ==TRUE, 1, 0),
           Certified = as.factor(Certified),
@@ -774,23 +774,24 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by country") +
   labs(x="Country", y="Percentage of sucess", 
-      subtitle = paste("(date ", FileDate,")"), 
-      caption = paste(" Only countries with more than", MinLearners, "participants are represented")) +
+      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`noshows`) excluded \n
+                     (date ", FileDate,")"))+
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
-   annotate("text", x = 1, y =NbCertificates/NbLearners,
+   annotate("text", x = 1, y = RealSuccessRate/100,
           color= "red",
           label = "Mean", alpha = 0.7)+
-  geom_hline( yintercept = NbCertificates/NbLearners,  color = "red" ) +
+  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
   coord_flip()
 
 ```
 
 
-```{r, fig.height= 3}
+```{r GraphSuccessBySex, fig.height= 3}
 Learners %>%
  filter(Country != "" | Country != "NA")%>%
+  filter(TotalReal > 0 | !is.na(TotalReal)) %>%
   mutate( One = 1, 
           Certified = ifelse(Certified == 1, "Yes", "No" )) %>%
   ggplot() +
@@ -798,9 +799,10 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by gender") +
   labs(x="Gender", y="Percentage of sucess", 
-      subtitle = paste("(date ", FileDate,")")) +
+      caption = paste(" Participants with a grade of 0 (`noshows`) excluded \n
+                     (date ", FileDate,")"))+
   theme_minimal()+
-  geom_hline( yintercept = NbCertificates/NbLearners,  color = "red" ) +
+  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
   coord_flip()
 
@@ -811,7 +813,7 @@ Learners %>%
 The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r paste0(NbStudentsNoShow)`* participants that did not participate in any of the tests (grade =0)].  
 
 
-```{r Grades , fig.height=3}
+```{r GraphGrades , fig.height=3}
 
 # Automatic vertical scale
 GradesPositive <- Grades%>% filter(GradeFinal > 0 | !is.na(GradeFinal)) 
@@ -821,7 +823,6 @@ HistHeight <- max(histdata$counts)
 rm("histdata")
 # Parameters for the plot
 Ymax <- round(1.5*HistHeight, 0)
-Nb0 = nrow(Grades) - nrow(GradesPositive)
 
 GradesPositive %>%
  ggplot() +
@@ -830,7 +831,7 @@ GradesPositive %>%
  coord_cartesian(xlim=c(0,GradeMax))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
-      caption = paste("(Excluding",Nb0, "participants with grade = 0)"),
+      caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
       subtitle = paste("(as of ", FileDate,",",
                       NbStudentsAboveThreshold," learners are above the threshold)") )+
  annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
@@ -882,7 +883,7 @@ GradesPositive %>%
 
 ```
 
-```{r densityCountry, fig.height=3}
+```{r densityCountry, fig.height=5}
 #library(ggridges)
 GradesPositive %>%
  filter(Country != "" | Country != "NA")%>%
@@ -898,17 +899,18 @@ GradesPositive %>%
   # geom_density_ridges( alpha = 0.3) +
   stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
                         jittered_points = TRUE,
-                        position = position_points_jitter(width = 0.05, height = 2),
+                        position = position_points_jitter(width = 0.05, height = 0.1),
                         point_shape = '|', point_size = 2, point_alpha = 0.3, 
                        alpha = 0.3
                       ) +
   #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
   ggtitle("Distribution of grades by countries ") +
-  labs(x="Final Grades", y=" Countries (Ordered by Avg Grades) ", 
-      subtitle = paste("(date ", FileDate,")"),
-      caption = "(Countries with more than 5 participants)") +
+  labs(x="Final Grades",
+       y=" Countries", 
+      caption = paste("Countries with more than 5 participants \n
+                     (date ", FileDate,")"))+
     theme_ridges(grid = FALSE) +
-   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
+  geom_vline( xintercept = GradeThreshold,  color = "red" ) +
   annotate("text", x = GradeThreshold+12, y = 0.75,
           color= "red",
           label = "Success")+
@@ -926,7 +928,7 @@ GradesPositive %>%
 
 When on the platform, the learners can interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course.log$Event.name))-1`**  different type of events (as defined by Moodle)
 
-```{r TypeEvents}
+```{r GraphTypeEvents}
 course.log %>%
   filter(!is.na(Event.name)) %>%
   mutate(SpecificEvent = 
@@ -960,7 +962,7 @@ course.log %>%
 
 We observe events over the whole period of the course and represent the activities by day. 
 
-```{r ActivityByDate}
+```{r GraphActivityByDate}
 # Specific to Facilitated courses
 
 course.log %>%
@@ -992,7 +994,7 @@ course.log %>%
 
 Since there is an important **time difference** between the teacher and the learners, it was important to have an idea of the learner's presence on the platform by hour.  The graphic below shows the maximum number of learners for different time periods of the day. 
 
-```{r HourlyActivity, fig.height=3}
+```{r GraphHourlyActivity, fig.height=3}
 #Active time by Learners
 
 ThreshodlLowActivity <- 10
@@ -1041,7 +1043,7 @@ MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```
 
 
-```{r BarActivities, fig.height=10, fig.width=10, out.width = "80%"}
+```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
 
 # myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
 myPaletteModules <- c("lightgrey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
@@ -1275,7 +1277,7 @@ Grades %>%
  geom_jitter(size = 3,  alpha = 0.5, width = 0.1) +
  scale_x_continuous(breaks=seq(from = 0, to = max(Grades$NbAct)+2, by =2))+
  ggtitle("Activity of learners and visits to the LMS") +
- labs(x="Nb of visits on the LMS (days)", 
+ labs(x="Nb of visits on the LMS (unique days)", 
       y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
       subtitle = paste0("Each dot is a participant, couloured by success"), 
       caption=  paste("Date", FileDate) )+
