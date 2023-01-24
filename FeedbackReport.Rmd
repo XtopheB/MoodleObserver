@@ -129,7 +129,7 @@ NbModules <- AllCoursesNbModules[i.course]
 list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",CourseName,"*")),
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
-data.feedback <- read.csv(name_last_feedback)
+data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
 
 # Date of the last file found
 FileDate <-as_date(file.mtime(name_last_feedback))
@@ -140,6 +140,10 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 # I split the string (strsplit) at a dot (which you need to escape using \\) and take out only the second element using lapply. unlist is there to coerce the list into a vector.
 
 names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[", 2))
+
+# Saving questions could be a good idea (does not work)
+# questions <-  unlist(lapply(strsplit(names(data.feedback), "\\.."), "[[", 2))
+
 
 
 ```
@@ -153,8 +157,6 @@ data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2F
 ```
 
 
-
-
 We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform  (file `r name_last_feedback`)
 
 
@@ -163,10 +165,27 @@ We base our analysis on the data collected on **`r FileDate`** recorded on the  
 
 
 ```{r}
+# Transforming answers into factors
 library(purrr)
 
-data.feedback <- data.feedback %>%
- mutate_if(is.character,as.factor)
+
+data.feedback <- data.feedback %>% 
+  mutate_at(
+    vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
+    funs(case_when(
+     . == "Strongly disagree" ~ -3,
+     . =="Somewhat disagree" ~ -2,
+     . == "Disagree" ~ -1,
+     . == "Agree" ~ 1,
+     . == "Somewhat agree" ~ 2,
+     . == "Strongly agree" ~ 3))
+  )
+
+
+
+# data.feedback[,1:10] <- data.feedback[, 1:10] %>%
+#   mutate_if(is.character,as.factor)
+
 ```
 
 
@@ -176,6 +195,24 @@ data.feedback <- data.feedback %>%
 # Better looking if long list of Modules
 #kable(data.feedback, "latex", longtable = T, booktabs = T) %>%
 #  kable_styling(latex_options = c("repeat_header"), font_size = 7)
+
+
+```
+
+
+```{r}
+
+data.feedback %>%
+  ggplot() +
+  aes(x = Content) +
+  geom_histogram(fill = SIAP.color) +
+ ggtitle("TBC") +
+ labs(y = paste("Based on" ,nrow(data.feedback) ," responses" ), 
+      x = "",
+      caption = paste("(date ", FileDate,")"))+
+  coord_flip() +
+  theme_minimal()
+
 
 
 ```
