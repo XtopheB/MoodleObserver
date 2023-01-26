@@ -6,13 +6,13 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document:
     df_print: kable
-    toc: yes
+    toc: no
     keep_tex: yes
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
   word_document:
-    toc: yes
+    toc: no
   html_document:
     df_print: paged
     toc: yes
@@ -65,6 +65,7 @@ library(modelsummary)
 
 library(plotly)
 library(wesanderson)
+library(patchwork)
 ```
 
  
@@ -150,17 +151,50 @@ names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[
 
 
 ```{r NonUnicode}
-# remove comments written in chinese
+# remove comments written in Chinese (maybe not necessary since we imported in utf-8)
 data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 
 data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 ```
 
 
-We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform  (file `r name_last_feedback`)
+We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform^[file `r name_last_feedback`]
 
 
-> As of *`r format(FileDate, "%A %d %B ")`, **`r nrow(data.feedback)`** different learners provided their feedback and comments on the course*.
+> As of *`r format(FileDate, "%A %d %B")`, **`r nrow(data.feedback)`** different learners provided their feedback and comments on the course*.
+
+# Composition of the respondants
+
+```{r StatDesc, cache =TRUE}
+G_Sex <- data.feedback %>%
+    ggplot() +
+    aes(x= Gender ) +
+    geom_histogram(stat = "count", fill = SIAP.color) +
+    ggtitle("Gender") +
+    coord_flip() +
+    theme_minimal()
+
+G_Org <- data.feedback %>%
+  ggplot() +
+  aes(x= Organization ) +
+  geom_histogram(stat = "count", fill = SIAP.color) +
+  ggtitle("Organization") +
+  coord_flip() +
+  theme_minimal()
+
+
+
+```
+
+
+```{r GraphicOrganisation}
+
+G_Sex + G_Org + 
+  plot_annotation(title = 'Respondants:',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
 
 
 
@@ -168,26 +202,31 @@ We base our analysis on the data collected on **`r FileDate`** recorded on the  
 # Transforming answers into factors
 library(purrr)
 
-
-data.feedback <- data.feedback %>% 
-  mutate_at(
-    vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
-    funs(case_when(
-     . == "Strongly disagree" ~ -3,
-     . =="Somewhat disagree" ~ -2,
-     . == "Disagree" ~ -1,
-     . == "Agree" ~ 1,
-     . == "Somewhat agree" ~ 2,
-     . == "Strongly agree" ~ 3))
-  )
-
-
-
 # data.feedback[,1:10] <- data.feedback[, 1:10] %>%
-#   mutate_if(is.character,as.factor)
+#    mutate_if(is.character,as.factor)
+ 
+
+# data.feedback <- data.feedback %>%
+#   mutate_at(
+#     vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
+#     funs(case_when(
+#      . == "Strongly disagree" ~ 0,
+#      . =="Somewhat disagree" ~ 1,
+#      . == "Disagree" ~ 2,
+#      . == "Agree" ~ 3,
+#      . == "Somewhat agree" ~ 4,
+#      . == "Strongly agree" ~ 5))
+#   )
+
+# label(vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  ))) <- c("A",)
+
+
+data.feedback[,1:10] <- data.feedback[, 1:10] %>%
+  mutate_if(is.character,as.factor)  
+
+mylabs <- unique(levels(data.feedback$Knowledge))
 
 ```
-
 
 
 ```{r TablePrint}
@@ -200,19 +239,70 @@ data.feedback <- data.feedback %>%
 ```
 
 
-```{r}
+```{r InitialGraphic}
+# library(forcats)
 
-data.feedback %>%
-  ggplot() +
-  aes(x = Content) +
-  geom_histogram(fill = SIAP.color) +
- ggtitle("TBC") +
- labs(y = paste("Based on" ,nrow(data.feedback) ," responses" ), 
-      x = "",
-      caption = paste("(date ", FileDate,")"))+
+# data.feedback %>%
+#   mutate(Knowledge = factor(Knowledge,  levels= c("Strongly disagree", "Somewhat disagree", "Disagree",
+#                                                   "Agree", "Somewhat agree", "Strongly agree"))) %>%
+#   ggplot() +
+#   aes(x= Knowledge ) +
+#   geom_histogram(stat = "count", fill = SIAP.color) +
+#   
+#  ggtitle("TBC") +
+#  labs(y = paste("Based on" ,nrow(data.feedback) ," responses" ), 
+#       x = "",
+#       caption = paste("(date ", FileDate,")"))+
+#   coord_flip() +
+#   theme_minimal()
+
+
+```
+
+```{r GraphicFunction}
+library(rlang)
+Response_plot <- function(data, xvar) {
+  # Defining the right order for factor variables
+  data[[xvar]] = factor(data[[xvar]],levels= c("Strongly disagree", "Somewhat disagree", "Disagree",
+                                              "Agree", "Somewhat agree", "Strongly agree")) 
+
+  ggplot(data)+
+  aes_string(x= xvar) +
+  geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
+
+  ggtitle(paste("On", xvar)) +
+  # labs(y = paste("Based on" , nrow(data) ," responses" ),
+  #      x = "")+
   coord_flip() +
   theme_minimal()
+}
+```
 
+
+```{r SurveyGraphicsCreation, cache=TRUE}
+# Creating Graphics
+
+G_K <- Response_plot(data.feedback, "Knowledge")
+G_C <- Response_plot(data.feedback, "Content")
+G_E <- Response_plot(data.feedback, "Efficiency")
+G_Q <- Response_plot(data.feedback, "Quality")
+G_D <- Response_plot(data.feedback, "Design")
+G_U <- Response_plot(data.feedback, "Usefulness")
+```
+
+
+```{r GraphicsKCEQ, fig.height=6}
+patch <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
+patch + 
+  plot_annotation(title = 'Sentiment on the course',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+# Sentilment analysis on the  comments
+
+```{r}
 
 
 ```
