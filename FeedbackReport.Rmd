@@ -66,6 +66,11 @@ library(modelsummary)
 library(plotly)
 library(wesanderson)
 library(patchwork)
+
+#Text analysis
+library(stringr)        
+library(tidytext)  
+
 ```
 
  
@@ -294,17 +299,69 @@ G_U <- Response_plot(data.feedback, "Usefulness")
 ```{r GraphicsKCEQ, fig.height=6}
 patch <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
 patch + 
-  plot_annotation(title = 'Sentiment on the course',
+  plot_annotation(title = 'Evaluation of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
                   theme = theme(plot.title = element_text(size = 16))) 
 
 ```
 
-# Sentilment analysis on the  comments
+# Text analysis from the comments
 
 ```{r}
+# from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
+
+ library(tm)
+
+# Get corpus.R
+corpus.R <- iconv(data.feedback$Results)
+
+corpus.R <- corpus.R(VectorSource(corpus.R))
+   
+# Clean text
+
+corpus.R <- tm_map(corpus.R, tolower)
+corpus.R <- tm_map(corpus.R, removePunctuation)
+corpus.R <- tm_map(corpus.R, removeNumbers)
+cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
+# inspect(cleanset.R[1:5])
+
+#Text stemming – which reduces words to their root form
+#cleanset.R <- tm_map(cleanset.R, stemDocument)
+cleanset.R <- tm_map(cleanset.R, stripWhitespace)
+#inspect(cleanset.R[1:5])
+
+```
+
+##  Most popular words
+
+```{r TopWords, fig.height=6}
+tdm <- TermDocumentMatrix(cleanset.R)
+tdm <- as.matrix(tdm)
+
+w <- rowSums(tdm)
+
+w <- subset(w, w>=25)
+barplot(w,
+        las = 2,
+        horiz=TRUE,
+        col = SIAP.color)
+
+```
 
 
+
+```{r}
+library(wordcloud)
+w <- sort(rowSums(tdm), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(w),
+          freq = w,
+          max.words = 150,
+          random.order = F,
+          min.freq = 5,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(5, 0.3),
+          rot.per = 0.7)
 ```
 
 
