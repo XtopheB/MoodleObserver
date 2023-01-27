@@ -66,10 +66,15 @@ library(modelsummary)
 library(plotly)
 library(wesanderson)
 library(patchwork)
+library(wordcloud)
+
 
 #Text analysis
 library(stringr)        
+library(tm)
+### using Tidytext
 library(tidytext)  
+library(textdata)
 
 ```
 
@@ -136,6 +141,7 @@ list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",Cou
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
 data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+#data.feedback <- read.csv(name_last_feedback, locale = locale(encoding = "Latin1"))
 
 # Date of the last file found
 FileDate <-as_date(file.mtime(name_last_feedback))
@@ -163,10 +169,7 @@ data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2F
 ```
 
 
-We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform^[file `r name_last_feedback`]
-
-
-> As of *`r format(FileDate, "%A %d %B")`, **`r nrow(data.feedback)`** different learners provided their feedback and comments on the course*.
+We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform^[file `r name_last_feedback`]. **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course*.^[As of `r format(FileDate, "%A %d %B")`]
 
 # Composition of the respondants
 
@@ -207,41 +210,14 @@ G_Sex + G_Org +
 # Transforming answers into factors
 library(purrr)
 
-# data.feedback[,1:10] <- data.feedback[, 1:10] %>%
-#    mutate_if(is.character,as.factor)
- 
-
-# data.feedback <- data.feedback %>%
-#   mutate_at(
-#     vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
-#     funs(case_when(
-#      . == "Strongly disagree" ~ 0,
-#      . =="Somewhat disagree" ~ 1,
-#      . == "Disagree" ~ 2,
-#      . == "Agree" ~ 3,
-#      . == "Somewhat agree" ~ 4,
-#      . == "Strongly agree" ~ 5))
-#   )
-
-# label(vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  ))) <- c("A",)
-
-
 data.feedback[,1:10] <- data.feedback[, 1:10] %>%
   mutate_if(is.character,as.factor)  
 
+# Gathering the labels
 mylabs <- unique(levels(data.feedback$Knowledge))
 
 ```
 
-
-```{r TablePrint}
-# module.tab
-# Better looking if long list of Modules
-#kable(data.feedback, "latex", longtable = T, booktabs = T) %>%
-#  kable_styling(latex_options = c("repeat_header"), font_size = 7)
-
-
-```
 
 
 ```{r InitialGraphic}
@@ -274,12 +250,13 @@ Response_plot <- function(data, xvar) {
   ggplot(data)+
   aes_string(x= xvar) +
   geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
-
+  geom_vline(xintercept= 3.5, lwd = 1.5, linetype="dashed", color = "pink")+
   ggtitle(paste("On", xvar)) +
   # labs(y = paste("Based on" , nrow(data) ," responses" ),
   #      x = "")+
   coord_flip() +
-  theme_minimal()
+  theme_minimal() +
+ theme(legend.position = "none")
 }
 ```
 
@@ -294,7 +271,16 @@ G_Q <- Response_plot(data.feedback, "Quality")
 G_D <- Response_plot(data.feedback, "Design")
 G_U <- Response_plot(data.feedback, "Usefulness")
 ```
+#  Evalauation of the different dimensions of the course
 
+We asked the participants to value their experience on the course using a 5-level scale, on 6 different dimensions: 
+
+- **Knowledge**: *The knowledge gained from this is e-learning course is useful for my present work.*
+- **Content**: *The content and scope of the e-learning course is appropriate for my level of understanding.*
+- **Efficiency**: *The e-Learning platform is effective.*
+- **Quality**: *The modules and the exercise are of high quality, concise and clear.*
+- **Design**: *The graphic design and presentations for each module are appropriate and effective.*
+- **Usefulness**: *I plan to use the skills acquired through this e-learning course for my work in the coming six months*
 
 ```{r GraphicsKCEQ, fig.height=6}
 patch <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
@@ -307,21 +293,41 @@ patch +
 
 # Text analysis from the comments
 
-```{r}
+
+
+```{r Questions}
+Text.R <- "How do you plan to use what you have learnt through this course? "
+Text.C <- "Any comments/ suggestions on how to improve this course or the platform?"
+```
+
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **two** different free-text questions in the feedback form for this course: 
+
+- *`r Text.R`* and, 
+- *`r Text.C`*
+
+We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the particpants in their comments.  `
+
+
+```{r TextAnalysis}
 # from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
 
- library(tm)
 
-# Get corpus.R
-corpus.R <- iconv(data.feedback$Results)
+# Get text corpus
+# remove some specific terms
+data.text <- data.feedback %>%
+  select(Results, Comments) %>%
+   mutate_all(~gsub("use |machine |learning |course| will |data", "", .))
 
-corpus.R <- corpus.R(VectorSource(corpus.R))
-   
+# Create corpus
+All.Comments <- rbind(data.text$Results, data.text$Comments)
+corpus.R <- iconv(All.Comments)
+corpus.R <- Corpus(VectorSource(corpus.R))
+
 # Clean text
-
 corpus.R <- tm_map(corpus.R, tolower)
 corpus.R <- tm_map(corpus.R, removePunctuation)
 corpus.R <- tm_map(corpus.R, removeNumbers)
+
 cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
 # inspect(cleanset.R[1:5])
 
@@ -335,13 +341,16 @@ cleanset.R <- tm_map(cleanset.R, stripWhitespace)
 ##  Most popular words
 
 ```{r TopWords, fig.height=6}
-tdm <- TermDocumentMatrix(cleanset.R)
-tdm <- as.matrix(tdm)
 
-w <- rowSums(tdm)
+Terms.R <- TermDocumentMatrix(cleanset.R)
+Terms.R <- as.matrix(Terms.R)
 
-w <- subset(w, w>=25)
-barplot(w,
+Words.R <- rowSums(Terms.R)
+Words.R <- subset(Words.R, Words.R>=25)
+
+barplot(Words.R,
+        main = "Most popular words in comments", 
+        #sub = Text.R,
         las = 2,
         horiz=TRUE,
         col = SIAP.color)
@@ -351,845 +360,173 @@ barplot(w,
 
 
 ```{r}
-library(wordcloud)
-w <- sort(rowSums(tdm), decreasing = TRUE)
+
+Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
 set.seed(222)
-wordcloud(words = names(w),
-          freq = w,
+wordcloud(words = names(Words.R),
+          freq = Words.R,
           max.words = 150,
           random.order = F,
           min.freq = 5,
           colors = brewer.pal(8, 'Dark2'),
-          scale = c(5, 0.3),
-          rot.per = 0.7)
+          scale = c(3, 0.6),
+          rot.per = 0.2)
 ```
+\newpage
+
+##  Sentiment analysis
+
+We  use *sentiment analysis* to determine  whether comments belong to some sort of  " predefined opinions". This method is basically a classification algorithm based on a reference list (*Word-Emotion Association Lexicon*, Mohammad and Turney 2013) where a large set of words are already classified as "positive", "negative", "happy", "sad", "angry", etc. We use here the  comments left by the participants on the free-text fields in the evaluation form  as the raw corpus of text.  
+
+Each comment is decomposed into words^[Only "meaningful"  extracted from each sentence, excluding stop words like  “the", "is", "at", "on”]  associated to its semantic root  ([*Stemmization*](https://towardsdatascience.com/stemming-lemmatization-what-ba782b7c0bd8) ) in order to reduce the complexity of the process. After cleaning each "meaningful"  word can be related (or not) to one class *i.e.* to a sentiment.
+
+Each comment can then be associated with one or several "sentiments" in a matrix form and some statistics can be derived, includinga a basic count for each category, as below:  
+
+
+```{r SentimentScores, cache=TRUE}
+library(syuzhet) # For generating sentiment scores
+scores.R <- get_nrc_sentiment(unlist(cleanset.R))
+
+# The tidytext version consist of matching with NRC sentiment source
+# see https://ladal.edu.au/sentiment.html
+# nrc <-tidytext::get_sentiments("nrc")
+```
+
+
+```{r}
+barplot(colSums(scores.R),
+        las = 2,
+        col = SIAP.color,
+        horiz = TRUE, 
+        main = "Sentiment Scores on the whole text corpus"
+)
+```
+# Comments from learners
+
+```{r}
+
+data.num <- data.feedback
+
+data.num[1:10] <-data.num[, 1:10] %>%
+   mutate_if(is.character,as.factor)
+
+
+data.num <- data.num %>%
+  mutate_at(
+    vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
+    funs(case_when(
+     . == "Strongly disagree" ~ 0,
+     . =="Somewhat disagree" ~ 1,
+     . == "Disagree" ~ 2,
+     . == "Agree" ~ 3,
+     . == "Somewhat agree" ~ 4,
+     . == "Strongly agree" ~ 5))
+  )
+
+# Total score
+data.num <- data.num %>%
+  mutate( Total = Knowledge + Content + Efficiency +
+                  Quality + Design + Usefulness)
+
+# Nb Answers shown 
+NbAnswers <-20
+
+```
+
+
+Since the number of comments can be important (we have `r  nrow(data.feedback)` responses), we  computed a score of satisfaction based on the 5-level scale used for each questions on Knowledge, Content, Efficiency, Quality, Design \& Usefulness.^[ For each question, a score from 0 ("*Strongly disagree*") to 5 ("*Strongly agree*") was attributed. The total score is the sum for the 6 questions] For both open-text question, we present here the  `r NbAnswers` comments  with lowest and highest scores.  
+
+
+## Answers for  *`r Text.R`*
+
+```{r ResultTableN}
+
+data.num %>%
+  filter(str_count(Results) >20) %>%
+  arrange(Total) %>%    # Lowest Total first
+  head(n= NbAnswers )%>%
+  select(number, Results)%>%
+  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese caracters
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste(NbAnswers, "most negative learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE) %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
+```{r ResultTableP}
+
+data.num %>%
+  filter(str_count(Results) >20) %>%
+  arrange(desc(Total)) %>%    # highest Total first
+  head(n= NbAnswers )%>%
+  select(number, Results)%>%
+  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese caracters
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste("Most positive learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE) %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
+\newpage
+
+## Answers for  *`r Text.C`*
+```{r CommentsTableN}
+
+data.num %>%
+  filter(str_count(Comments) >20) %>%
+  arrange(Total) %>%    # Lowest Total first
+  head(n= NbAnswers )%>%
+  select(Total, Comments)%>%
+  filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese caracters
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste("Most negative learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE) %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
+
+```{r CommentsTableP}
+
+data.num %>%
+  filter(Total>15 &  str_count(Comments) >20) %>%
+  arrange(desc(Total)) %>%    # Highest Total first
+  head(n= NbAnswers )%>%
+  select(number, Comments)%>%
+  filter(xfun::is_ascii(Comments)== T)%>%   # remove Chinese caracters
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste("Most positive learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE)%>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
 
 
 ```{r EXIT}
 knitr::knit_exit()
-```
-
-
-
-
-```{r MergeLogsGrades}
-# Step 1: Adding email address to course.log using data.act
-
-StudentsNames <- data.act  %>%
-  select(X, Email.address) %>%
-  rename( User.full.name = X)
-
-course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
-
-# Step 2: Adding Sex and Country  to course.log using 
-NameSex <- data.grades %>%
-  mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
-  select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
-  mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
-
-course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
-
-```
-
-```{r CourseStats}
-## Stat 
-Qoo <-course.log %>%
-  filter(
-    str_detect(Event.name, "Quiz"))%>%  
-  count(n_distinct(User.full.name) )
-
-NbLearnersQuiz <- Qoo$`n_distinct(User.full.name)`
-
-# Subset of posts on Forums (for counts below)
-Foo <-course.log %>%
-  filter(
-    str_detect(Event.context, "Forum") &
-    str_detect(Event.name, "posted"))%>%  
-  count(n_distinct(User.full.name) )
-
-NbLearnersPost <- Foo$`n_distinct(User.full.name)`
-
-# Subset of Projects workshops (for counts below)
-Woo <-course.log %>%
-  filter(
-    (str_detect(Event.context, "Workshop")  |
-    str_detect(Event.context, "Assignment:") )   &
-    str_detect(Event.name, "uploaded"))%>%
-  count(n_distinct(User.full.name) )
-
-NbLearnersProject <-Woo$`n_distinct(User.full.name)`
-NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
-
-# Cleaning unnecessary file
-rm("Qoo", "Foo", "Woo")
-```
-
-
-
-## Attendance 
-
-```{r WomenCountries}
-NbWomen <- course.log %>%
- select(Email.address, Sex)%>%
-  unique() %>%
-  filter(Sex == "Female") %>%
-  nrow()
-
-NbCountries <- course.log %>%
-  select(Country) %>%
-  filter(Country != "" | Country != "NA" | Country != "Unknown")%>%
-  unique() %>%
-  nrow()
-```
-
-**`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. 
-
-```{r GraphBycountry}
-
-course.log %>%
- filter(Country != "" | Country != "NA")%>%
- group_by(Country) %>%
- summarise(Learners = n_distinct(Email.address)) %>%
- ggplot() +
- aes( x=reorder(Country, Learners), y=  Learners) +
- geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
-geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
- scale_fill_hue() +
- ggtitle("Learners origin") +
- labs(y = paste("Learners enrolled  by country (total =" ,NbLearners ,")" ), 
-      x = paste("Countries (total =" ,NbCountries , ")"),
-      caption = paste("(date ", FileDate,")"))+
- coord_flip() +
- theme_minimal() +
- theme(legend.position = "none")
-
-
-```
-
-
-## Certified people
-
-```{r GradesTotal}
-# We remove grades from SCORM here (some courses need that)
-Grades <- data.grades %>%
-  select(!(ID.number:Department)) %>%
-  select(!(Position:Organization))%>%
-  select(!contains("download"))%>%
-  select(!contains("SCORM"))%>%
-  mutate_at(vars(matches("Quiz|Assign|Assess|Test")),funs(as.numeric))
-
-# Total or Final grade
-
-Grades$GradeFinal <- as.numeric(Grades[ , grep(c("total", "Final"), colnames(Grades))])  # Find matches
-# Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
-# Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
-
-# Grades <- Grades %>%
-#   mutate(
-#     # Here it depends on the type of exam..)
-#     # GradeFinal = rowSums(Grades[, grep(c("Assess"), colnames(Grades))], na.rm = T)
-#     # This is for a Final exam type of assessment
-#    GradeFinal = Quiz...Final.Test..Real.
-# )
-```
-
-
-
-
-```{r Certified}
-# I create a Boolean to identify Certificate
-# using  "any" returns TRUE if TRUE appears in any Actname for a participant
-# Some courses have a different type of certificate in Actname --> tolower
-
-course.log <- course.log %>%
-  group_by(Email.address, User.full.name) %>%
-  mutate(Certified = any(stringr::str_detect(tolower(Actname), "certificate") ))  %>%
-  ungroup()
-
-# Certification
-Learners <- course.log %>%
-  distinct(User.full.name, .keep_all=TRUE) %>%
-  mutate(Sex = replace_na(Sex, "NA"))%>%
-  # filter(Certified ==TRUE)%>%
-  select(User.full.name, Email.address,  Sex, Country, Position, Organization, TotalReal, Certified)%>%
-  unique()
-
-NbCertificates <- nrow(subset(Learners, Certified == TRUE))
-```
-
-
-
-```{r ExportParticipants}
-library(openxlsx)
-# For Shuji
-CourseListParticipants <- Learners %>% 
-  filter( Certified =="TRUE") %>%
-  select (User.full.name, Sex, Country)
- 
-
-# save the file 
-write.xlsx(CourseListParticipants,
-           file=paste("Output/",CourseName,"-Participants-",ymd(Sys.Date()),".xlsx", sep=""))
-```
-
-
-
-
-```{r ActivityTime}
-### Time spent computation 
-learners_Time <-  course.log %>%
-  select(Email.address,  Actname, ActNb,Date, Time) %>%
-  mutate(RealTime = lubridate::dmy_hm(Time)) %>%
-  group_by(Email.address, Date) %>%
-  arrange(RealTime) %>%
-  mutate(RawDiff = RealTime - lag(RealTime))  %>%
-  filter(RawDiff < 3600)%>%
-  group_by(Email.address)%>%  
-  summarise(TotalTime = sum(RawDiff, na.rm = TRUE), 
-            NbAct = length(unique(Actname)), 
-            NbDays = length(unique(Date))) %>%
-  ungroup()
-```
-
-
-```{r LearnersFile}
-Grades <- learners_Time %>%
-  left_join(Grades, by = "Email.address") 
-
-StudentsNoShow <-  Grades %>%
-  filter(GradeFinal ==0)
-
-```
-
-
-```{r AboveThreshold }
-NbStudentsAboveThreshold <-  Grades %>%
-  filter(GradeFinal >= GradeThreshold ) %>% nrow()
-
-NbStudentsNoShow <-  Grades %>%
-  filter(GradeFinal ==0 | is.na(GradeFinal)) %>% nrow()
-
-# StudentsInWorkshop <-  Grades %>%
-#   filter(!is.na(Grades[, grep(c("Work"), colnames(Grades))]) ) 
-
-# Success Rates
-RawSuccessRate <- round(100*NbCertificates/NbLearners, 1)
-RealSuccessRate <-round(100*NbCertificates/(NbLearners - NbStudentsNoShow) , 1)
-
-
-```
-
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
-
- 
-
-> The "raw" success rate  is **`r RawSuccessRate`** %. However,  note that **`r paste0(NbStudentsNoShow)`**  participants did not participante in any test and have a grade of 0 (*no-shows*). So the "**real**"  success rate is  **`r RealSuccessRate`** %.
-
-
-The distribution of certificates delivered by country  and by gender is the following.
-
-```{r CertifiedbyCountry}
-DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
-
-CertifiedCountryL<-  DTCertified[, .N, keyby = c("Country", "Sex")]
-CertifiedCountryL$N <- as.numeric(CertifiedCountryL$N)
-CertifiedCountryW <- reshape(CertifiedCountryL, idvar = "Country", timevar = "Sex", direction = "wide")
-
-# PB here since there is not enough certified people
-
-# CertifiedCountryW  <- CertifiedCountryW %>%
-#   replace(is.na(.), 0) %>%
-#   rowwise()%>%
-#   mutate(Total = sum(c(N.Female,N.Male)))%>%
-#   arrange(desc(Total))
-  
-```
-
-```{r TableCertifiedSex}
-CertifiedSex<-  DTCertified[, .N, keyby = Sex]
-names(CertifiedSex) <- c("Sex", "Nb of Certificates")
-CertifiedSex
-```
-
-
-```{r ExportData}
-library(openxlsx)
-# For Shuji
-# Define sheet names for each data frame
-CourseListExport <- list('Grades' = DTCertified%>% arrange(desc(TotalReal)),
-                     'ByCountry' = CertifiedCountryW%>% arrange(desc(.[[2]])),
-                     'BySex' = CertifiedSex)
-# save the file 
-write.xlsx(CourseListExport,
-           file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
-```
-
-```{r}
-rm("CertifiedCountryL", "CertifiedCountryW", "CertifiedSex")
-```
-
-
-```{r ExportDataReport}
-#For report
-CourseReportExport <- data.frame(NbLearners, NbCertificates)
-write.xlsx(CourseReportExport,
-           file=paste("Output/",CourseName,"-Report-",ymd(Sys.Date()),".xlsx", sep=""))
-
-
-```
-
-##  Success rate
-
-The success rate (`r RealSuccessRate` %) can be analysed by country and gender.
-
-
-```{r GraphSuccessByCountry}
-MinLearners <- 5
-Learners %>%
- filter(Country != "" | Country != "NA") %>%
- filter(TotalReal > 0 | !is.na(TotalReal)) %>%
-  mutate( One = 1, 
-          OneC = ifelse(Certified ==TRUE, 1, 0),
-          Certified = as.factor(Certified),
-          Country = as.factor(Country)) %>%
-    group_by(Country) %>%
-  mutate (TotalC = sum(OneC), 
-          Total = sum(One), 
-          PercentC = TotalC/Total) %>%
-  ungroup() %>%
-  filter(Total >= MinLearners)%>%
-  ggplot() +
-  aes(x = reorder(Country, PercentC) , y = One , fill = Certified)  +
-  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
-  ggtitle("Sucess rate by country") +
-  labs(x="Country", y="Percentage of sucess", 
-      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`noshows`) excluded \n
-                     (date ", FileDate,")"))+
-  guides(fill = guide_legend(title = "Sucess")) +
-  theme_minimal()+
-   annotate("text", x = 1, y = RealSuccessRate/100,
-          color= "red",
-          label = "Mean", alpha = 0.7)+
-  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
-  theme(legend.position = "bottom")+ 
-  coord_flip()
-
-```
-
-
-```{r GraphSuccessBySex, fig.height= 3}
-Learners %>%
- filter(Country != "" | Country != "NA")%>%
-  filter(TotalReal > 0 | !is.na(TotalReal)) %>%
-  mutate( One = 1, 
-          Certified = ifelse(Certified == 1, "Yes", "No" )) %>%
-  ggplot() +
-  aes(x = Sex , y = One , fill = Certified) +
-  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
-  ggtitle("Sucess rate by gender") +
-  labs(x="Gender", y="Percentage of sucess", 
-      caption = paste(" Participants with a grade of 0 (`noshows`) excluded \n
-                     (date ", FileDate,")"))+
-  theme_minimal()+
-  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
-  theme(legend.position = "bottom")+ 
-  coord_flip()
-
-```
-
-##  Grades distribution
-
-The distribution of grades presented below  shows the high quality of the learners.^[This graphic excludes the  *`r paste0(NbStudentsNoShow)`* participants that did not participate in any of the tests (grade =0)].  
-
-
-```{r GraphGrades , fig.height=3}
-
-# Automatic vertical scale
-GradesPositive <- Grades%>% filter(GradeFinal > 0 | !is.na(GradeFinal)) 
-histdata <- hist(GradesPositive$GradeFinal,
-                 freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
-HistHeight <- max(histdata$counts)
-rm("histdata")
-# Parameters for the plot
-Ymax <- round(1.5*HistHeight, 0)
-
-GradesPositive %>%
- ggplot() +
- aes(x = GradeFinal) +
- geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
- coord_cartesian(xlim=c(0,GradeMax))+
- ggtitle("Grades distribution") +
- labs(x="Grades", y=" Nb of sucessful learners",
-      caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
-      subtitle = paste("(as of ", FileDate,",",
-                      NbStudentsAboveThreshold," learners are above the threshold)") )+
- annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
-                  ymin = 0, ymax = Ymax,
-                  fill = SIAP.color , alpha = .2)+
-   annotate("text", x = GradeThreshold+10, y = Ymax*0.75,
-          color= SIAP.color,
-          label = "Success")+
- theme_minimal()
-
-```
-
-###  Grades distribution by sex and country
-
-```{r densitySex, fig.height=3}
-library(ggridges)
-GradesPositive %>%
- filter(Country != "" | Country != "NA")%>%
-  group_by(Sex) %>%
-  mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(Email.address))  %>%
-  ungroup() %>%
-  filter(NbLearners >5) %>%
-  ggplot() +
-  aes(x = GradeFinal , y = reorder(Sex, AvgGrade) , fill = Sex) +
-  xlim( c(0,max(GradesPositive$GradeFinal)+1))+
-  #geom_density_ridges(stat="binline", bins=20) +
-  # geom_density_ridges( alpha = 0.3) +
-  stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
-                        jittered_points = TRUE,
-                        position = position_points_jitter(width = 0.05, height = 0),
-                        point_shape = '|', point_size = 2, point_alpha = 0.3, 
-                       alpha = 0.3
-                      ) +
-  scale_fill_viridis_d(name = "Quintiles") +
-  
-  #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
-  ggtitle("Distribution of grades by Sex ") +
-  labs(x="Final Grades", y=" Sex ", 
-      subtitle = paste("(date ", FileDate,")")) +
-    theme_ridges(grid = FALSE) +
-  geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+12, y = 0.75,
-          color= "red",
-          label = "Success")+
-  #theme_minimal()+
-  theme(legend.position = "none")
- 
-
-```
-
-```{r densityCountry, fig.height=5}
-#library(ggridges)
-GradesPositive %>%
- filter(Country != "" | Country != "NA")%>%
-  group_by(Country) %>%
-  mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(Email.address))  %>%
-  ungroup() %>%
-  filter(NbLearners >5) %>%
-  ggplot() +
-  aes(x = GradeFinal , y = reorder(Country, AvgGrade) , fill = Country) +
-  xlim( c(0,max(GradesPositive$GradeFinal)+1))+
-  #geom_density_ridges(stat="binline", bins=20) +
-  # geom_density_ridges( alpha = 0.3) +
-  stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
-                        jittered_points = TRUE,
-                        position = position_points_jitter(width = 0.05, height = 0.1),
-                        point_shape = '|', point_size = 2, point_alpha = 0.3, 
-                       alpha = 0.3
-                      ) +
-  #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
-  ggtitle("Distribution of grades by countries ") +
-  labs(x="Final Grades",
-       y=" Countries", 
-      caption = paste("Countries with more than 5 participants \n
-                     (date ", FileDate,")"))+
-    theme_ridges(grid = FALSE) +
-  geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+12, y = 0.75,
-          color= "red",
-          label = "Success")+
-  #theme_minimal()+
-  theme(legend.position = "none")
- 
-
-```
-
-
-
-# Detailled analysis
-
-## Learners views and completion by type of event
-
-When on the platform, the learners can interact with the activities in different ways. These interactions with the various types of activities can be regrouped in a typology of **`r length(unique(course.log$Event.name))-1`**  different type of events (as defined by Moodle)
-
-```{r GraphTypeEvents}
-course.log %>%
-  filter(!is.na(Event.name)) %>%
-  mutate(SpecificEvent = 
-           ifelse(str_detect(Event.name, "Quiz"), "Test",
-                  ifelse(str_detect(Event.name, "Discussion")|
-                           str_detect(Event.name, "Post"), "Forum","Other"))) %>%
-  group_by(Event.name, SpecificEvent) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  #mutate(rank = dense_rank(desc(Learners))) %>% 
-  #filter(rank <= 25) %>% 
-  ggplot()+
-  aes(x=reorder(Event.name, Learners), y=Learners, fill= SpecificEvent)+
-  geom_bar(stat='identity')+
-  labs(x="Events", y="Number of Learners", 
-       subtitle = paste("The course has", length(unique(course.log$Event.name))-1,"different events (Final date ",
-                        FileDate,")"))+
-  ggtitle("Total number of learners per type of event")+
-  scale_fill_manual("Type of Event",values=c(SIAP.color, "grey", "darkred")) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-```
-
-
-
-##  Events conducted by date and time of the day{-} 
-
-We observe events over the whole period of the course and represent the activities by day. 
-
-```{r GraphActivityByDate}
-# Specific to Facilitated courses
-
-course.log %>%
-  mutate(ParticularDays = ifelse(DayOfWeek ==1, "Sunday",
-                                 ifelse(DayOfWeek ==WebinarDay & DayID < 7 * NbModules,
-                                        "Webinar day", "Regular"))  ) %>%
-  filter(!is.na(User.full.name)) %>%
-  ggplot()+
-  #aes(x=fct_infreq(Date))+
-  aes(x = as.factor(DayID),  fill = ParticularDays)+
-  geom_bar(color = "white" )+
-  labs(x="Day since start", y="Number of events",
-       subtitle = paste("Nb of days", length(unique(course.log$Date)),"(Final date: ",
-                        FileDate,")"))+
-  ggtitle("Number of events recorded on the platform by date")+
-  scale_fill_manual("Activity",values=c( SIAP.color, "grey", "orange")) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8),
-        axis.line = element_line(colour = "black"),
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 10))
-
-```
-
-## Activities on the LMS
-
-> Seminar days seem to be among the most active ones
-
-Since there is an important **time difference** between the teacher and the learners, it was important to have an idea of the learner's presence on the platform by hour.  The graphic below shows the maximum number of learners for different time periods of the day. 
-
-```{r GraphHourlyActivity, fig.height=3}
-#Active time by Learners
-
-ThreshodlLowActivity <- 10
-
-course.log %>%
-  filter(!is.na(Time_range)) %>%
-  group_by(Time_range) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  ggplot()+
-  aes(x=reorder(Time_range, Time_range), y=Learners, 
-      fill = ifelse(Learners> ThreshodlLowActivity, "High", "Low"))+
-  geom_bar(stat='identity')+ 
-  ggtitle("Number of Unique Visitors on the Platform by Hour")+
-  labs(x="Time (JST)", y="Maximum Number of Learners", 
-       subtitle = paste("Japan Time (Final date ", FileDate,")"))+
-  scale_fill_manual("Activity",values=c("pink","grey")) +
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8), 
-        axis.text.x = element_text(angle = 60))
-        
-  # coord_flip()
-  
-```
-
-> *Most of the activity is completed within the regular day work time (Japan Time)*
-    
-## Learners preferred activities {-}
-
-
-
-```{r LearnersByActivity}
-LearnersByActivity <- course.log %>%
-  filter(!is.na(Event.context)) %>%
-  filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
-  group_by(ActID.lab) %>%
-  summarise(Learners = n_distinct(User.full.name),
-            ModuleName = as.factor(unique(Actname))) 
-
-MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
-```
-
-
-```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
-
-# myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
-myPaletteModules <- c("lightgrey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
-myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
-
-#myPaletteModules <- c("lightyellow", "yellow",'#b2df8a','#33a02c','#fb9a99','#e31a1c', "orange")
-
-course.log %>%
-  filter(!is.na(Event.context)) %>%
-  filter(Actname != CourseNameLong) %>%
-  filter(ModuleID >= 0) %>% 
-  filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",str_trunc(Event.context, 20, "right"))) %>%
-  group_by(ActID.lab) %>%
-  summarise(NbLearners = n_distinct(User.full.name),
-            ModuleName = as.factor(unique(Actname)),
-            ModuleID = as.factor(unique(ModuleID)))  %>%
-  # mutate(rank = dense_rank(desc(NbLearners))) %>
-  # filter(rank <= 30) %>% 
-  mutate(ActID.lab = fct_reorder(ActID.lab, NbLearners, min)) %>%
-  arrange(ActID.lab) %>%  
-  ggplot() +
-  aes(x = ActID.lab,  y = NbLearners, fill = ModuleID) +
-  geom_bar(stat='identity') +
-  scale_fill_manual("ModuleID", values = myPaletteModules ) +
-  # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
-  geom_text(aes(label= NbLearners, color = ModuleID),
-            vjust= 0.5, hjust = -0.5,  size=3.5)+
-   scale_color_manual("ModuleID", values = myPaletteModulesDark ) +
-  labs(x="Activities", y="Number of Learners per activity") +
-  ggtitle("Activities accessed by Learners")+
-  coord_flip() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), 
-        text = element_text(size=12),
-        axis.line = element_line(colour = "black"),
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 12))+
-   annotate("text", x = 1, y = MedianLearnersActivity,
-          color= "red",
-          label = "Median", alpha = 0.7)+
-  geom_hline( yintercept = MedianLearnersActivity,  color = "red" ) 
-
-
-#p
-#ggplotly(p)
-
-
-
-```
-
- > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** original activities proposed* ^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.] . 
- 
-### 10 **most viewed** activities
- 
-```{r Top10Activities}
-
-DTActivities <- data.table(LearnersByActivity %>%
-                          slice_max(Learners, n = 10)%>%
-                          select(ModuleName, Learners))
-                   
-names(DTActivities) <- c( "Activity", "Nb Learners")
-DTActivities
-
-```
-
-
-### 10 **least viewed** activities
- 
-```{r Bottom10Activities}
-
-DTActivitiesLeast <- data.table(LearnersByActivity %>%
-                             slice_min(Learners, n = 10)%>%
-                             select( ModuleName, Learners))
-
-DTActivitiesLeast <-  DTActivitiesLeast[order(-Learners)]                  
-names(DTActivitiesLeast) <- c( "Activity", "Nb Learners")
-DTActivitiesLeast
-
-```
-
- 
-## Activities along the course span: 
-
-This *heatmap* is an attempt to visualize the activities on the platform over time.  The coding is the following:
-
--  Horizontally:  Nb of days since beginning of course
--  Vertically:  Activities (Module 1 at the bottom, module 6 at the top)
--  Cells (color):  Nb of views (Nb of Learners) for each activity each day
-
-
-```{r HeatMap}
-library(colorspace)
-course.log %>%
- filter(!is.na(ActNb))  %>%
-  mutate(ActID.lab = paste(ActNb,"-",str_trunc(Actname, 30, "right") )) %>%
-  group_by(ActID.lab, Date) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  ggplot()+
-  aes(x=Date, y=fct_rev(fct_infreq(ActID.lab)), fill=Learners)+
-  geom_tile( )+
-  scale_fill_gradientn(colours= diverge_hcl(14), trans = "log", 
-                      labels =  scales::comma_format(accuracy=1))+
-  scale_y_discrete(label=function(x) abbreviate(x, minlength=15))+
-  labs(x="Date", y="Activities", 
-       fill = "Nb of learners", 
-       subtitle = paste("Final date ", FileDate), 
-       caption = " Vertical lines indicate module opening")+
-  ggtitle("Heatmap of the activities")+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=14),
-        panel.background = element_blank(), text = element_text(size=10), 
-        axis.line = element_line(colour = "black"), 
-        axis.text.y = element_text(face= "plain", size=4.5, color="black"),
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_fixed(ratio = 0.5 )
-```
-
-
-## Learners activities and grades
-
-Over the **`r NbLearners`** unique learners[^MyNote] registered for the course,  **`r NbLearnersQuiz`** attempted  to at least one test and  **`r Grades%>% filter(NbDays > 6 ) %>% nrow()`** visited the LMS at more than **6 different dates** (some learners have completed several modules within the same day).  
-
-[^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
-
-In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)` participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
-
-```{r GradesVsActivities}
-
-# Here we put the points AFTER the annotation for Plotly... 
-p <-Grades %>%
-  filter(Country != "") %>%
- ggplot() +
- ggtitle("Test Scores vs Number of Activities Viewed") +
- labs(x="Nb of activities viewed", y=" Total Grade ", 
-      subtitle = paste0("Each dot is a participant, coloured by country" ),
-       caption=  paste("Date", FileDate) )+
-  ylim( c(0,GradeMax))+
-  annotate("rect", 
-           xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
-           xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
-           ymin = GradeThreshold,
-           ymax = GradeMax, 
-           fill = "grey",  alpha = 0.1, 
-          color= SIAP.color, alpha = 0.1) +
- aes(x = NbAct, y = GradeFinal, color = Country) +
- geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
- # facet_wrap(vars(Country)) +
- scale_color_hue() +
- theme_minimal()+
- theme(legend.position = "none")
-p
-#Interactive plot
-#ggplotly(p)
-```
-
-## Activities viewed and time spent by learners 
-
-```{r}
-
-# Subset of students spending more than 3hours/week (for counts below)
-Too <-Grades %>%
- #mutate(TotalTimeHour = TotalTime/3600) %>%
-  filter(
-    !is.na(TotalTime),
-    as.numeric(TotalTime)> 3*NbModules*3600
-    )%>%  
-  count(n_distinct(Email.address) )
-
-NbLearners3hours <- max(Too$n, 0)
-rm("Too")
-
-```
-
-The time spent by learners on the platform is, of course, proportional to the number of activities viewed, with a greater heterogeneity for the most serious learners who viewed most of the activities.[^Time] 
-
-> It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent more than 3 hours/Module on the course.
-
-[^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.  
-
-
-```{r TimeVsActivities}
-
-p <- Grades %>%
- filter(!is.na(Country)) %>%
-mutate(TotalTime = TotalTime/60, 
-        Certification = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
- ggplot() +
- aes(x = NbAct, y = TotalTime,
-     colour =  Certification,
-     toto = Email.address) +   # for plotly
-  # Toto is a trick to have names in plotly
- # geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
- geom_jitter(size = 3,  alpha = 0.6) +
- ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
- labs(x="Nb of activities viewed", y=" Total time spent by learners (in min)", 
-      subtitle = paste0("Each dot is a participant. ", NbLearners3hours," learners spent more than 3 hours/week"), 
-      caption=  paste("Date", FileDate) )+
- geom_hline (aes(yintercept = 3*NbModules*60), color = SIAP.color) +
- annotate("text", x = 15, y = 3*NbModules*60 + 200,
-          color= SIAP.color,
-          label = "Course  requirement (3 hours/Module)")+
-# geom_vline (aes(xintercept =  median(TotalTime))) +
-# facet_wrap(vars(Country)) +
- scale_color_hue() +
- theme_minimal()+
- theme(legend.position = "bottom")
-
-p
-#Interactive plot
-#ggplotly(p)
-
-
-```
-
-## Activities viewed and visits on the LMS
-
-```{r VisitsVsActivities}
-
-Grades %>%
- filter(!is.na(Country)) %>%
- mutate( 
-       Certification = as.factor(ifelse(GradeFinal >= GradeThreshold, "Succeed", "Failed"))) %>%
- ggplot() +
- aes(x= NbDays, y = NbAct, 
-     colour = Certification)+
- geom_jitter(size = 3,  alpha = 0.5, width = 0.1) +
- scale_x_continuous(breaks=seq(from = 0, to = max(Grades$NbAct)+2, by =2))+
- ggtitle("Activity of learners and visits to the LMS") +
- labs(x="Nb of visits on the LMS (unique days)", 
-      y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
-      subtitle = paste0("Each dot is a participant, couloured by success"), 
-      caption=  paste("Date", FileDate) )+
- theme_minimal()+
- theme(legend.position = "bottom", 
-       panel.grid.minor = element_blank())
-
-
-
-```
-
-```{r reportexport}
-library(here)
-# Report.name <- paste0("Report-", CourseName,"-", FileDate)
-# 
-# # Export
-# file.copy(from = here("GenericReport.pdf"),
-#           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
-
-
-
-
-
 ```
 
 
