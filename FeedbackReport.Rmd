@@ -129,7 +129,7 @@ NbModules <- AllCoursesNbModules[i.course]
 ```
 # ***`r CourseNameLong `***:  
 
-## Gathering the data
+## Data set
 
 ```{r LoadData}
 # Parse the data folder to find the latest files 
@@ -169,9 +169,9 @@ data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2F
 ```
 
 
-We base our analysis on the data collected on **`r FileDate`** recorded on the  Feedback form on Moodle platform^[file `r name_last_feedback`]. **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course*.^[As of `r format(FileDate, "%A %d %B")`]
+Our analysis uses the data collected on **`r FileDate`** from the  **Feedback Form** on the Moodle platform^[file `r name_last_feedback`]. **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
 
-# Composition of the respondants
+## Composition of the respondants
 
 ```{r StatDesc, cache =TRUE}
 G_Sex <- data.feedback %>%
@@ -271,7 +271,7 @@ G_Q <- Response_plot(data.feedback, "Quality")
 G_D <- Response_plot(data.feedback, "Design")
 G_U <- Response_plot(data.feedback, "Usefulness")
 ```
-#  Evalauation of the different dimensions of the course
+#  Evaluation of the different dimensions of the course
 
 We asked the participants to value their experience on the course using a 5-level scale, on 6 different dimensions: 
 
@@ -283,127 +283,19 @@ We asked the participants to value their experience on the course using a 5-leve
 - **Usefulness**: *I plan to use the skills acquired through this e-learning course for my work in the coming six months*
 
 ```{r GraphicsKCEQ, fig.height=6}
-patch <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
-patch + 
+all.fig <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
+all.fig  + 
   plot_annotation(title = 'Evaluation of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
                   theme = theme(plot.title = element_text(size = 16))) 
 
 ```
 
-# Text analysis from the comments
+# Consitency of the responses
 
 
-
-```{r Questions}
-Text.R <- "How do you plan to use what you have learnt through this course? "
-Text.C <- "Any comments/ suggestions on how to improve this course or the platform?"
-```
-
-Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **two** different free-text questions in the feedback form for this course: 
-
-- *`r Text.R`* and, 
-- *`r Text.C`*
-
-We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the particpants in their comments.  `
-
-
-```{r TextAnalysis}
-# from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
-
-
-# Get text corpus
-# remove some specific terms
-data.text <- data.feedback %>%
-  select(Results, Comments) %>%
-   mutate_all(~gsub("use |machine |learning |course| will |data", "", .))
-
-# Create corpus
-All.Comments <- rbind(data.text$Results, data.text$Comments)
-corpus.R <- iconv(All.Comments)
-corpus.R <- Corpus(VectorSource(corpus.R))
-
-# Clean text
-corpus.R <- tm_map(corpus.R, tolower)
-corpus.R <- tm_map(corpus.R, removePunctuation)
-corpus.R <- tm_map(corpus.R, removeNumbers)
-
-cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
-# inspect(cleanset.R[1:5])
-
-#Text stemming – which reduces words to their root form
-#cleanset.R <- tm_map(cleanset.R, stemDocument)
-cleanset.R <- tm_map(cleanset.R, stripWhitespace)
-#inspect(cleanset.R[1:5])
-
-```
-
-##  Most popular words
-
-```{r TopWords, fig.height=6}
-
-Terms.R <- TermDocumentMatrix(cleanset.R)
-Terms.R <- as.matrix(Terms.R)
-
-Words.R <- rowSums(Terms.R)
-Words.R <- subset(Words.R, Words.R>=25)
-
-barplot(Words.R,
-        main = "Most popular words in comments", 
-        #sub = Text.R,
-        las = 2,
-        horiz=TRUE,
-        col = SIAP.color)
-
-```
-
-
-
-```{r}
-
-Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
-set.seed(222)
-wordcloud(words = names(Words.R),
-          freq = Words.R,
-          max.words = 150,
-          random.order = F,
-          min.freq = 5,
-          colors = brewer.pal(8, 'Dark2'),
-          scale = c(3, 0.6),
-          rot.per = 0.2)
-```
-\newpage
-
-##  Sentiment analysis
-
-We  use *sentiment analysis* to determine  whether comments belong to some sort of  " predefined opinions". This method is basically a classification algorithm based on a reference list (*Word-Emotion Association Lexicon*, Mohammad and Turney 2013) where a large set of words are already classified as "positive", "negative", "happy", "sad", "angry", etc. We use here the  comments left by the participants on the free-text fields in the evaluation form  as the raw corpus of text.  
-
-Each comment is decomposed into words^[Only "meaningful"  extracted from each sentence, excluding stop words like  “the", "is", "at", "on”]  associated to its semantic root  ([*Stemmization*](https://towardsdatascience.com/stemming-lemmatization-what-ba782b7c0bd8) ) in order to reduce the complexity of the process. After cleaning each "meaningful"  word can be related (or not) to one class *i.e.* to a sentiment.
-
-Each comment can then be associated with one or several "sentiments" in a matrix form and some statistics can be derived, includinga a basic count for each category, as below:  
-
-
-```{r SentimentScores, cache=TRUE}
-library(syuzhet) # For generating sentiment scores
-scores.R <- get_nrc_sentiment(unlist(cleanset.R))
-
-# The tidytext version consist of matching with NRC sentiment source
-# see https://ladal.edu.au/sentiment.html
-# nrc <-tidytext::get_sentiments("nrc")
-```
-
-
-```{r}
-barplot(colSums(scores.R),
-        las = 2,
-        col = SIAP.color,
-        horiz = TRUE, 
-        main = "Sentiment Scores on the whole text corpus"
-)
-```
-# Comments from learners
-
-```{r}
+```{r numericscale}
+# We transform the factors into a numeric scale
 
 data.num <- data.feedback
 
@@ -427,7 +319,195 @@ data.num <- data.num %>%
 data.num <- data.num %>%
   mutate( Total = Knowledge + Content + Efficiency +
                   Quality + Design + Usefulness)
+```
 
+
+
+```{r PCP, eval = FALSE}
+# library(GGally)
+# library(viridis)
+# library(hrbrthemes)
+
+data.num %>%
+  select(Gender,Knowledge:Usefulness) %>%
+  mutate_if(is.numeric, as.factor) %>%
+ggparcoord(
+   columns = c(2:7), 
+   groupColumn = "Gender",
+   scale = "globalminmax",
+   order = "anyClass",
+    title = "No scaling",
+    alphaLines = 0.3
+    ) +
+ theme_minimal() +
+  theme(
+    plot.title = element_text(size=10), 
+    axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
+    #axis.text.x =  element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+```{r}
+# https://github.com/heike/ggpcp
+# install.packages("devtools")
+# remotes::install_github("heike/ggpcp")
+```
+
+We represent each evaluation by a line joining the score for each question. The line for a participant with always the same answer (e.g. "Strongly agree") should be horizontal. The  colors her reflect the gender. 
+```{r}
+library(ggpcp)
+data.num %>%
+mutate_if(is.numeric, as.factor) %>%
+arrange(Knowledge, Content, Total)%>%
+pcp_select(5:10) %>%
+  pcp_scale(method = "uniminmax") %>%
+  pcp_arrange(method="from-right") %>%
+  ggplot(aes_pcp()) + 
+    geom_pcp(aes(colour = Gender ),
+             alpha = 0.6, axiswidth = c(0,0))+
+    scale_colour_manual(values=c("darkorange", "steelblue", "grey")) +
+    guides(colour=guide_legend(override.aes = list(alpha=1)))+
+  # geom_pcp_labels() +
+  labs(title = "Consistency of responses",
+       caption = paste(" Each line is one response, ",
+                       "based on", nrow(data.feedback), "responses"), 
+       y = " Responses",
+       x = "Topics in the form")+
+  
+ theme_minimal() +
+  theme(
+    plot.title = element_text(size=10), 
+    axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
+    #axis.text.x =  element_blank(),
+    legend.position = "right"
+  ) 
+  
+
+
+
+```
+
+
+
+# Text analysis from the comments
+
+
+
+```{r Questions}
+Text.R <- "How do you plan to use what you have learnt through this course? "
+Text.C <- "Any comments/ suggestions on how to improve this course or the platform?"
+```
+
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **two** different free-text questions in the feedback form for this course: 
+
+- *`r Text.R`* and, 
+- *`r Text.C`*
+
+We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the participants in their comments. 
+`
+
+
+```{r TextAnalysis}
+# from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
+
+
+# Get text corpus
+# remove some specific terms
+data.text <- data.feedback %>%
+  select(Results, Comments) %>%
+   mutate_all(~gsub("use |machine |learning| learned|can
+                    |course| will |data", "", .))
+
+# Create corpus
+All.Comments <- rbind(data.text$Results, data.text$Comments)
+corpus.R <- iconv(All.Comments)
+corpus.R <- Corpus(VectorSource(corpus.R))
+
+# Clean text
+corpus.R <- tm_map(corpus.R, tolower)
+corpus.R <- tm_map(corpus.R, removePunctuation)
+corpus.R <- tm_map(corpus.R, removeNumbers)
+
+cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
+# inspect(cleanset.R[1:5])
+
+#Text stemming – which reduces words to their root form
+#cleanset.R <- tm_map(cleanset.R, stemDocument)
+cleanset.R <- tm_map(cleanset.R, stripWhitespace)
+#inspect(cleanset.R[1:5])
+
+```
+
+## Descriptive analmysis: Most popular words
+
+```{r TopWords, fig.height=6}
+
+Terms.R <- TermDocumentMatrix(cleanset.R)
+Terms.R <- as.matrix(Terms.R)
+
+Words.R <- rowSums(Terms.R)
+Words.R <- subset(Words.R, Words.R>=25)
+
+barplot(Words.R,
+        main = "Most popular words in comments", 
+        #sub = Text.R,
+        las = 2,
+        horiz=TRUE,
+        col = SIAP.color)
+
+```
+
+## Descriptive analmysis: Word Cloud
+
+```{r}
+
+Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(Words.R),
+          freq = Words.R,
+          max.words = 150,
+          random.order = F,
+          min.freq = 5,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(3, 0.6),
+          rot.per = 0.2)
+```
+\newpage
+
+#  Sentiment analysis
+
+We  use *sentiment analysis* to determine  whether comments belong to some sort of  " predefined opinions". This method is basically a classification algorithm based on a reference list (*Word-Emotion Association Lexicon*, Mohammad and Turney 2013) where a large set of words are already classified as "positive", "negative", "happy", "sad", "angry", etc. We use here the  comments left by the participants on the free-text fields in the evaluation form  as the raw corpus of text.  
+
+Each comment is decomposed into words^[Only "meaningful"  extracted from each sentence, excluding stop words like  “the", "is", "at", "on”]  associated to its semantic root  ([*Stemmization*](https://towardsdatascience.com/stemming-lemmatization-what-ba782b7c0bd8) ) in order to reduce the complexity of the process. After cleaning each "meaningful"  word can be related (or not) to one class *i.e.* to a sentiment.
+
+Each comment can then be associated with one or several "sentiments" in a matrix form and some statistics can be derived, including a basic count for each category, as below:  
+
+
+```{r SentimentScores, cache=TRUE}
+library(syuzhet) # For generating sentiment scores
+scores.R <- get_nrc_sentiment(unlist(cleanset.R))
+
+# The tidytext version consist of matching with NRC sentiment source
+# see https://ladal.edu.au/sentiment.html
+# nrc <-tidytext::get_sentiments("nrc")
+```
+
+
+```{r}
+barplot(colSums(scores.R),
+        las = 2,
+        col = SIAP.color,
+        horiz = TRUE, 
+        main = "Sentiment Scores on the whole text corpus"
+)
+```
+
+\newpage
+
+# Comments from learners
+
+```{r nbAnswers}
 # Nb Answers shown 
 NbAnswers <-20
 
@@ -446,7 +526,7 @@ data.num %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
   select(number, Results)%>%
-  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese caracters
+  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese characters
 kable( ,
        col.names = c("Id", "Comments"), 
        caption = paste(NbAnswers, "most negative learners \n"),
@@ -466,7 +546,7 @@ data.num %>%
   arrange(desc(Total)) %>%    # highest Total first
   head(n= NbAnswers )%>%
   select(number, Results)%>%
-  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese caracters
+  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese characters
 kable( ,
        col.names = c("Id", "Comments"), 
        caption = paste("Most positive learners \n"),
@@ -489,7 +569,7 @@ data.num %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
   select(Total, Comments)%>%
-  filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese caracters
+  filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese pcp
 kable( ,
        col.names = c("Id", "Comments"), 
        caption = paste("Most negative learners \n"),
@@ -510,7 +590,7 @@ data.num %>%
   arrange(desc(Total)) %>%    # Highest Total first
   head(n= NbAnswers )%>%
   select(number, Comments)%>%
-  filter(xfun::is_ascii(Comments)== T)%>%   # remove Chinese caracters
+  filter(xfun::is_ascii(Comments)== T)%>%   # remove Chinese characters
 kable( ,
        col.names = c("Id", "Comments"), 
        caption = paste("Most positive learners \n"),
