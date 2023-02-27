@@ -89,7 +89,7 @@ AllCoursesRef <- c("Gender_Self_1",
                    "HealthStats2",
                    "SEEA_CF_2022", 
                    "SBR22", 
-                   "MLOS22")
+                   "MLOS22", "ClimateChange2023")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -97,23 +97,24 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
                         "Introduction to the System of Environmental Economic Accounting-Central Framework", 
                         "Statistical Business Registers", 
-                        "Machine Learning for Official Statistics and SDGs-2022")
+                        "Machine Learning for Official Statistics and SDGs-2022", 
+                        "Compiling climate change indicators: an accounting approach")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6)
 ```
 
 
 ```{r CourseChoice}
 # Course Index <<<<<< =====  Choose the course here
 #i.course <- 1  # Gender
-# i.course <- 2  # Dataviz
-# i.course <- 3  # MLOS
+# i.course <- 2  # Dataviz -self
+# i.course <- 3  # MLOS- Self
 # i.course <- 4  # Health
 # i.course <- 5 # SEEA Central Framework
 # i.course <- 6 # SBR
-i.course <- 7 # MLOS22
-
+#i.course <- 7 # MLOS22
+i.course <-8 # Climate Change 2023
 ```
 
 
@@ -197,10 +198,10 @@ G_Org <- data.feedback %>%
 
 ```{r GraphicOrganisation}
 
-G_Sex + G_Org + 
-  plot_annotation(title = 'Respondants:',
-                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
-                  theme = theme(plot.title = element_text(size = 16))) 
+# G_Sex + G_Org + 
+#   plot_annotation(title = 'Respondants:',
+#                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+#                   theme = theme(plot.title = element_text(size = 16))) 
 
 ```
 
@@ -210,7 +211,7 @@ G_Sex + G_Org +
 # Transforming answers into factors
 library(purrr)
 
-data.feedback[,1:10] <- data.feedback[, 1:10] %>%
+data.feedback[,1:10] <- data.feedback[, 1:14] %>%
   mutate_if(is.character,as.factor)  
 
 # Gathering the labels
