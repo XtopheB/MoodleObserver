@@ -89,7 +89,7 @@ AllCoursesRef <- c("Gender_Self_1",
                    "HealthStats2",
                    "SEEA_CF_2022", 
                    "SBR22", 
-                   "MLOS22", "ClimateChange2023")
+                   "MLOS22", "ClimateChange2023", "user_2023")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -98,9 +98,10 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Introduction to the System of Environmental Economic Accounting-Central Framework", 
                         "Statistical Business Registers", 
                         "Machine Learning for Official Statistics and SDGs-2022", 
-                        "Compiling climate change indicators: an accounting approach")
+                        "Compiling climate change indicators: an accounting approach", 
+                        "Increasing User Engagement Around Data and Statistics")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16")
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-03-27")
 AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6)
 ```
 
@@ -114,13 +115,17 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6)
 # i.course <- 5 # SEEA Central Framework
 # i.course <- 6 # SBR
 #i.course <- 7 # MLOS22
-i.course <-8 # Climate Change 2023
+# i.course <-8 # Climate Change 2023
+i.course <-9 # User Engagement
+# i.course <-10 # Refugees
+
+
 ```
 
 
 ```{r CourseParameters}
 # Course general parameters
-CourseName <- AllCoursesRef[i.course]    # Gender Self
+CourseName <- AllCoursesRef[i.course]    
 CourseNameLong <- AllCoursesNameLong[i.course]
 CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
@@ -130,7 +135,7 @@ NbModules <- AllCoursesNbModules[i.course]
 ```
 # ***`r CourseNameLong `***:  
 
-## Data set
+## Data sets
 
 ```{r LoadData}
 # Parse the data folder to find the latest files 
@@ -151,6 +156,7 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 
 ```{r RenameVars}
 # I split the string (strsplit) at a dot (which you need to escape using \\) and take out only the second element using lapply. unlist is there to coerce the list into a vector.
+names(data.feedback)[c(2, 4, 5)] <- c("G.groups", "c.Country", "D.Date")
 
 names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[", 2))
 
@@ -164,7 +170,7 @@ names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[
 
 ```{r NonUnicode}
 # remove comments written in Chinese (maybe not necessary since we imported in utf-8)
-data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+#data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 
 data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 ```
@@ -207,92 +213,140 @@ G_Org <- data.feedback %>%
 
 
 
-```{r}
+```{r TransformFactors}
 # Transforming answers into factors
 library(purrr)
 
-data.feedback[,1:10] <- data.feedback[, 1:14] %>%
-  mutate_if(is.character,as.factor)  
+# Define a function to harmonize the answers
+harmonize_answers <- function(answer) {
+  answer <- tolower(answer)
+  if (grepl("strongly agree", answer)) {
+    return("Strongly agree")
+  } else if (grepl("somewhat agree", answer)) {
+    return("Somewhat agree")
+  } else if (grepl("strongly disagree", answer)) {
+    return("Strongly disagree")
+  } else if (grepl("disagree", answer)) {
+    return("Disagree")
+  } else if (grepl("agree", answer)) {
+    return("Agree")
+  } else {
+    return(NA)
+  }
+}
 
-# Gathering the labels
-mylabs <- unique(levels(data.feedback$Knowledge))
 
-```
-
-
-
-```{r InitialGraphic}
-# library(forcats)
-
-# data.feedback %>%
-#   mutate(Knowledge = factor(Knowledge,  levels= c("Strongly disagree", "Somewhat disagree", "Disagree",
-#                                                   "Agree", "Somewhat agree", "Strongly agree"))) %>%
-#   ggplot() +
-#   aes(x= Knowledge ) +
-#   geom_histogram(stat = "count", fill = SIAP.color) +
-#   
-#  ggtitle("TBC") +
-#  labs(y = paste("Based on" ,nrow(data.feedback) ," responses" ), 
-#       x = "",
-#       caption = paste("(date ", FileDate,")"))+
-#   coord_flip() +
-#   theme_minimal()
-
+# Define a function to convert a variable into a factor with 6 levels
+factor_6_levels <- function(variable) {
+  variable <- factor(variable, levels = c("Strongly disagree", "Disagree", "Somewhat disagree", "Somewhat agree", "Agree", "Strongly agree"))
+  return(variable)
+}
 
 ```
+
 
 ```{r GraphicFunction}
 library(rlang)
-Response_plot <- function(data, xvar) {
-  # Defining the right order for factor variables
-  data[[xvar]] = factor(data[[xvar]],levels= c("Strongly disagree", "Somewhat disagree", "Disagree",
-                                              "Agree", "Somewhat agree", "Strongly agree")) 
+Response_plot <- function(data, xvar, title) {
+  # Harmonize the answers for each variable
+  data[[xvar]]<- sapply(data[[xvar]], harmonize_answers)
+
+  # Convert each variable into a factor with 6 levels
+   data[[xvar]] <- factor_6_levels( data[[xvar]])
+  
+  # Graphic
 
   ggplot(data)+
   aes_string(x= xvar) +
   geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
-  geom_vline(xintercept= 3.5, lwd = 1.5, linetype="dashed", color = "pink")+
-  ggtitle(paste("On", xvar)) +
-  # labs(y = paste("Based on" , nrow(data) ," responses" ),
-  #      x = "")+
+ # geom_vline(xintercept= 3.5, lwd = 1.5, linetype="dashed", color = "pink")+ # <<- doesn't work well when not answers have a response
+  ggtitle(paste(title)) +
   coord_flip() +
-  theme_minimal() +
- theme(legend.position = "none")
+  theme_minimal( ) +
+ theme(legend.position = "none", 
+       plot.title = element_text(size = 10))
 }
 ```
 
 
-```{r SurveyGraphicsCreation, cache=TRUE}
+```{r SurveyNewFormat, cache=TRUE}
 # Creating Graphics
+## Relevance: (3 questions)
 
-G_K <- Response_plot(data.feedback, "Knowledge")
-G_C <- Response_plot(data.feedback, "Content")
-G_E <- Response_plot(data.feedback, "Efficiency")
-G_Q <- Response_plot(data.feedback, "Quality")
-G_D <- Response_plot(data.feedback, "Design")
-G_U <- Response_plot(data.feedback, "Usefulness")
+G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
+G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
+G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
+
+## Effectiveness: (4 questions)
+
+G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
+G_E2 <- Response_plot(data.feedback, "Effectiveness2", "My confidence has improved in applying \n the training  received in my work.")
+G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
+G_E4 <- Response_plot(data.feedback, "Effectiveness4", "The course content (interactive lessons) was \n of high quality, clear and concise.  ")
+
+##Efficiency: (2 questions)
+
+G_Y1 <- Response_plot(data.feedback, "Efficiency1", "I was satisfied with the technical support provided \n on the SIAP e-learning platform.")
+G_Y2 <- Response_plot(data.feedback, "Efficiency2", "I was satisfied with navigating the SIAP \n e-learning platform." )
+
 ```
+
+
 #  Evaluation of the different dimensions of the course
 
-We asked the participants to value their experience on the course using a 5-level scale, on 6 different dimensions: 
+We asked the participants to value their experience on the course using a 5-level scale, on 3 different dimensions: 
+- **Relevance**: (3 questions)
+- **Effectiveness**: (4 questions)
+- **Efficiency**: (2 questions)
 
-- **Knowledge**: *The knowledge gained from this is e-learning course is useful for my present work.*
-- **Content**: *The content and scope of the e-learning course is appropriate for my level of understanding.*
-- **Efficiency**: *The e-Learning platform is effective.*
-- **Quality**: *The modules and the exercise are of high quality, concise and clear.*
-- **Design**: *The graphic design and presentations for each module are appropriate and effective.*
-- **Usefulness**: *I plan to use the skills acquired through this e-learning course for my work in the coming six months*
+## Relevance
 
-```{r GraphicsKCEQ, fig.height=6}
-all.fig <- (G_K | G_C) /(G_E | G_Q) / (G_D | G_U) 
-all.fig  + 
-  plot_annotation(title = 'Evaluation of the course',
+
+```{r GraphicsRelev, fig.height=6}
+all.R<- (G_R1 +G_R2) /G_R3 
+all.R + 
+  plot_annotation(title = 'Relevance of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
                   theme = theme(plot.title = element_text(size = 16))) 
 
 ```
 
+## Effectiveness
+
+
+```{r GraphicsEff, fig.height=6}
+all.E <- (G_E1 | G_E2) /(G_E3 | G_E4) 
+all.E + 
+  plot_annotation(title = 'Effectiveness of the course',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+
+## Efficiency
+
+
+```{r GraphicsEffy, fig.height=6}
+all.Y <- (G_Y1 | G_Y2) 
+all.Y + 
+  plot_annotation(title = 'Efficiency of the course',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+
+
+```{r}
+knitr::knit_exit()
+```
+
 # Consitency of the responses
+
+```{r}
+
+```
 
 
 ```{r numericscale}
