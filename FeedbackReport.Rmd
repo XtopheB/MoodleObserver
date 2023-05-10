@@ -205,7 +205,7 @@ G_Org <- data.feedback %>%
 ```{r GraphicOrganisation}
 
 # G_Sex + G_Org + 
-#   plot_annotation(title = 'Respondants:',
+#   plot_annotation(title = 'Respondents:',
 #                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
 #                   theme = theme(plot.title = element_text(size = 16))) 
 
@@ -259,7 +259,6 @@ Response_plot <- function(data, xvar, title) {
   ggplot(data)+
   aes_string(x= xvar) +
   geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
- # geom_vline(xintercept= 3.5, lwd = 1.5, linetype="dashed", color = "pink")+ # <<- doesn't work well when not answers have a response
   ggtitle(paste(title)) +
   coord_flip() +
   theme_minimal( ) +
@@ -328,7 +327,7 @@ all.E +
 
 
 ```{r GraphicsEffy, fig.height=6}
-all.Y <- (G_Y1 | G_Y2) 
+all.Y <- (G_Y1 / G_Y2) 
 all.Y + 
   plot_annotation(title = 'Efficiency of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
@@ -338,42 +337,58 @@ all.Y +
 
 
 
-```{r}
-knitr::knit_exit()
+<!-- # Consistency of the responses -->
+
+```{r textdata}
+
+data.text <- data.feedback %>%
+  select(share, Effectiveness_open, Comments, FinalComments )
+
+data.survey <- data.feedback %>%
+  select(Relevance1:Relevance3, Effectiveness1:Effectiveness4, Efficiency1:Efficiency2)
+
 ```
 
-# Consitency of the responses
 
 ```{r}
+# 
+# # Function to convert character variables to numeric
+# char_to_num <- function(x) {
+#   x_levels <- c("Strongly disagree", "Disagree", "Somewhat disagree", "Somewhat agree", "Agree", "Strongly agree")
+#   as.numeric(factor(x, levels = x_levels)) -1
+# }
+# 
+# # Apply function to all character variables in data frame
+# data.num<- lapply(data.survey, function(x) if (is.character(x)) char_to_num(x) else x)
+# names(data.num) <- paste(names(data.num), "N", sep = "_")
+# 
+# data.feedback <- cbind(data.feedback, data.num)
 
 ```
+
 
 
 ```{r numericscale}
-# We transform the factors into a numeric scale
-
-data.num <- data.feedback
-
-data.num[1:10] <-data.num[, 1:10] %>%
-   mutate_if(is.character,as.factor)
-
-
-data.num <- data.num %>%
-  mutate_at(
-    vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
-    funs(case_when(
-     . == "Strongly disagree" ~ 0,
-     . =="Somewhat disagree" ~ 1,
-     . == "Disagree" ~ 2,
-     . == "Agree" ~ 3,
-     . == "Somewhat agree" ~ 4,
-     . == "Strongly agree" ~ 5))
-  )
-
-# Total score
-data.num <- data.num %>%
-  mutate( Total = Knowledge + Content + Efficiency +
-                  Quality + Design + Usefulness)
+# data.num[1:10] <-data.num[, 1:10] %>%
+#    mutate_if(is.character,as.factor)
+# 
+# 
+# data.num <- data.num %>%
+#   mutate_at(
+#     vars(one_of('Knowledge', 'Content', 'Efficiency','Quality', 'Design', 'Usefulness'  )),
+#     funs(case_when(
+#      . == "Strongly disagree" ~ 0,
+#      . =="Somewhat disagree" ~ 1,
+#      . == "Disagree" ~ 2,
+#      . == "Agree" ~ 3,
+#      . == "Somewhat agree" ~ 4,
+#      . == "Strongly agree" ~ 5))
+#   )
+# 
+# # Total score
+# data.num <- data.num %>%
+#   mutate( Total = Knowledge + Content + Efficiency +
+#                   Quality + Design + Usefulness)
 ```
 
 
@@ -383,24 +398,24 @@ data.num <- data.num %>%
 # library(viridis)
 # library(hrbrthemes)
 
-data.num %>%
-  select(Gender,Knowledge:Usefulness) %>%
-  mutate_if(is.numeric, as.factor) %>%
-ggparcoord(
-   columns = c(2:7), 
-   groupColumn = "Gender",
-   scale = "globalminmax",
-   order = "anyClass",
-    title = "No scaling",
-    alphaLines = 0.3
-    ) +
- theme_minimal() +
-  theme(
-    plot.title = element_text(size=10), 
-    axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
-    #axis.text.x =  element_blank(),
-    legend.position = "bottom"
-  )
+# data.num %>%
+#   select(Gender,Knowledge:Usefulness) %>%
+#   mutate_if(is.numeric, as.factor) %>%
+# ggparcoord(
+#    columns = c(2:7), 
+#    groupColumn = "Gender",
+#    scale = "globalminmax",
+#    order = "anyClass",
+#     title = "No scaling",
+#     alphaLines = 0.3
+#     ) +
+#  theme_minimal() +
+#   theme(
+#     plot.title = element_text(size=10), 
+#     axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
+#     #axis.text.x =  element_blank(),
+#     legend.position = "bottom"
+#   )
 ```
 
 ```{r}
@@ -409,73 +424,80 @@ ggparcoord(
 # remotes::install_github("heike/ggpcp")
 ```
 
-We represent each evaluation by a line joining the score for each question. The line for a participant with always the same answer (e.g. "Strongly agree") should be horizontal. The  colors her reflect the gender. 
+<!--  We represent each evaluation by a line joining the score for each question. The line for a participant with always the same answer (e.g. "Strongly agree") should be horizontal. The  colors her reflect the gender. -->
+
 ```{r}
-library(ggpcp)
-data.num %>%
-mutate_if(is.numeric, as.factor) %>%
-arrange(Knowledge, Content, Total)%>%
-pcp_select(5:10) %>%
-  pcp_scale(method = "uniminmax") %>%
-  pcp_arrange(method="from-right") %>%
-  ggplot(aes_pcp()) + 
-    geom_pcp(aes(colour = Gender ),
-             alpha = 0.6, axiswidth = c(0,0))+
-    scale_colour_manual(values=c("darkorange", "steelblue", "grey")) +
-    guides(colour=guide_legend(override.aes = list(alpha=1)))+
-  # geom_pcp_labels() +
-  labs(title = "Consistency of responses",
-       caption = paste(" Each line is one response, ",
-                       "based on", nrow(data.feedback), "responses"), 
-       y = " Responses",
-       x = "Topics in the form")+
-  
- theme_minimal() +
-  theme(
-    plot.title = element_text(size=10), 
-    axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
-    #axis.text.x =  element_blank(),
-    legend.position = "right"
-  ) 
+# library(ggpcp)
+# data.num %>%
+# mutate_if(is.numeric, as.factor) %>%
+# arrange(Knowledge, Content, Total)%>%
+# pcp_select(5:10) %>%
+#   pcp_scale(method = "uniminmax") %>%
+#   pcp_arrange(method="from-right") %>%
+#   ggplot(aes_pcp()) + 
+#     geom_pcp(aes(colour = Gender ),
+#              alpha = 0.6, axiswidth = c(0,0))+
+#     scale_colour_manual(values=c("darkorange", "steelblue", "grey")) +
+#     guides(colour=guide_legend(override.aes = list(alpha=1)))+
+#   # geom_pcp_labels() +
+#   labs(title = "Consistency of responses",
+#        caption = paste(" Each line is one response, ",
+#                        "based on", nrow(data.feedback), "responses"), 
+#        y = " Responses",
+#        x = "Topics in the form")+
+#   
+#  theme_minimal() +
+#   theme(
+#     plot.title = element_text(size=10), 
+#     axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
+#     #axis.text.x =  element_blank(),
+#     legend.position = "right"
+#   ) 
   
 
 
 
 ```
 
-
-
-# Text analysis from the comments
-
-
+# Text analysis from the open fields
 
 ```{r Questions}
-Text.R <- "How do you plan to use what you have learnt through this course? "
-Text.C <- "Any comments/ suggestions on how to improve this course or the platform?"
+Text.R <- "Please share comments and suggestions on how to improve the relevance of the training to your work. "
+Text.E <- "Please share comments and suggestions on how to improve the effectiveness of the course in enhancing your skills and knowledge."
+Text.C <- "Please share further comments and suggestions, if any, on logistical arrangements of the e-learning course."
+Text.F <-"Please let us know of any other comments you would like to share with us about the course."
+
+
 ```
 
-Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **two** different free-text questions in the feedback form for this course: 
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **for** different free-text questions in the feedback form for this course: 
 
-- *`r Text.R`* and, 
-- *`r Text.C`*
+- *`r Text.R`* 
+- *`r Text.E`*
+- *`r Text.C`* 
+- *`r Text.F`*
+
 
 We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the participants in their comments. 
 `
 
-
-```{r TextAnalysis}
+```{r TextCleaning}
 # from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
 
 
 # Get text corpus
 # remove some specific terms
-data.text <- data.feedback %>%
-  select(Results, Comments) %>%
-   mutate_all(~gsub("use |machine |learning| learned|can
+data.text <- data.text %>%
+   mutate_all(~gsub("use |machine |learning| learned|can| training|
                     |course| will |data", "", .))
+```
 
+## Word cloud on *Relevance* and *Efectiveness*
+
+
+```{r TextRelevance}
 # Create corpus
-All.Comments <- rbind(data.text$Results, data.text$Comments)
+All.Comments <- rbind(data.text$share, data.text$Effectiveness_open)
 corpus.R <- iconv(All.Comments)
 corpus.R <- Corpus(VectorSource(corpus.R))
 
@@ -494,9 +516,62 @@ cleanset.R <- tm_map(cleanset.R, stripWhitespace)
 
 ```
 
-## Descriptive analmysis: Most popular words
+```{r TopWordsRelevance, fig.height=6}
 
-```{r TopWords, fig.height=6}
+Terms.R <- TermDocumentMatrix(cleanset.R)
+Terms.R <- as.matrix(Terms.R)
+
+Words.R <- rowSums(Terms.R)
+Words.R <- subset(Words.R, Words.R>=25)
+
+barplot(Words.R,
+        main = "Most popular words", 
+        sub = "Relevance* and Efectiveness",
+        las = 2,
+        horiz=TRUE,
+        col = SIAP.color)
+
+```
+
+```{r}
+
+Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(Words.R),
+          freq = Words.R,
+          max.words = 150,
+          random.order = F,
+          min.freq = 5,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(3, 0.6),
+          rot.per = 0.2)
+```
+
+## Word cloud on *Comments* 
+
+
+```{r TextComments}
+# Create corpus
+All.Comments <- rbind(data.text$Comments, data.text$FinalComments)
+corpus.R <- iconv(All.Comments)
+corpus.R <- Corpus(VectorSource(corpus.R))
+
+# Clean text
+corpus.R <- tm_map(corpus.R, tolower)
+corpus.R <- tm_map(corpus.R, removePunctuation)
+corpus.R <- tm_map(corpus.R, removeNumbers)
+
+cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
+# inspect(cleanset.R[1:5])
+
+#Text stemming – which reduces words to their root form
+#cleanset.R <- tm_map(cleanset.R, stemDocument)
+cleanset.R <- tm_map(cleanset.R, stripWhitespace)
+#inspect(cleanset.R[1:5])
+
+```
+
+```{r TopWordsComments, fig.height=6}
 
 Terms.R <- TermDocumentMatrix(cleanset.R)
 Terms.R <- as.matrix(Terms.R)
@@ -513,8 +588,6 @@ barplot(Words.R,
 
 ```
 
-## Descriptive analmysis: Word Cloud
-
 ```{r}
 
 Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
@@ -528,6 +601,17 @@ wordcloud(words = names(Words.R),
           scale = c(3, 0.6),
           rot.per = 0.2)
 ```
+
+
+
+
+
+
+```{r}
+ knitr::knit_exit()
+```
+
+
 \newpage
 
 #  Sentiment analysis
