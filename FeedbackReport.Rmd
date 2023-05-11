@@ -121,7 +121,7 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6, 6)
 #i.course <- 7 # MLOS22
 # i.course <-8 # Climate Change 2023
 # i.course <-9 # User Engagement
-i.course <-10 # Refugees
+i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
 
 
 ```
@@ -496,7 +496,7 @@ data.text <- data.text %>%
                     |course| will |data", "", .))
 ```
 
-## Word cloud on *Relevance* and *Efectiveness*
+## Word cloud on *Relevance* and *Effectiveness*
 
 
 ```{r TextRelevance}
@@ -516,12 +516,14 @@ cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
 #Text stemming – which reduces words to their root form
 #cleanset.R <- tm_map(cleanset.R, stemDocument)
 cleanset.R <- tm_map(cleanset.R, stripWhitespace)
+
 # we reduce the dimension here 
-cleanset.R <- cleanset.R[1:100]
+#cleanset.R <- cleanset.R[1:100]
 
 ```
 
-```{r TopWordsRelevance, fig.height=6}
+```{r TopWordsRelevance, fig.height=6, results ='hide', fig.show='hide'}
+### NO FIGURE SHOWED HERE !!!
 
 Terms.R <- TermDocumentMatrix(cleanset.R)
 Terms.R <- as.matrix(Terms.R)
@@ -532,8 +534,8 @@ Words.R <- subset(Words.R, Words.R>=40)
 barplot(Words.R,
         main = "Most popular words (Relevance and Effectiveness)", 
         # sub = "Relevance and Effectiveness",
-        xlim = c(0, 10), 
-        ylim = c(0, 10), 
+        xlim = c(0, 100), 
+        ylim = c(0, 100), 
         las = 2,
         horiz=TRUE,
         col = SIAP.color)
@@ -578,7 +580,8 @@ cleanset.C <- tm_map(cleanset.C, stripWhitespace)
 
 ```
 
-```{r TopWordsComments, fig.height=6}
+```{r TopWordsComments, fig.height=6,  results ='hide', fig.show='hide'}
+### NO FIGURE SHOWED HERE !!!
 
 Terms.C <- TermDocumentMatrix(cleanset.C)
 Terms.C <- as.matrix(Terms.C)
@@ -589,6 +592,8 @@ Words.C <- subset(Words.C, Words.C>=25)
 barplot(Words.C,
         main = "Most popular words (comments)", 
         #sub = Text.C,
+        xlim = c(0, 1000), 
+        ylim = c(0, 10), 
         las = 2,
         horiz=TRUE,
         col = SIAP.color)
