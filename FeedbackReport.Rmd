@@ -89,7 +89,10 @@ AllCoursesRef <- c("Gender_Self_1",
                    "HealthStats2",
                    "SEEA_CF_2022", 
                    "SBR22", 
-                   "MLOS22", "ClimateChange2023", "user_2023")
+                   "MLOS22", 
+                   "ClimateChange2023", 
+                   "user_2023", 
+                   "egriss_2023")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -99,10 +102,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Statistical Business Registers", 
                         "Machine Learning for Official Statistics and SDGs-2022", 
                         "Compiling climate change indicators: an accounting approach", 
-                        "Increasing User Engagement Around Data and Statistics")
+                        "Increasing User Engagement Around Data and Statistics", 
+                        "Introduction to International Recommendations on Refugee and IDP Statistics")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-03-27")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-03-27", "2023-03-13 ")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6, 6)
 ```
 
 
@@ -116,8 +120,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6)
 # i.course <- 6 # SBR
 #i.course <- 7 # MLOS22
 # i.course <-8 # Climate Change 2023
-i.course <-9 # User Engagement
-# i.course <-10 # Refugees
+# i.course <-9 # User Engagement
+i.course <-10 # Refugees
 
 
 ```
@@ -470,7 +474,7 @@ Text.F <-"Please let us know of any other comments you would like to share with 
 
 ```
 
-Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **for** different free-text questions in the feedback form for this course: 
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **four** different free-text questions in the feedback form for this course: 
 
 - *`r Text.R`* 
 - *`r Text.E`*
@@ -497,8 +501,8 @@ data.text <- data.text %>%
 
 ```{r TextRelevance}
 # Create corpus
-All.Comments <- rbind(data.text$share, data.text$Effectiveness_open)
-corpus.R <- iconv(All.Comments)
+All.Comments.R <- rbind(data.text$share, data.text$Effectiveness_open)
+corpus.R <- iconv(All.Comments.R)
 corpus.R <- Corpus(VectorSource(corpus.R))
 
 # Clean text
@@ -512,7 +516,8 @@ cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
 #Text stemming – which reduces words to their root form
 #cleanset.R <- tm_map(cleanset.R, stemDocument)
 cleanset.R <- tm_map(cleanset.R, stripWhitespace)
-#inspect(cleanset.R[1:5])
+# we reduce the dimension here 
+cleanset.R <- cleanset.R[1:100]
 
 ```
 
@@ -522,11 +527,13 @@ Terms.R <- TermDocumentMatrix(cleanset.R)
 Terms.R <- as.matrix(Terms.R)
 
 Words.R <- rowSums(Terms.R)
-Words.R <- subset(Words.R, Words.R>=25)
+Words.R <- subset(Words.R, Words.R>=40)
 
 barplot(Words.R,
-        main = "Most popular words", 
-        sub = "Relevance* and Efectiveness",
+        main = "Most popular words (Relevance and Effectiveness)", 
+        # sub = "Relevance and Effectiveness",
+        xlim = c(0, 10), 
+        ylim = c(0, 10), 
         las = 2,
         horiz=TRUE,
         col = SIAP.color)
@@ -552,36 +559,36 @@ wordcloud(words = names(Words.R),
 
 ```{r TextComments}
 # Create corpus
-All.Comments <- rbind(data.text$Comments, data.text$FinalComments)
-corpus.R <- iconv(All.Comments)
-corpus.R <- Corpus(VectorSource(corpus.R))
+All.Comments.C <- rbind(data.text$Comments, data.text$FinalComments)
+corpus.C <- iconv(All.Comments.C)
+corpus.C <- Corpus(VectorSource(corpus.C))
 
 # Clean text
-corpus.R <- tm_map(corpus.R, tolower)
-corpus.R <- tm_map(corpus.R, removePunctuation)
-corpus.R <- tm_map(corpus.R, removeNumbers)
+corpus.C <- tm_map(corpus.C, tolower)
+corpus.C <- tm_map(corpus.C, removePunctuation)
+corpus.C <- tm_map(corpus.C, removeNumbers)
 
-cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
-# inspect(cleanset.R[1:5])
+cleanset.C <- tm_map(corpus.C, removeWords, stopwords('english'))
+# inspect(cleanset.C[1:5])
 
 #Text stemming – which reduces words to their root form
-#cleanset.R <- tm_map(cleanset.R, stemDocument)
-cleanset.R <- tm_map(cleanset.R, stripWhitespace)
-#inspect(cleanset.R[1:5])
+#cleanset.C <- tm_map(cleanset.C, stemDocument)
+cleanset.C <- tm_map(cleanset.C, stripWhitespace)
+#inspect(cleanset.C[1:5])
 
 ```
 
 ```{r TopWordsComments, fig.height=6}
 
-Terms.R <- TermDocumentMatrix(cleanset.R)
-Terms.R <- as.matrix(Terms.R)
+Terms.C <- TermDocumentMatrix(cleanset.C)
+Terms.C <- as.matrix(Terms.C)
 
-Words.R <- rowSums(Terms.R)
-Words.R <- subset(Words.R, Words.R>=25)
+Words.C <- rowSums(Terms.C)
+Words.C <- subset(Words.C, Words.C>=25)
 
-barplot(Words.R,
-        main = "Most popular words in comments", 
-        #sub = Text.R,
+barplot(Words.C,
+        main = "Most popular words (comments)", 
+        #sub = Text.C,
         las = 2,
         horiz=TRUE,
         col = SIAP.color)
@@ -590,10 +597,10 @@ barplot(Words.R,
 
 ```{r}
 
-Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
+Words.C <- sort(rowSums(Terms.C), decreasing = TRUE)
 set.seed(222)
-wordcloud(words = names(Words.R),
-          freq = Words.R,
+wordcloud(words = names(Words.C),
+          freq = Words.C,
           max.words = 150,
           random.order = F,
           min.freq = 5,
@@ -606,10 +613,6 @@ wordcloud(words = names(Words.R),
 
 
 
-
-```{r}
- knitr::knit_exit()
-```
 
 
 \newpage
@@ -624,8 +627,15 @@ Each comment can then be associated with one or several "sentiments" in a matrix
 
 
 ```{r SentimentScores, cache=TRUE}
+
+
 library(syuzhet) # For generating sentiment scores
-scores.R <- get_nrc_sentiment(unlist(cleanset.R))
+
+cleanset <- c(unlist(cleanset.R),unlist(cleanset.C))
+# This takes time
+scores <- get_nrc_sentiment(cleanset)
+
+
 
 # The tidytext version consist of matching with NRC sentiment source
 # see https://ladal.edu.au/sentiment.html
@@ -634,13 +644,20 @@ scores.R <- get_nrc_sentiment(unlist(cleanset.R))
 
 
 ```{r}
-barplot(colSums(scores.R),
+counts <-colSums(scores)
+barplot(counts, horiz = TRUE, 
+        col = "lightblue", 
+        xlim = c(0, max(counts) * 1.1), 
         las = 2,
-        col = SIAP.color,
-        horiz = TRUE, 
-        main = "Sentiment Scores on the whole text corpus"
-)
+        border = NA,
+        main = "Sentiment Scores (All text) ")
+
+text(x = counts, 
+     y = 1:length(counts), 
+     labels = paste0(names(counts), ": ", counts), 
+     col = "blue", pos = 3)
 ```
+
 
 \newpage
 
@@ -653,50 +670,93 @@ NbAnswers <-20
 ```
 
 
-Since the number of comments can be important (we have `r  nrow(data.feedback)` responses), we  computed a score of satisfaction based on the 5-level scale used for each questions on Knowledge, Content, Efficiency, Quality, Design \& Usefulness.^[ For each question, a score from 0 ("*Strongly disagree*") to 5 ("*Strongly agree*") was attributed. The total score is the sum for the 6 questions] For both open-text question, we present here the  `r NbAnswers` comments  with lowest and highest scores.  
+Since the number of comments can be important (we have `r  nrow(data.feedback)` responses), we  computed a score of satisfaction based on the 5-level scale used for each closed-form question.^[ For each question, a score from 0 ("*Strongly disagree*") to 5 ("*Strongly agree*") was attributed. The total score is the sum for the all questions.]
+
+Based on this satisfaction score, we present here the  *comments* and *final comments*  for the  `r NbAnswers` less and  `r NbAnswers` most satisfied participants.  
 
 
-## Answers for  *`r Text.R`*
+```{r DataNum}
+# data.feedback <- data.feedback %>%
+#   mutate(Total =  )
+
+
+
+# Function to convert character variables to numeric
+char_to_num <- function(x) {
+  x_levels <- c("Strongly disagree", "Disagree", "Somewhat disagree", "Somewhat agree", "Agree", "Strongly agree")
+  as.numeric(factor(x, levels = x_levels)) -1
+}
+
+# Apply function to all character variables in data frame
+data.num<- lapply(data.survey[,1:5], function(x) if (is.character(x)) char_to_num(x) else x)
+
+#names(data.num) <- paste(names(data.num), "N", sep = "_")
+
+
+data.num <- as.data.frame(data.num) %>%
+  mutate(Total = Relevance1 + Relevance2 + Relevance3 + Effectiveness1 + Effectiveness2 )
+
+# Not clean but works
+data.feedback <- cbind(data.feedback, data.num$Total)%>%
+  rename( "Total" = "data.num$Total" )
+
+
+```
+
 
 ```{r ResultTableN}
-
-data.num %>%
-  filter(str_count(Results) >20) %>%
+data.feedback %>%
+  filter(str_count(Total) < 10) %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
-  select(number, Results)%>%
-  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese characters
+  select(Total, Comments, FinalComments)%>%
+  filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments"), 
+       col.names = c("Id", "Comments", "FinalComments"), 
        caption = paste(NbAnswers, "most negative learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
   kable_styling(full_width = FALSE) %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "30em")
+  column_spec(2 ,width = "15em")  %>%
+  column_spec(3 ,width = "15em")
 
 
 ```
+\newpage
 
 ```{r ResultTableP}
 
-data.num %>%
-  filter(str_count(Results) >20) %>%
-  arrange(desc(Total)) %>%    # highest Total first
+data.feedback %>%
+  filter(Total > 20) %>%
+  filter( Comments !="" | FinalComments != "") %>%
+  arrange(desc(Total)) %>%    # Highest Total first
   head(n= NbAnswers )%>%
-  select(number, Results)%>%
-  filter(xfun::is_ascii(Results)== T) %>%   # remove Chinese characters
+  select(Total, Comments, FinalComments)%>%
+  #filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments"), 
-       caption = paste("Most positive learners \n"),
+       col.names = c("Id", "Comments", "FinalComments"), 
+       caption = paste(NbAnswers, "most positive learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
-  kable_styling(full_width = FALSE) %>%
+ kable_styling(full_width = FALSE)  %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "30em")
+  column_spec(2 ,width = "15em")  %>%
+  column_spec(3 ,width = "15em")
+
+
 
 
 ```
+
+
+```{r}
+ knitr::knit_exit()
+```
+
+
+
+
 
 \newpage
 
