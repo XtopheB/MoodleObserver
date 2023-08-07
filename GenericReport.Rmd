@@ -116,7 +116,7 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7)
 # i.course <- 6 # SBR
 #i.course <- 7 # MLOS22
 #i.course <-8 # Climate Change 2023
-i.course <-9 # Climate Change 2023
+i.course <-9 # ADV2023
 
 ```
 
@@ -649,8 +649,42 @@ Learners <- course.log %>%
   select(User.full.name, Email.address,  Sex, Country, Position, Organization, TotalReal, Certified)%>%
   unique()
 
+# Adding Learners First and last names
+Learners <- Learners %>%
+  mutate(First.name = word(User.full.name, 1),
+         Last.name = word(User.full.name, -1))%>%
+  relocate(First.name, .after = User.full.name )%>%
+  relocate(Last.name, .after = First.name ) %>%
+  rename(Country.Code = Country )  # for later merging
+
+```
+
+
+```{r NBCertified}
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
+
+
+```{r Countries}
+# Data used https://unstats.un.org/unsd/methodology/m49/overview/
+country_df <- read.csv("SourceData/UNSD-CountryCodes.csv", sep = ";")
+
+# Select relevant columns 
+country_df <- country_df %>% 
+select(ISO.alpha2.Code, Country.or.Area)%>%
+  rename( Country.Code = ISO.alpha2.Code, 
+          Country = Country.or.Area)
+
+# Merge with learners
+
+Learners <-   left_join(x= Learners, y= country_df, by = "Country.Code")
+Learners <- Learners %>%
+  relocate(Country, .after = Country.Code ) %>%
+  select(-Country.Code)
+
+
+```
+
 
 
 
@@ -659,7 +693,7 @@ library(openxlsx)
 # For Shuji
 CourseListParticipants <- Learners %>% 
   filter( Certified =="TRUE") %>%
-  select (User.full.name, Sex, Country)
+  select (User.full.name, First.name, Last.name,  Sex, Country)
  
 
 # save the file 
@@ -747,7 +781,7 @@ CertifiedSex
 ```
 
 
-```{r ExportData}
+```{r ExportDataShuji}
 library(openxlsx)
 # For Shuji
 # Define sheet names for each data frame
@@ -1332,6 +1366,26 @@ library(here)
 ```{r EXIT}
 knitr::knit_exit()
 ```
+
+
+```{r Cheaters}
+
+Cheaters <- read.csv("SourceData/CheatersADV23.csv", sep = ";")%>%
+  rename(User.full.name = First.name...Surname)
+
+# Merge with learners
+Cheaters <- left_join(x= Cheaters, y= Learners, by = "User.full.name")
+
+
+Cheaters <- Cheaters %>%
+  select(-c(TotalReal , Certified))
+
+# save the file 
+# write.xlsx(Cheaters,
+#            file=paste("Output/",CourseName,"-Cheaters-",ymd(Sys.Date()),".xlsx", sep=""))
+
+```
+
 
 
 # Lerner's paths
