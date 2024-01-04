@@ -75,7 +75,7 @@ library(wesanderson)
 
 There are some elements that are really specific to a course: 
 
-* CourseNameLong:for example "Machine Learning for Official Statistics and SDGs"
+* CourseNameLong: for example "Machine Learning for Official Statistics and SDGs"
 * CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
 * CourseStartDate: in a standard format *YYYY-MM-DD*
 
@@ -89,7 +89,7 @@ AllCoursesRef <- c("Gender_Self_1",
                    "SEEA_CF_2022", 
                    "SBR22", 
                    "MLOS22", "ClimateChange2023", 
-                   "ADV23")
+                   "ADV23", "2023-MLOS")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -99,10 +99,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Statistical Business Registers", 
                         "Machine Learning for Official Statistics and SDGs-2022", 
                         "Compiling climate change indicators: an accounting approach", 
-                        "Advanced Data Visualization for Official Statistics and SDG Indicators")
+                        "Advanced Data Visualization for Official Statistics and SDG Indicators", 
+                         "Machine Learning for Official Statistics and SDGs-2023")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8)
 ```
 
 
@@ -116,7 +117,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7)
 # i.course <- 6 # SBR
 #i.course <- 7 # MLOS22
 #i.course <-8 # Climate Change 2023
-i.course <-9 # ADV2023
+#i.course <-9 # ADV2023
+i.course <- 10 # MLOS23
 
 ```
 
@@ -143,19 +145,27 @@ GradeMax = 100
 # Opening4 <- as_date("2021-12-03")
 # Opening5 <- as_date("2021-12-10")
 
-# Dates of Modules opening ADV23
+# # Dates of Modules opening ADV23
+# Opening1 <- as_date(CourseStartDate)
+# Opening2 <- as_date(CourseStartDate)
+# Opening3 <- as_date("2023-07-17")
+# Opening4 <- as_date("2023-07-24")
+ 
+# # Dates of Modules opening MLOS 23
 Opening1 <- as_date(CourseStartDate)
 Opening2 <- as_date(CourseStartDate)
-Opening3 <- as_date("2023-07-17")
-Opening4 <- as_date("2023-07-24")
+Opening3 <- as_date("2023-12-04")
+Opening4 <- as_date("2023-12-11")
+Opening5 <- as_date("2023-12-18")
+Opening6 <- as_date("2023-12-22")
 
-
-### Define the Starting activity nb for each Modules  
+### Define the Starting activity nb for each Modules --> see Actname 
 # Important: Include LAST activity!!!
 
 # ModStartIdx <- c(1,13,22,33,46,61,74)  # Parameters for For Data Visualization
 # ModStartIdx <- c(1,6,16,23,33,42,58,68)  # Parameters for ForMLOS22
-ModStartIdx <- c(1,14,24,34,44, 49, 51,55 )  # Parameters for ADV23
+# ModStartIdx <- c(1,14,24,34,44, 49, 51,55 )  # Parameters for ADV23
+ModStartIdx <- c(1,6,17,24,34,43,58,68)  # Parameters for For MLOS23 - 10 modules !
 
 
 ```
@@ -167,14 +177,23 @@ ModStartIdx <- c(1,14,24,34,44, 49, 51,55 )  # Parameters for ADV23
  https://siap-elearning.org/report/log/index.php?id=**XXX**  where **XXX** is the course id (ex: 158 for Data visualization, 129 for ML, ... )
 
 
+
+```{r listcountries}
+# Data used https://unstats.un.org/unsd/methodology/m49/overview/
+country_df <- read.csv("SourceData/UNSD-CountryCodes.csv", sep = ";")
+
+# Select relevant columns 
+country_df <- country_df %>% 
+select(ISO.alpha2.Code, Country.or.Area)%>%
+  rename( Country.Code = ISO.alpha2.Code, 
+          Country = Country.or.Area)
+
+```
+
 ```{r LoadData}
-# Parse the data folder to find the latest files 
+# 1-Log File
 
-#### Logs File
-# --> use Comma separated values
-
-# Generic interface for Data 
-# Also https://siap-elearning.org/report/log/index.php?id=129
+### Recovering Log file name on the data repo (parse the repo, take the  most recent)
 
 # list.logs<- list.files(path="Data/",pattern="logs",full.names = TRUE,recursive = TRUE)
 list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,"*")),
@@ -182,13 +201,16 @@ list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,
 name_last_logs <- list.logs[which.max(file.mtime(list.logs))]
 data.logs <- read.csv(name_last_logs)
 
+
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
 # data.logs <- data.logs %>%
 #   rename(Time = ï..Time ) 
 
-###  activity File:  Admin>Reports>Statistics> (select course and  period) activity completion 
-# UTF-8.csv (= with comma separating)
-# From https://siap-elearning.org/report/progress/index.php?course=129
+# 2- Activity File: 
+
+## Admin>Reports>Statistics> (select course and  period) activity completion 
+## UTF-8.csv (= with comma separating)
+## From https://siap-elearning.org/report/progress/index.php?course=129
 
 
 #list.act<- list.files(path="Data/",pattern="progress",full.names = TRUE,recursive = TRUE)
@@ -197,7 +219,8 @@ list.act<- list.files(path="Data/",pattern = glob2rx(paste0("progress*",tolower(
 name_last_act <- list.act[which.max(file.mtime(list.act))]
 data.act <- read.csv(name_last_act)
 
-###  Grade File
+### 3-  Grade File
+
 #list.grades<- list.files(path="Data/",pattern="Grades",full.names = TRUE,recursive = TRUE)
 list.grades<-list.files(path="Data/",pattern = glob2rx(paste0("*",CourseName,"*Grades*")),
                         full.names = TRUE,recursive = TRUE)
@@ -205,6 +228,7 @@ list.grades<-list.files(path="Data/",pattern = glob2rx(paste0("*",CourseName,"*G
 name_last_grades <- list.grades[which.max(file.mtime(list.grades))]
 data.grades <- read.csv(name_last_grades)
 
+# 4- Gathering the download date from the file name
 FileDate <-as_date(file.mtime(name_last_logs))
 
 ```
@@ -344,7 +368,7 @@ course.registration %>%
 ggplot() +
  aes(x = Date, weight = registered) +
  geom_bar(fill = SIAP.color, alpha = 0.5) +
- ggtitle("Learners registered by date sincer begining of the course (Cumulative)") +
+ ggtitle("Learners registered by date since begining of the course (Cumulative)") +
 scale_x_date(date_breaks = "weeks" , date_labels = "%e-%b-%y")+
  labs(y = "Total nb of learners enrolled", 
       x = "Date",
@@ -370,7 +394,7 @@ NbLearners <- as.numeric(count(ListUser))
 
 Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorded. We can therefore gather information at the learner or activity level. 
 
-> After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course:
+<!-- After cleaning, we recorded **`r nrow(course.log)`** events of different nature for the course.-->
 
 
 ## Activity data 
@@ -411,33 +435,33 @@ actname <-  actname %>%
 ``````{r Modules}
 # Based on Course parameters  ModStartIdx 
 ### For a  8 modules course
-# actname <- actname %>%
-#             mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
-#                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 2,
-#                                           between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 3,
-#                                           between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 4,
-#                                           between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 5,
-#                                           between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 6,
-#                                           between(ActNb, ModStartIdx[7], ModStartIdx[8]-1) ~ 7,
-#                                           between(ActNb, ModStartIdx[8], ModStartIdx[9]) ~ 8,
-#                                           
-#                                             )) %>%
-#   filter(!is.na(ModuleID))
-# # Specific to MLOS22
-# actname <- actname %>%
-#             mutate(ModuleID = ModuleID -2)
-
-# For a  4+1   Module course 
 actname <- actname %>%
-            mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 0,
-                                          between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 1,
-                                          between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 2,
-                                          between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 3,
-                                          between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 4, 
-                                          between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
-                                          between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
+            mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 1,
+                                          between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 2,
+                                          between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 3,
+                                          between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 4,
+                                          between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 5,
+                                          between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 6,
+                                          between(ActNb, ModStartIdx[7], ModStartIdx[8]-1) ~ 7,
+                                          between(ActNb, ModStartIdx[8], ModStartIdx[9]) ~ 8,
+
                                             )) %>%
   filter(!is.na(ModuleID))
+# Specific to MLOS22 and MLOS23 where we have Module 0 (and intro)
+actname <- actname %>%
+            mutate(ModuleID = ModuleID -2)
+
+# For a  4+1   Module course 
+# actname <- actname %>%
+#             mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 0,
+#                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 1,
+#                                           between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 2,
+#                                           between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 3,
+#                                           between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 4, 
+#                                           between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
+#                                           between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
+#                                             )) %>%
+#   filter(!is.na(ModuleID))
 # Specific to MLOS22
 # actname <- actname %>%
 #             mutate(ModuleID = ModuleID -2)
@@ -518,7 +542,7 @@ course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 
 # Step 2: Adding Sex and Country  to course.log using 
 NameSex <- data.grades %>%
-  mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
+  mutate(TotalReal =  as.numeric(Total..Real.)) %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
@@ -577,29 +601,57 @@ NbCountries <- course.log %>%
   nrow()
 ```
 
-**`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. 
+ 
+
+```{r LearnersBycountry}
+temp_country <- course.log %>%
+  filter(Country != "" | Country != "NA") %>%
+  group_by(Country) %>%
+  summarise(Learners = n_distinct(Email.address)) %>%
+  arrange(desc(Learners)) %>%
+  mutate(  differ = lag(Learners) - Learners)%>% 
+  rename(Country.Code = Country)
+
+# adding real name of countries 
+temp_country <-  left_join(x= temp_country, y= country_df, by = c("Country.Code"))
+
+
+#removing when large differences 
+cond <- max(temp_country$differ, na.rm = TRUE)>100
+message <- ifelse(cond,
+                  paste("Data from ", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n as well as countries with less that 2 participants for better readability.\n "),
+                  "" )
+# Stats for text
+country_max <- temp_country %>% 
+  slice_max(Learners)%>%
+  select(Country)
+
+```
+
+
+**`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. The most important country in terms of participation is **`r as.character(country_max)`**  with **`r as.character(temp_country[1, 2])`** participants.  
 
 ```{r GraphBycountry}
-
-course.log %>%
- filter(Country != "" | Country != "NA")%>%
- group_by(Country) %>%
- summarise(Learners = n_distinct(Email.address)) %>%
+# Graphic 
+temp_country %>%
+  slice(ifelse(cond, -1, 1:n())) %>%
+  filter(Learners>1)%>%
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
 geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
  scale_fill_hue() +
- ggtitle("Learners origin") +
- labs(y = paste("Learners enrolled  by country (total =" ,NbLearners ,")" ), 
-      x = paste("Countries (total =" ,NbCountries , ")"),
-      caption = paste("(date ", FileDate,")"))+
+ ggtitle(paste("Learners origin by country, (Total",NbCountries , "countries)")) +
+ labs(y = paste(NbLearners, "Learners, by country" ), 
+      x = paste("Countries"),
+      caption = paste(message, "(file date ", FileDate,")"))+
  coord_flip() +
  theme_minimal() +
  theme(legend.position = "none")
 
 
 ```
+
 
 
 ## Certified people
@@ -615,7 +667,7 @@ Grades <- data.grades %>%
 
 # Total or Final grade
 
-Grades$GradeFinal <- as.numeric(Grades[ , grep(c("total", "Final"), colnames(Grades))])  # Find matches
+Grades$GradeFinal <- as.numeric(Grades[ , grep(c("Total","total", "Final"), colnames(Grades))])  # Find matches
 # Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
 # Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
 
@@ -660,24 +712,24 @@ Learners <- Learners %>%
 ```
 
 
+
+
+
+```{r EXITPROVISOIRE}
+knitr::knit_exit()
+```
+
+
 ```{r NBCertified}
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
 
 
 ```{r Countries}
-# Data used https://unstats.un.org/unsd/methodology/m49/overview/
-country_df <- read.csv("SourceData/UNSD-CountryCodes.csv", sep = ";")
 
-# Select relevant columns 
-country_df <- country_df %>% 
-select(ISO.alpha2.Code, Country.or.Area)%>%
-  rename( Country.Code = ISO.alpha2.Code, 
-          Country = Country.or.Area)
+# Merge countries with learners
 
-# Merge with learners
-
-Learners <-   left_join(x= Learners, y= country_df, by = "Country.Code")
+Learners <-   left_join(x= Learners, y= country_df, by = "Country")
 Learners <- Learners %>%
   relocate(Country, .after = Country.Code ) %>%
   select(-Country.Code)
