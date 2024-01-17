@@ -1137,10 +1137,12 @@ course.log %>%
 LearnersByActivity <- course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>%
+  mutate(ActID.lab = paste(ActNb,"-",Event.context), 
+         Actname = paste(ActNb, "-", Actname))%>%
+  filter(ActNb >5 )%>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
-            ModuleName = as.factor(unique(Actname))) 
+            ActivityName = as.factor(unique(Actname))) 
 
 MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```
@@ -1162,7 +1164,7 @@ course.log %>%
   mutate(ActID.lab = paste(ActNb,"-",str_trunc(Event.context, 20, "right"))) %>%
   group_by(ActID.lab) %>%
   summarise(NbLearners = n_distinct(User.full.name),
-            ModuleName = as.factor(unique(Actname)),
+            ActivityName = as.factor(unique(Actname)),
             ModuleID = as.factor(unique(ModuleID)))  %>%
   # mutate(rank = dense_rank(desc(NbLearners))) %>
   # filter(rank <= 30) %>% 
@@ -1208,7 +1210,7 @@ course.log %>%
 
 DTActivities <- data.table(LearnersByActivity %>%
                           slice_max(Learners, n = 10)%>%
-                          select(ModuleName, Learners))
+                          select(ActivityName, Learners))
                    
 names(DTActivities) <- c( "Activity", "Nb Learners")
 DTActivities
@@ -1222,7 +1224,7 @@ DTActivities
 
 DTActivitiesLeast <- data.table(LearnersByActivity %>%
                              slice_min(Learners, n = 10)%>%
-                             select( ModuleName, Learners))
+                             select( ActivityName, Learners))
 
 DTActivitiesLeast <-  DTActivitiesLeast[order(-Learners)]                  
 names(DTActivitiesLeast) <- c( "Activity", "Nb Learners")
@@ -1396,11 +1398,9 @@ Grades %>%
 library(here)
 Report.name <- paste0("Report-", CourseName,"-", FileDate)
 # 
-# Export
+# Export a copy with course name
 file.copy(from = here("GenericReport.pdf"),
           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
-
-
 
 
 
