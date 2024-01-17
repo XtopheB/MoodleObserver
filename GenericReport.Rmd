@@ -652,8 +652,6 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
 
 ```
 
-
-
 ## Certified people
 
 ```{r GradesTotal}
@@ -715,11 +713,6 @@ Learners <- Learners %>%
 
 
 
-```{r EXITPROVISOIRE}
-knitr::knit_exit()
-```
-
-
 ```{r NBCertified}
 NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
@@ -729,7 +722,7 @@ NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 
 # Merge countries with learners
 
-Learners <-   left_join(x= Learners, y= country_df, by = "Country")
+Learners <-   left_join(x= Learners, y= country_df, by = "Country.Code")
 Learners <- Learners %>%
   relocate(Country, .after = Country.Code ) %>%
   select(-Country.Code)
@@ -1401,11 +1394,11 @@ Grades %>%
 
 ```{r reportexport}
 library(here)
-# Report.name <- paste0("Report-", CourseName,"-", FileDate)
+Report.name <- paste0("Report-", CourseName,"-", FileDate)
 # 
-# # Export
-# file.copy(from = here("GenericReport.pdf"),
-#           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
+# Export
+file.copy(from = here("GenericReport.pdf"),
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
 
 
 
