@@ -1335,6 +1335,8 @@ The time spent by learners on the platform is, of course, proportional to the nu
 
 
 ```{r TimeVsActivities}
+NbNoGrades <- sum(is.na(Grades$GradeFinal))
+
 
 p <- Grades %>%
  filter(!is.na(Country)) %>%
@@ -1347,17 +1349,19 @@ mutate(TotalTime = TotalTime/60,
   # Toto is a trick to have names in plotly
  # geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
  geom_jitter(size = 3,  alpha = 0.6) +
+ scale_color_manual(values= c( "Succeed" = '#00BFC4', "Failed"='#F8766D'), na.value = "#d7d7d7") +
  ggtitle("Total Time Spent (estimated) vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total time spent by learners (in min)", 
-      subtitle = paste0("Each dot is a participant. ", NbLearners3hours," learners spent more than 3 hours/week"), 
-      caption=  paste("Date", FileDate) )+
+      subtitle = paste0("Each dot is a participant. ", 
+                        NbLearners3hours," learners spent more than 3 hours/week"), 
+      caption=  paste( NbNoGrades,  "participants with no grade ( in grey), ", "date", FileDate) )+
  geom_hline (aes(yintercept = 3*NbModules*60), color = SIAP.color) +
  annotate("text", x = 15, y = 3*NbModules*60 + 200,
           color= SIAP.color,
           label = "Course  requirement (3 hours/Module)")+
 # geom_vline (aes(xintercept =  median(TotalTime))) +
 # facet_wrap(vars(Country)) +
- scale_color_hue() +
+# scale_color_hue() +
  theme_minimal()+
  theme(legend.position = "bottom")
 
@@ -1380,12 +1384,14 @@ Grades %>%
  aes(x= NbDays, y = NbAct, 
      colour = Certification)+
  geom_jitter(size = 3,  alpha = 0.5, width = 0.1) +
+ scale_color_manual(values= c( "Succeed" = '#00BFC4', "Failed"='#F8766D'), na.value = "#d7d7d7") +
  scale_x_continuous(breaks=seq(from = 0, to = max(Grades$NbAct)+2, by =2))+
  ggtitle("Activity of learners and visits to the LMS") +
  labs(x="Nb of visits on the LMS (unique days)", 
       y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
       subtitle = paste0("Each dot is a participant, couloured by success"), 
-      caption=  paste("Date", FileDate) )+
+      caption=  paste( NbNoGrades,  "participants with no grade ( in grey), ", "date", FileDate) )+
+
  theme_minimal()+
  theme(legend.position = "bottom", 
        panel.grid.minor = element_blank())
@@ -1394,13 +1400,13 @@ Grades %>%
 
 ```
 
-```{r reportexport}
+```{r reportexport, message=FALSE}
 library(here)
 Report.name <- paste0("Report-", CourseName,"-", FileDate)
 # 
 # Export a copy with course name
 file.copy(from = here("GenericReport.pdf"),
-          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"))
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
 
 
 
@@ -1433,7 +1439,7 @@ Cheaters <- Cheaters %>%
 
 
 
-# Lerner's paths
+# Learner's paths
 
 ```{r LearnersTracks}
 # Creating Learners Chronology
