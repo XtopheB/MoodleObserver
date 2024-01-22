@@ -189,7 +189,7 @@ data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2F
 ```
 
 
-Our analysis uses the data collected on **`r FileDate`** from the  **Feedback Form** on the Moodle platform^[file `r name_last_feedback`]. **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
+Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form* on SIAP's Moodle platform^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
 
 ## Composition of the respondants
 
@@ -519,16 +519,18 @@ Text.F <-"Please let us know of any other comments you would like to share with 
 
 ```
 
-Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. We have **four** different free-text questions in the feedback form for this course: 
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. 
+
+<!--- We have **four** different free-text questions in the feedback form for this course: 
 
 - *`r Text.R`* 
 - *`r Text.E`*
 - *`r Text.C`* 
 - *`r Text.F`*
+ -->
 
+We provide here a first descriptive analysis of the comments received. This analysis is quite limited, but allows to spot some of the most important terms used by the participants in their comments. 
 
-We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the participants in their comments. 
-`
 
 ```{r }
 # from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
@@ -567,7 +569,7 @@ data.text <- data.text %>%
 ```
 
 
-## Word cloud on open comments
+## Word cloud on open comments fields
 
 
 ```{r TextRelevance}
@@ -796,7 +798,7 @@ data.feedback %>%
   filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
        col.names = c("Id", "Comments"), 
-       caption = paste(NbAnswers, "most negative learners \n"),
+       caption = paste("Comments from",NbAnswers, "most negative learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
   kable_styling(full_width = FALSE) %>%
@@ -818,7 +820,7 @@ data.feedback %>%
   #filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
        col.names = c("Id", "Comments"), 
-       caption = paste(NbAnswers, "most positive learners \n"),
+       caption = paste("Comments from", NbAnswers, "most positive learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
  kable_styling(full_width = FALSE)  %>%
@@ -830,6 +832,19 @@ kable( ,
 
 ```
 
+
+
+```{r reportexport, message=FALSE, warning=FALSE, echo = FALSE, results='hide',}
+library(here)
+Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
+# 
+# Export a copy with course name
+file.copy(from = here("FeedbackReport.pdf"),
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
+
+
+
+```
 
 ```{r}
  knitr::knit_exit()
