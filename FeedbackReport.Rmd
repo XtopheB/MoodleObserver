@@ -32,10 +32,10 @@ knitr::opts_chunk$set(echo = FALSE)
 # Other options used here 
 opts_chunk$set(warning = FALSE, message = FALSE,
                fig.pos = "!H", fig.align = "center",
-               autodep = TRUE, tidy = FALSE, cache = TRUE)
+               autodep = TRUE, tidy = FALSE, cache = FALSE)
 
 # In case of "weird" problem, uncomment the line below (cache issue)
-opts_chunk$set(cache.rebuild=TRUE) 
+# opts_chunk$set(cache.rebuild=TRUE) 
 
 # My colors:
 SIAP.color <- "#0385a8"
@@ -46,6 +46,7 @@ SIAP.color <- "#0385a8"
 
 ```{r libraries}
 # Analysis
+
 library(tidyverse)
 library(stringr)
 library(dplyr)
@@ -92,7 +93,8 @@ AllCoursesRef <- c("Gender_Self_1",
                    "MLOS22", 
                    "ClimateChange2023", 
                    "user_2023", 
-                   "egriss_2023")
+                   "egriss_2023", 
+                    "ADV23", "2023-MLOS")
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -103,15 +105,20 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Machine Learning for Official Statistics and SDGs-2022", 
                         "Compiling climate change indicators: an accounting approach", 
                         "Increasing User Engagement Around Data and Statistics", 
-                        "Introduction to International Recommendations on Refugee and IDP Statistics")
+                        "Introduction to International Recommendations on Refugee and IDP Statistics", 
+                        "Advanced Data Visualization for Official Statistics and SDG Indicators",  
+                         "Machine Learning for Official Statistics and SDGs-2023")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-03-27", "2023-03-13 ")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6, 6)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8)
 ```
 
 
 ```{r CourseChoice}
 # Course Index <<<<<< =====  Choose the course here
+### ACHTUNG this list is not the same than for GenericReport.Rmd
+
+
 #i.course <- 1  # Gender
 # i.course <- 2  # Dataviz -self
 # i.course <- 3  # MLOS- Self
@@ -121,8 +128,9 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8, 6, 6)
 #i.course <- 7 # MLOS22
 # i.course <-8 # Climate Change 2023
 # i.course <-9 # User Engagement
-i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
-
+# i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
+# i.course <-11 # ADV23   
+i.course <- 12 # MLOS23
 
 ```
 
@@ -160,7 +168,8 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 
 ```{r RenameVars}
 # I split the string (strsplit) at a dot (which you need to escape using \\) and take out only the second element using lapply. unlist is there to coerce the list into a vector.
-names(data.feedback)[c(2, 4, 5)] <- c("G.groups", "c.Country", "D.Date")
+
+# names(data.feedback)[c(2, 4, 5)] <- c("G.groups", "c.Country", "D.Date")
 
 names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[", 2))
 
@@ -271,33 +280,63 @@ Response_plot <- function(data, xvar, title) {
 }
 ```
 
+```{r SurveySimple}
+G_K <- Response_plot(data.feedback, "Knowledge", "The knowledge gained from this is e-learning course is useful for my present work.")
 
-```{r SurveyNewFormat, cache=TRUE}
+G_C <- Response_plot(data.feedback, "Content", "The content and scope of the e-learning course is appropriate for my level of understanding.")
+
+G_E <- Response_plot(data.feedback, "Efficiency", "The eLearning platform is effective.")
+
+G_Q <- Response_plot(data.feedback, "Quality", "The modules and the exercise are of high quality, concise and clear")
+
+G_D <- Response_plot(data.feedback, "Design", "The graphic design and presentations for each module are appropriate and effective.")
+
+G_U <- Response_plot(data.feedback, "Usefulness", "I plan to use the skills acquired through this e-learning course for my work in the coming six months")
+
+
+```
+
+```{r SurveyNewFormat, eval=FALSE}
 # Creating Graphics
 ## Relevance: (3 questions)
 
-G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
-G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
-G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
-
-## Effectiveness: (4 questions)
-
-G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
-G_E2 <- Response_plot(data.feedback, "Effectiveness2", "My confidence has improved in applying \n the training  received in my work.")
-G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
-G_E4 <- Response_plot(data.feedback, "Effectiveness4", "The course content (interactive lessons) was \n of high quality, clear and concise.  ")
-
-##Efficiency: (2 questions)
-
-G_Y1 <- Response_plot(data.feedback, "Efficiency1", "I was satisfied with the technical support provided \n on the SIAP e-learning platform.")
-G_Y2 <- Response_plot(data.feedback, "Efficiency2", "I was satisfied with navigating the SIAP \n e-learning platform." )
+# G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
+# G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
+# G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
+# 
+# ## Effectiveness: (4 questions)
+# 
+# G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
+# G_E2 <- Response_plot(data.feedback, "Effectiveness2", "My confidence has improved in applying \n the training  received in my work.")
+# G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
+# G_E4 <- Response_plot(data.feedback, "Effectiveness4", "The course content (interactive lessons) was \n of high quality, clear and concise.  ")
+# 
+# ##Efficiency: (2 questions)
+# 
+# G_Y1 <- Response_plot(data.feedback, "Efficiency1", "I was satisfied with the technical support provided \n on the SIAP e-learning platform.")
+# G_Y2 <- Response_plot(data.feedback, "Efficiency2", "I was satisfied with navigating the SIAP \n e-learning platform." )
 
 ```
 
 
 #  Evaluation of the different dimensions of the course
 
-We asked the participants to value their experience on the course using a 5-level scale, on 3 different dimensions: 
+We asked the participants to value their experience on the course using a 5-level scale, on  different dimensions (*Knowledge, Usefulness, Quality*,...) 
+
+
+```{r GraphicFeed, fig.height=6}
+all<- (G_K + G_C) / (G_E + G_Q ) / (G_D + G_U ) 
+all + 
+  plot_annotation(title = 'Feedback',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+
+<!-- This part is for Alternative  feedback  form with  3  topics (eval = FALSE)
+
+
 - **Relevance**: (3 questions)
 - **Effectiveness**: (4 questions)
 - **Efficiency**: (2 questions)
@@ -305,8 +344,8 @@ We asked the participants to value their experience on the course using a 5-leve
 ## Relevance
 
 
-```{r GraphicsRelev, fig.height=6}
-all.R<- (G_R1 +G_R2) /G_R3 
+```{r GraphicsRelev, fig.height=6, eval = FALSE}
+all.R<- G_R1 / G_R2 /G_R3 
 all.R + 
   plot_annotation(title = 'Relevance of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
@@ -317,7 +356,7 @@ all.R +
 ## Effectiveness
 
 
-```{r GraphicsEff, fig.height=6}
+```{r GraphicsEff, fig.height=6, eval = FALSE}
 all.E <- (G_E1 | G_E2) /(G_E3 | G_E4) 
 all.E + 
   plot_annotation(title = 'Effectiveness of the course',
@@ -330,7 +369,7 @@ all.E +
 ## Efficiency
 
 
-```{r GraphicsEffy, fig.height=6}
+```{r GraphicsEffy, fig.height=6, eval = FALSE}
 all.Y <- (G_Y1 / G_Y2) 
 all.Y + 
   plot_annotation(title = 'Efficiency of the course',
@@ -339,22 +378,28 @@ all.Y +
 
 ```
 
-
+-->
 
 <!-- # Consistency of the responses -->
 
 ```{r textdata}
+# Alternative feedback form with 3topics 
+# data.text <- data.feedback %>%
+#   select(share, Effectiveness_open, Comments, FinalComments )
+
+# data.survey <- data.feedback %>%
+#   select(Relevance1:Relevance3, Effectiveness1:Effectiveness4, Efficiency1:Efficiency2)
 
 data.text <- data.feedback %>%
-  select(share, Effectiveness_open, Comments, FinalComments )
+  select(Results, Comments)
 
 data.survey <- data.feedback %>%
-  select(Relevance1:Relevance3, Effectiveness1:Effectiveness4, Efficiency1:Efficiency2)
+  select(Knowledge:Design)
 
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 # 
 # # Function to convert character variables to numeric
 # char_to_num <- function(x) {
@@ -485,23 +530,51 @@ Free-text comments are probably the most valuable elements for lecturers as sugg
 We provide here a first descriptive analysis of the comments received. This analysis is quite crude, but allows to spot some of the most important terms used by the participants in their comments. 
 `
 
-```{r TextCleaning}
+```{r }
 # from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
 
 
 # Get text corpus
-# remove some specific terms
+# remove some specific terms (does not work inside sentences)
 data.text <- data.text %>%
    mutate_all(~gsub("use |machine |learning| learned|can| training|
-                    |course| will |data", "", .))
+                    |course| will |data| work | Visualization | thank ", "", .))
 ```
 
-## Word cloud on *Relevance* and *Effectiveness*
+
+```{r TextCleaning}
+
+# Words to remove
+words_to_remove <- c("use", "can", "training","work", "help",
+                     "thank", "content", "platform", 
+                     "online","course", "will", "learned", "knowledge",
+                     "machine", "learning", "statistics",
+                     "data",   "Visualization","Visualizations")
+
+# Function to remove words from a single variable (from OpenAI)
+remove_words <- function(text, words) {
+  pattern <- paste0("\\b", paste(words, collapse = "|"), "\\b")
+  text <- gsub(pattern, "", text, ignore.case = TRUE)
+  text
+}
+
+# Apply the function to each variable in the data frame using mutate_all
+data.text <- data.text %>%
+  mutate_all(~ remove_words(., words_to_remove))
+
+
+
+```
+
+
+## Word cloud on open comments
 
 
 ```{r TextRelevance}
 # Create corpus
-All.Comments.R <- rbind(data.text$share, data.text$Effectiveness_open)
+# All.Comments.R <- rbind(data.text$share, data.text$Effectiveness_open)
+All.Comments.R <- rbind(data.text$Results, data.text$Comments)
+
 corpus.R <- iconv(All.Comments.R)
 corpus.R <- Corpus(VectorSource(corpus.R))
 
@@ -532,7 +605,7 @@ Words.R <- rowSums(Terms.R)
 Words.R <- subset(Words.R, Words.R>=40)
 
 barplot(Words.R,
-        main = "Most popular words (Relevance and Effectiveness)", 
+        main = "Most popular words (Results and Comments)", 
         # sub = "Relevance and Effectiveness",
         xlim = c(0, 100), 
         ylim = c(0, 100), 
@@ -555,11 +628,11 @@ wordcloud(words = names(Words.R),
           scale = c(3, 0.6),
           rot.per = 0.2)
 ```
-
+<!-- This part is for Alternative  feedback  form with  3  topics 
 ## Word cloud on *Comments* 
 
 
-```{r TextComments}
+```{r TextComments, eval = FALSE}
 # Create corpus
 All.Comments.C <- rbind(data.text$Comments, data.text$FinalComments)
 corpus.C <- iconv(All.Comments.C)
@@ -580,7 +653,7 @@ cleanset.C <- tm_map(cleanset.C, stripWhitespace)
 
 ```
 
-```{r TopWordsComments, fig.height=6,  results ='hide', fig.show='hide'}
+```{r TopWordsComments, fig.height=6,  results ='hide', fig.show='hide', eval = FALSE}
 ### NO FIGURE SHOWED HERE !!!
 
 Terms.C <- TermDocumentMatrix(cleanset.C)
@@ -600,7 +673,7 @@ barplot(Words.C,
 
 ```
 
-```{r}
+```{r, eval = FALSE}
 
 Words.C <- sort(rowSums(Terms.C), decreasing = TRUE)
 set.seed(222)
@@ -616,8 +689,7 @@ wordcloud(words = names(Words.C),
 
 
 
-
-
+-->
 
 
 \newpage
@@ -631,12 +703,14 @@ Each comment is decomposed into words^[Only "meaningful"  extracted from each se
 Each comment can then be associated with one or several "sentiments" in a matrix form and some statistics can be derived, including a basic count for each category, as below:  
 
 
-```{r SentimentScores, cache=TRUE}
+```{r SentimentScores}
 
 
 library(syuzhet) # For generating sentiment scores
 
-cleanset <- c(unlist(cleanset.R),unlist(cleanset.C))
+# cleanset <- c(unlist(cleanset.R),unlist(cleanset.C))
+
+cleanset <- c(unlist(cleanset.R))
 # This takes time
 scores <- get_nrc_sentiment(cleanset)
 
@@ -698,8 +772,11 @@ data.num<- lapply(data.survey[,1:5], function(x) if (is.character(x)) char_to_nu
 #names(data.num) <- paste(names(data.num), "N", sep = "_")
 
 
+# data.num <- as.data.frame(data.num) %>%
+#   mutate(Total = Relevance1 + Relevance2 + Relevance3 + Effectiveness1 + Effectiveness2 )
+
 data.num <- as.data.frame(data.num) %>%
-  mutate(Total = Relevance1 + Relevance2 + Relevance3 + Effectiveness1 + Effectiveness2 )
+  mutate(Total = Knowledge + Content + Efficiency  + Quality + Design  )
 
 # Not clean but works
 data.feedback <- cbind(data.feedback, data.num$Total)%>%
@@ -712,19 +789,19 @@ data.feedback <- cbind(data.feedback, data.num$Total)%>%
 ```{r ResultTableN}
 data.feedback %>%
   filter(str_count(Total) < 10) %>%
+  filter( Comments !="" ) %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
-  select(Total, Comments, FinalComments)%>%
+  select(Total, Comments)%>%
   filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments", "FinalComments"), 
+       col.names = c("Id", "Comments"), 
        caption = paste(NbAnswers, "most negative learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
   kable_styling(full_width = FALSE) %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "15em")  %>%
-  column_spec(3 ,width = "15em")
+  column_spec(2 ,width = "30em") 
 
 
 ```
@@ -734,20 +811,19 @@ kable( ,
 
 data.feedback %>%
   filter(Total > 20) %>%
-  filter( Comments !="" | FinalComments != "") %>%
+  filter( Comments !="" ) %>%
   arrange(desc(Total)) %>%    # Highest Total first
   head(n= NbAnswers )%>%
-  select(Total, Comments, FinalComments)%>%
+  select(Total, Comments)%>%
   #filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments", "FinalComments"), 
+       col.names = c("Id", "Comments"), 
        caption = paste(NbAnswers, "most positive learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
  kable_styling(full_width = FALSE)  %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "15em")  %>%
-  column_spec(3 ,width = "15em")
+  column_spec(2 ,width = "30em")  
 
 
 
@@ -812,378 +888,4 @@ kable( ,
 ```{r EXIT}
 knitr::knit_exit()
 ```
-
-
-
-# Lerner's paths
-
-```{r LearnersTracks}
-# Creating Learners Chronology
-
-LearnersPaths <- course.log %>%
-  filter(!is.na(ActNb)) %>%
-  distinct(User.full.name, Time,.keep_all = TRUE) %>%
-  group_by(User.full.name) %>%
-  arrange(Time) %>%
-  mutate( seq_idx  = row_number()
-  ) %>%
-  ungroup()
-
-# Sequence of steps by learners 
-LearnersPaths <- LearnersPaths   %>%
-  group_by(User.full.name) %>%
-  arrange(seq_idx) %>%
-  mutate( 
-    Increasing  =  !is.unsorted(ActNb), 
-    Nbre_Steps = n(), 
-    next_step = c(ActNb[-1], NA ),
-    step_diff = (next_step - ActNb)-1, 
-    
-    sum_neg_diff = sum( ifelse(step_diff < 0 , step_diff + 1, 0) ),
-    I_back = ifelse(step_diff < 0 , 1, 0), 
-    Nbre_back = sum(I_back, na.rm =TRUE),
-    Tx_back =  Nbre_back /Nbre_Steps,
-    
-    total_diff = sum(step_diff , na.rm =TRUE),
-    abs_tot_diff = sum(abs(step_diff) , na.rm =TRUE),
-    rel_diff = abs_tot_diff/Nbre_Steps, 
-    max_diff = max(abs(step_diff) , na.rm =TRUE)
-  ) %>%
-  ungroup() 
-
-# some stats to do here...
-
-```
-
-
-```{r LearnersPath}
-# maybe change the definition of "clicks"  --> seq_idx
-## Trajectories of learners....
-
-NminStep <- 200    #Selecting learners for  graph
-df <- LearnersPaths  %>%
-  filter(Certified == TRUE,
-         Nbre_Steps >= NminStep ) %>%
-  group_by(User.full.name) %>%
-  select(User.full.name, ActNb, Actname, ModuleID, Certified, Country,
-         seq_idx, Nbre_Steps, Increasing, next_step, step_diff) %>% 
-  ungroup() %>%
-  arrange(User.full.name, seq_idx)
-
-# Jitter plot 
-
-p <- ggplot(df, aes(x = seq_idx,
-                    y= ActNb,
-                    group = User.full.name,
-                    Act = Actname
-                    # colour =  User.full.name
-                    )) +
-  geom_line(alpha = 0.2, size = 0.8,
-            show.legend = FALSE,
-            aes(y = ActNb, 
-                x = jitter(as.numeric(seq_idx, 0.5)) ,
-                group=factor(User.full.name))) +
-  labs(title= paste("Trajectory of",length(unique(df$User.full.name)),"learners clicking at least", NminStep,"times"  ), 
-       y = "Course activity", x = "Learners chronological sequence (clics)") +
-  theme_minimal()
-
-# p
-
-ggplotly(p)
-
-```
-
-
-# Leftovers
-
-
-```{r specific }
-# Catching information on a specific user 
-toto <- course.log %>% 
-  filter(str_detect(User.full.name, "Fangcao")) %>%
-  select( User.full.name, Date, ModuleID,  Actname)%>%
-  unique()
-
-unique(toto$Date) 
-```
-
-
-```{r, eval = FALSE}
-
-NbSelect <- 10  # Best and worst students (in terms of events)
-
-#Learners event counts (top and bottom Learners)
-course.log %>%
-  filter(!is.na(User.full.name), 
-         User.full.name != "-") %>%
-  count(User.full.name) %>%
-  mte(rank = dense_rank(desc(n))) %>% 
-  filter(row_number() >= max(row_number()) - NbSelect | rank <= NbSelect) %>%
-  ggplot()+
-  aes(x=reorder(User.full.name, n), y=n, 
-      fill=factor(ifelse(rank <= NbSelect, paste("Top", NbSelect),paste("Bottom", NbSelect)))) +
-  geom_bar(stat='identity') +
-  labs(x="Learners' ID", y="Number of events", fill="",
-       subtitle = paste(NbLearners,"Learners (Final Date ", FileDate,")"))+
-  ggtitle("Learners event counts (top and bottom Learners)")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-  coord_flip()
-
-```
-
-### Activities accessed by number of Learners
-
-
-```{r}
-course.log %>%
-  filter(!is.na(ActNb)) %>%
-  mutate( ActID.lab = paste(ActNb,"-",Event.context, "-", ModuleID)) %>%
-  group_by(ActID.lab) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  mutate(rank = dense_rank(desc(Learners))) %>% 
-  filter(rank <= 40) %>% 
-  ggplot()+
-  aes(x=reorder(ActID.lab, Learners), y=Learners)+
-  geom_bar(stat='identity')+
-  labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(length(unique(actname))-1,"activities (Final Date ", as.Date(as.character(FileDate),format = "%Y%m%d"),")"))+
-  ggtitle("Activities accessed by number of Learners (top 30 activities)")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-  
-```
-
-
-
-
-```{r}
-course.log %>%
-  filter(!is.na(ActNb),
-         Date <= FileDate) %>%
-  mutate( ActID.lab = paste(ActNb,"-",Event.context)) %>%
-  group_by(ActID.lab) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  #mutate(rank = dense_rank(desc(Learners))) %>% 
-  #filter(rank <= 30) %>% 
-  ggplot()+
-  aes(x=reorder(ActID.lab, Learners), y=Learners)+
-  geom_bar(stat='identity')+
-  labs(x="Activities", y="Number of Learners", 
-       subtitle = paste(nrow(subset(unique(course.log[c("ActNb", "Date")]), Date==FileDate)),"activities (Date ", FileDate,")"))+
-  ggtitle("Activities accessed by number of Learners")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=12),
-        panel.background = element_blank(), text = element_text(size=8), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 8))+
-  coord_flip()
-```
-
- 
- - Sort by the frequency of activities 
-```{r, fig.width=12,fig.height=18}
-#Both Date and Date ID work. Date: the specific date since beginning; DayID: the first date = 1, and the second = 2, ...
-course.log %>%
-  filter(!is.na(ActNb)) %>%
-  mutate(ActID.lab = paste(ActNb,"-",Event.context, "-")) %>%
-  group_by(ActID.lab, Date) %>%
-  summarise(Learners = n_distinct(User.full.name)) %>% 
-  ggplot()+
-  aes(x=Date, y=fct_rev(fct_infreq(ActID.lab)), fill=Learners)+
-  geom_tile()+
-  labs(x="Date", y="Activities", 
-       subtitle = paste("Final date ", as.Date(as.character(FileDate),format = "%Y%m%d")))+
-  ggtitle("Heatmap of the activities")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-        plot.title = element_text(hjust = 0.5, size=14),
-        panel.background = element_blank(), text = element_text(size=10), 
-        axis.line = element_line(colour = "black"), 
-        plot.subtitle = element_text(hjust = 0.5, size=8),
-        axis.title.y = element_text(size = 10))+
-  coord_fixed(ratio = 0.5)
-
-```
-
-
-
-```{r }
-# course.log <-  course.log %>%
-#   group_by(User.full.name, Date, Actname) %>%
-#   mutate( TimeperActivity = lubridate::as.duration(Time)) %>%
-#   group_by(User.full.name, Date) %>%
-#   mutate(TimeperDay = sum(TimeperActivity)) %>%
-#   ungroup()
-#  Still a problem in this computation since there may be hours btween two event...
-```
-
-
-```{r}
-
-p <- Grades %>%
- filter(!is.na(Country)) %>%
-mutate(TotalTime = TotalTime/60) %>%
- ggplot() +
- aes(x = NbAct, y = GradeFinal, colour = Country, toto = Email.address) +
- geom_jitter(aes(size=as.numeric(TotalTime)), width = 0.5, height = 0.5, alpha = 0.6) +
-# geom_vline (aes(xintercept =  median(TotalTime))) +
-# facet_wrap(vars(Country)) +
- scale_color_hue() +
- theme_minimal()+
- theme(legend.position = "bottom")
-
-p
-#ggplotly(p)
-
-```
-
-
-
-
-# leftovers
-
-
-
-
-```{r}
-
-Grades%>%
- filter(Country != "" | Country != "NA")%>%
- group_by(Country)%>%
-  summarise(Learners = n()) %>%
- ggplot() +
- aes( x=reorder(Country, Learners), y=  Learners) +
- geom_bar(aes(fill = Country), stat='identity', alpha = 0.3)+
- scale_fill_hue() +
- ggtitle("Learners origin") +
- labs(y = "Nb of learners enrolled", 
-      x = "Countries (Ordered by Nb of participants)",
-      caption = paste("(as of ", FileDate,")"))+
- coord_flip() +
- theme_minimal() +
- theme(legend.position = "none")
-
-
-```
-
-```{r density1, fig.height=4}
-library(ggridges)
-Grades %>%
- filter(Country != "" | Country != "NA")%>%
-  filter(GradeFinal > 0) %>%
-  group_by(Country) %>%
-  mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(Email.address))  %>%
-  ungroup() %>%
-  filter(NbLearners >5) %>%
-  ggplot() +
-  aes(x = GradeFinal , y = reorder(Country, AvgGrade) , fill = Country) +
-  xlim( c(0,65))+
-  #geom_density_ridges(stat="binline", bins=20) +
-  # geom_density_ridges( alpha = 0.3) +
-  stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
-                        jittered_points = TRUE,
-                        position = position_points_jitter(width = 0.05, height = 0),
-                        point_shape = '|', point_size = 2, point_alpha = 0.3, 
-                       alpha = 0.3
-                      ) +
-  #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
-  ggtitle("Distribution of grades by countries ") +
-  labs(x="Final Grades", y=" Countries (Ordered by Avg Grades) ", 
-      subtitle = paste("Countries with more than 5 participants", "(date ", FileDate,")")) +
-    theme_ridges(grid = FALSE) +
-  #theme_minimal()+
-  theme(legend.position = "none")
- 
-
-```
-
-```{r}
-
-Grades %>%
- filter(Country != "" | Country != "NA")%>%
- group_by(Country) %>%
- summarise(Learners = n_distinct(Email.address)) %>%
- ggplot() +
- aes( x=reorder(Country, Learners), y=  Learners) +
- geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
-geom_text(aes(label= Learners, color = Country), vjust= 0.3, size=3.5,)+
- scale_fill_hue() +
- ggtitle("Learners origin") +
- labs(y = "Nb of learners enrolled", 
-      x = "Countries (Ordered by Nb of participants)",
-      subtitle = paste("(date ", FileDate,")"))+
- coord_flip() +
- theme_minimal() +
- theme(legend.position = "none")
-
-
-```
-
-```{r density2, fig.height=4}
-library(ggridges)
-Grades %>%
- filter(Country != "" | Country != "NA")%>%
-  filter(GradeFinal > 0) %>%
-  group_by(Country) %>%
-  mutate(AvgGrade = mean(GradeFinal, na.rm =TRUE), 
-         NbLearners = n_distinct(Email.address))  %>%
-  ungroup() %>%
-  filter(NbLearners >5) %>%
-  ggplot() +
-  aes(x = GradeFinal , y = reorder(Country, AvgGrade) , fill = Country) +
-  xlim( c(0,100))+
-  #geom_density_ridges(stat="binline", bins=20) +
-  # geom_density_ridges( alpha = 0.3) +
-  stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
-                        jittered_points = TRUE,
-                        position = position_points_jitter(width = 0.05, height = 0),
-                        point_shape = '|', point_size = 2, point_alpha = 0.3, 
-                       alpha = 0.3
-                      ) +
-  #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
-  ggtitle("Distribution of grades by countries ") +
-  labs(x="Final Grades", y=" Countries (Ordered by Avg Grades) ", 
-      subtitle = paste("Countries with more than 5 participants", "(date ", FileDate,")")) +
-    theme_ridges(grid = FALSE) +
-  #theme_minimal()+
-  theme(legend.position = "none")
- 
-
-```
-
-
-```{r}
-
-# Graphics on special activities
-
-Special <- "Satellite"
-
-toto <-  course.log %>%
-  filter(!is.na(Event.name)) %>%
-  filter(str_detect(Event.context, Special))%>%
-  group_by(Event.context)%>%
-  summarise(Learners = n_distinct(User.full.name), 
-            Module = max(ModuleID))
-
-
-ggplot(toto) +
-  aes(x = Event.context, y =  Learners) +
-  geom_bar(aes(fill = Event.context), stat = "identity", alpha = 0.5) +
-  ggtitle(paste(Special, "activities")) +
- labs(y = "Nb of learners enrolled", 
-      subtitle = paste("(date ", FileDate,")"))+
-  coord_flip() +
-  theme_minimal()+
- theme(legend.position = "none")
-```
-
 
