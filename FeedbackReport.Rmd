@@ -193,7 +193,7 @@ Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** fro
 
 ## Composition of the respondants
 
-```{r StatDesc, cache =TRUE}
+```{r StatDesc}
 G_Sex <- data.feedback %>%
     ggplot() +
     aes(x= Gender ) +
@@ -217,10 +217,10 @@ G_Org <- data.feedback %>%
 
 ```{r GraphicOrganisation}
 
-# G_Sex + G_Org + 
-#   plot_annotation(title = 'Respondents:',
-#                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
-#                   theme = theme(plot.title = element_text(size = 16))) 
+G_Sex + G_Org +
+  plot_annotation(title = 'Respondents:',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16)))
 
 ```
 
@@ -791,19 +791,20 @@ data.feedback <- cbind(data.feedback, data.num$Total)%>%
 ```{r ResultTableN}
 data.feedback %>%
   filter(str_count(Total) < 10) %>%
-  filter( Comments !="" ) %>%
+  filter( Comments !="" & Comments !="-" ) %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
-  select(Total, Comments)%>%
+  select(Total, Results, Comments)%>%
   filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments"), 
-       caption = paste("Comments from",NbAnswers, "most negative learners \n"),
+       col.names = c("Id", "What use?", "Comments"), 
+       caption = paste("Comments from",NbAnswers, "**most negative** learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
   kable_styling(full_width = FALSE) %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "30em") 
+  column_spec(2 ,width = "15em")%>%
+  column_spec(3 ,width = "15em") 
 
 
 ```
@@ -813,19 +814,20 @@ kable( ,
 
 data.feedback %>%
   filter(Total > 20) %>%
-  filter( Comments !="" ) %>%
+  filter( Comments !="" & Comments != "-") %>%
   arrange(desc(Total)) %>%    # Highest Total first
   head(n= NbAnswers )%>%
-  select(Total, Comments)%>%
+  select(Total, Results,Comments)%>%
   #filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "Comments"), 
+       col.names = c("Id", "What use?", "Comments"), 
        caption = paste("Comments from", NbAnswers, "most positive learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
  kable_styling(full_width = FALSE)  %>%
   column_spec(1, width ="1cm") %>%
-  column_spec(2 ,width = "30em")  
+  column_spec(2 ,width = "20em") %>%
+  column_spec(3 ,width = "15em") 
 
 
 
@@ -835,6 +837,7 @@ kable( ,
 
 
 ```{r reportexport, message=FALSE, warning=FALSE, echo = FALSE, results='hide',}
+# This will copy the previous feedback report not the current one
 library(here)
 Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
 # 
