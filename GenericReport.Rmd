@@ -844,10 +844,10 @@ rm("CertifiedCountryL", "CertifiedCountryW", "CertifiedSex")
 
 
 ```{r ExportDataReport}
-#For report
-CourseReportExport <- data.frame(NbLearners, NbCertificates)
-write.xlsx(CourseReportExport,
-           file=paste("Output/",CourseName,"-Report-",ymd(Sys.Date()),".xlsx", sep=""))
+# #For report (not usefull anymore) 
+# CourseReportExport <- data.frame(NbLearners, NbCertificates)
+# write.xlsx(CourseReportExport,
+#            file=paste("Output/",CourseName,"-Report-",ymd(Sys.Date()),".xlsx", sep=""))
 
 
 ```
@@ -1373,6 +1373,7 @@ p
 ```
 
 ## Activities viewed and visits on the LMS
+Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow`, "participants with grade = 0 who never really *engaged* with the course]. 
 
 ```{r VisitsVsActivities}
 
@@ -1387,11 +1388,14 @@ Grades %>%
  scale_color_manual(values= c( "Succeed" = '#00BFC4', "Failed"='#F8766D'), na.value = "#d7d7d7") +
  scale_x_continuous(breaks=seq(from = 0, to = max(Grades$NbAct)+2, by =2))+
  ggtitle("Activity of learners and visits to the LMS") +
- labs(x="Nb of visits on the LMS (unique days)", 
+ labs(x="Nb of days of visits on the LMS (unique days)", 
       y=paste0(" Nb of activities visited \n (max =", NbActivities,")"), 
       subtitle = paste0("Each dot is a participant, couloured by success"), 
       caption=  paste( NbNoGrades,  "participants with no grade ( in grey), ", "date", FileDate) )+
-
+ geom_vline (aes(xintercept = median(GradesPositive$NbDays)), color = SIAP.color) +
+ annotate("text", y = 5, x = median(GradesPositive$NbDays) + 1,
+          color= SIAP.color,
+          label = "Median nb of days of visits")+
  theme_minimal()+
  theme(legend.position = "bottom", 
        panel.grid.minor = element_blank())
@@ -1400,15 +1404,16 @@ Grades %>%
 
 ```
 
-```{r reportexport, message=FALSE}
+
+
+```{r reportexport}
+# This has to run AFTER the generic report has been completed (we get the n-1 version!!!)
 library(here)
 Report.name <- paste0("Report-", CourseName,"-", FileDate)
 # 
 # Export a copy with course name
 file.copy(from = here("GenericReport.pdf"),
           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
-
-
 
 ```
 
