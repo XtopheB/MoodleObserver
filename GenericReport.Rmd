@@ -133,8 +133,8 @@ CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
 
 # Minimum to get the certificate
-GradeThreshold <-70
-GradeMax = 100
+GradeMax = 40  # 4 tests with max 10
+GradeThreshold <-28  # 4 * 7 
 
 # Dates parameters
  WebinarDay = 4 # Sunday is 1
@@ -548,9 +548,10 @@ StudentsNames <- data.act  %>%
 
 course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 
-# Step 2: Adding Sex and Country  to course.log using 
+# Step 2: Adding Sex and Country  to course.log using data.grades 
+# Need to adjust name of Total grade (sometimes Total..Real)
 NameSex <- data.grades %>%
-  mutate(TotalReal =  as.numeric(Total..Real.)) %>%
+  mutate(TotalReal =  as.numeric(Grand.Total..Real.)) %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
@@ -617,7 +618,7 @@ temp_country <- course.log %>%
   group_by(Country) %>%
   summarise(Learners = n_distinct(Email.address)) %>%
   arrange(desc(Learners)) %>%
-  mutate(  differ = lag(Learners) - Learners)%>% 
+  mutate(  differ = Learners[1] - Learners)%>% 
   rename(Country.Code = Country)
 
 # adding real name of countries 
@@ -640,10 +641,11 @@ country_max <- temp_country %>%
 **`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. The most important country in terms of participation is **`r as.character(country_max)`**  with **`r as.character(temp_country[1, 2])`** participants.  
 
 ```{r GraphBycountry}
+
 # Graphic 
 temp_country %>%
-  slice(ifelse(cond, -1, 1:n())) %>%
-  filter(Learners>1)%>%
+ # slice(ifelse(cond, -1, 1:n())) %>%
+ # filter(Learners>1) %>%
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
@@ -886,7 +888,7 @@ Learners %>%
   ggtitle("Sucess rate by country") +
   labs(x="Country", y="Percentage of sucess", 
       caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`noshows`) excluded \n
-                     (date ", FileDate,")"))+
+                     (date:", format(FileDate, "%A %d %B"),")"))+
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
    annotate("text", x = 1, y = RealSuccessRate/100,
@@ -911,7 +913,7 @@ Learners %>%
   ggtitle("Sucess rate by gender") +
   labs(x="Gender", y="Percentage of sucess", 
       caption = paste(" Participants with a grade of 0 (`noshows`) excluded \n
-                     (date ", FileDate,")"))+
+                     (date:", format(FileDate, "%A %d %B"),")"))+
   theme_minimal()+
   geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
@@ -943,7 +945,7 @@ GradesPositive %>%
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
       caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
-      subtitle = paste("(as of ", FileDate,",",
+      subtitle = paste0("(as of ", format(FileDate, "%A %d %B "),",",
                       NbStudentsAboveThreshold," learners are above the threshold)") )+
  annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
                   ymin = 0, ymax = Ymax,
@@ -982,10 +984,10 @@ GradesPositive %>%
   #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
   ggtitle("Distribution of grades by Sex ") +
   labs(x="Final Grades", y=" Sex ", 
-      subtitle = paste("(date ", FileDate,")")) +
+      subtitle = paste("(date:", format(FileDate, "%A %d %B "),")")) +
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+12, y = 0.75,
+  annotate("text", x = GradeThreshold+5, y = 0.75,
           color= "red",
           label = "Success")+
   #theme_minimal()+
@@ -1011,7 +1013,7 @@ GradesPositive %>%
   stat_density_ridges(quantile_lines = FALSE, quantiles = 2, 
                         jittered_points = TRUE,
                         position = position_points_jitter(width = 0.05, height = 0.1),
-                        point_shape = '|', point_size = 2, point_alpha = 0.3, 
+                        point_shape = '|', point_size = 3, point_alpha = 0.5, 
                        alpha = 0.3
                       ) +
   #geom_jitter(color= SIAP.color, size=0.6, alpha=0.9) +
@@ -1019,7 +1021,7 @@ GradesPositive %>%
   labs(x="Final Grades",
        y=" Countries", 
       caption = paste("Countries with more than 5 participants \n
-                     (date ", FileDate,")"))+
+                     (date:", format(FileDate, "%A %d %B "),")"))+
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
   annotate("text", x = GradeThreshold+12, y = 0.75,
@@ -1139,8 +1141,6 @@ course.log %>%
     
 ## Learners preferred activities {-}
 
-
-
 ```{r LearnersByActivity}
 LearnersByActivity <- course.log %>%
   filter(!is.na(Event.context)) %>%
@@ -1159,10 +1159,11 @@ MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
 
 # myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
-myPaletteModules <- c("lightgrey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
-myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
+# myPaletteModules <- c("lightgrey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
+# myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
 
-#myPaletteModules <- c("lightyellow", "yellow",'#b2df8a','#33a02c','#fb9a99','#e31a1c', "orange")
+myPaletteModules <- c("lightgrey",'#a6cee3','#b2df8a','#fb9a99', "purple")
+myPaletteModulesDark <- c("grey",'#1f78b4','#33a02c','#e31a1c', "purple")
 
 course.log %>%
   filter(!is.na(Event.context)) %>%
@@ -1202,11 +1203,8 @@ course.log %>%
           label = "Median", alpha = 0.7)+
   geom_hline( yintercept = MedianLearnersActivity,  color = "red" ) 
 
-
-#p
+# For  interactive plot
 #ggplotly(p)
-
-
 
 ```
 
