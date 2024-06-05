@@ -546,20 +546,17 @@ kable(module.tab, "latex", longtable = T, booktabs = T) %>%
 ```{r ExportActivities}
 library(openxlsx)
 
-tmp <- actname %>%
+actname %>%
   mutate(
     Actnumber = str_extract(Activity, "^[^\\[]+"),  # Extract elements before '['
     Type = str_extract(Activity, "(?<=\\[)[^\\]]+"),  # Extract elements between '[' and ']'
     Title = str_extract(Activity, "(?<=\\])[^\n]+")  # Extract elements after ']'
   )%>%
-  select(Actnumber, Type, Name)
-
-
-
-# save the current structure of the course in an excel file 
-write.xlsx(tmp,
+  select(Actnumber, Type, Title) %>%
+  # save the current structure of the course in an excel file 
+  write.xlsx(.,
            file=paste("Output/",CourseName,"-Activities-",ymd(Sys.Date()),".xlsx", sep=""))
-
+  
 ```
 
 
