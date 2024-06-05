@@ -134,7 +134,8 @@ NbModules <- AllCoursesNbModules[i.course]
 
 # Minimum to get the certificate
 GradeMax = 40  # 4 tests with max 10
-GradeThreshold <-28  # 4 * 7 
+PercentThreshold = 70   # 70% is the norm for tests
+GradeThreshold <-GradeMax * (PercentThreshold/100)  
 
 # Dates parameters
  WebinarDay = 4 # Sunday is 1
@@ -803,7 +804,7 @@ RealSuccessRate <-round(100*NbCertificates/(NbLearners - NbStudentsNoShow) , 1)
 
 ```
 
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r GradeThreshold`  threshold (and are eligible for a certificate).
+There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r PercentThreshold` % threshold (and are eligible for a certificate).
 
  
 

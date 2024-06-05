@@ -136,7 +136,7 @@ data.act <- read.csv(name_last_act)
 
 ## The Grades data
 
-> The data can be downloaded  directly from here[https://learning.officialstatistics.org/grade/report/grader/index.php?id=113](https://learning.officialstatistics.org/grade/report/grader/index.php?id=113)
+> The data can be downloaded  directly from here[https://learning.officialstatistics.org/grade/export/txt/index.php?id=113](https://learning.officialstatistics.org/grade/export/txt/index.php?id=113)
 
 In the export tab, select *"Plain text file"* and in the folded "Export format option" tab at the bottom select comma (radio button).  
 
@@ -201,10 +201,13 @@ We have to perform several tasks before having some data to analyse.
 ```{r cleaning}
 #remove administrators
 
-# data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
-#                           data.logs$User.full.name=="Xtophe Fairweather" |
-#                           data.logs$User.full.name=="Ralf Becker" |
-#                           data.logs$Component=="Recycle bin"),]
+data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
+                          data.logs$User.full.name=="Xtophe Fairweather" |
+                          data.logs$User.full.name=="Ralf Becker" |
+                          data.logs$User.full.name=="ian banda" |
+                          data.logs$User.full.name=="Ceri Regan" |
+                          data.logs$User.full.name=="Rachael Beaven" |
+                          data.logs$Component=="Recycle bin"),]
 ```
 
 ### Remove events recorded but not useful
@@ -486,6 +489,25 @@ kable(module.tab, "latex", longtable = T, booktabs = T) %>%
 
 ```
 
+
+```{r ExportActivities}
+library(openxlsx)
+
+tmp <- actname %>%
+  mutate(
+    Actnumber = str_extract(Activity, "^[^\\[]+"),  # Extract elements before '['
+    Type = str_extract(Activity, "(?<=\\[)[^\\]]+"),  # Extract elements between '[' and ']'
+    Name = str_extract(Activity, "(?<=\\])[^\n]+")  # Extract elements after ']'
+  )%>%
+  select(Actnumber, Type, Name)
+
+
+
+# save the current structure of the course in an excel file 
+write.xlsx(tmp,
+           file=paste("Output/",CourseName,"Activities-",ymd(Sys.Date()),".xlsx", sep=""))
+
+```
 
 
 ```{r CourseStats}
