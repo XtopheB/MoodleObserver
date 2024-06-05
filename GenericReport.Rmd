@@ -89,7 +89,9 @@ AllCoursesRef <- c("Gender_Self_1",
                    "SEEA_CF_2022", 
                    "SBR22", 
                    "MLOS22", "ClimateChange2023", 
-                   "ADV23", "2023-MLOS", "RAP2024")
+                   "ADV23", "2023-MLOS", "RAP2024",
+                   "2024-DataMaster-S"
+                   )
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -101,10 +103,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Compiling climate change indicators: an accounting approach", 
                         "Advanced Data Visualization for Official Statistics and SDG Indicators", 
                          "Machine Learning for Official Statistics and SDGs-2023",
-                        "Principles of Reproducible Analytical Pipelines for Official Statistics")
+                        "Principles of Reproducible Analytical Pipelines for Official Statistics", 
+                        "Asia Pacific Data Masterclass")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4)
 ```
 
 
@@ -119,8 +122,10 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5)
 #i.course <- 7 # MLOS22
 #i.course <-8 # Climate Change 2023
 #i.course <-9 # ADV2023
-i.course <- 10 # MLOS23
-i.course <- 11 #RAP2024
+# i.course <- 10 # MLOS23
+#i.course <- 11 #RAP2024
+i.course <- 12 # MasterClass 24
+
 
 ```
 
@@ -436,7 +441,7 @@ actname <-  actname %>%
 
 ### List of all activities proposed on the course: 
 
-``````{r Modules}
+```{r Modules}
 # Based on Course parameters  ModStartIdx 
 ### For a  8 modules course
 # actname <- actname %>%
@@ -478,7 +483,7 @@ actname <- actname %>%
 ```
 
 
-``````{r ModuleNb}
+```{r ModuleNb}
 # Matching and adding columns
 
 course.log <- course.log  %>%
@@ -534,6 +539,26 @@ Below is a table with the specific pedagogical activities of the course, excludi
 # Better looking if long list of Modules
 kable(module.tab, "latex", longtable = T, booktabs = T) %>%
   kable_styling(latex_options = c("repeat_header"), font_size = 7)
+
+```
+
+
+```{r ExportActivities}
+library(openxlsx)
+
+tmp <- actname %>%
+  mutate(
+    Actnumber = str_extract(Activity, "^[^\\[]+"),  # Extract elements before '['
+    Type = str_extract(Activity, "(?<=\\[)[^\\]]+"),  # Extract elements between '[' and ']'
+    Title = str_extract(Activity, "(?<=\\])[^\n]+")  # Extract elements after ']'
+  )%>%
+  select(Actnumber, Type, Name)
+
+
+
+# save the current structure of the course in an excel file 
+write.xlsx(tmp,
+           file=paste("Output/",CourseName,"-Activities-",ymd(Sys.Date()),".xlsx", sep=""))
 
 ```
 
