@@ -94,7 +94,9 @@ AllCoursesRef <- c("Gender_Self_1",
                    "ClimateChange2023", 
                    "user_2023", 
                    "egriss_2023", 
-                    "ADV23", "2023-MLOS")
+                    "ADV23", "2023-MLOS", "RAP2024"
+                   )
+
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
@@ -107,10 +109,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Increasing User Engagement Around Data and Statistics", 
                         "Introduction to International Recommendations on Refugee and IDP Statistics", 
                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
-                         "Machine Learning for Official Statistics and SDGs-2023")
+                         "Machine Learning for Official Statistics and SDGs-2023",
+                         "Principles of Reproducible Analytical Pipelines for Official Statistics")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29" )
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8,5)
 ```
 
 
@@ -130,7 +133,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8)
 # i.course <-9 # User Engagement
 # i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
 # i.course <-11 # ADV23   
-i.course <- 12 # MLOS23
+#i.course <- 12 # MLOS23
+i.course <- 13 #RAP2024
 
 ```
 
