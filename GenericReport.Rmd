@@ -789,6 +789,7 @@ write.xlsx(CourseListParticipants,
 ### Time spent computation 
 learners_Time <-  course.log %>%
   select(Email.address,  Actname, ActNb,Date, Time) %>%
+  filter(!grepl("feedback|certificate|Announcements", Actname, ignore.case = TRUE)) %>%
   mutate(RealTime = lubridate::dmy_hm(Time)) %>%
   group_by(Email.address, Date) %>%
   arrange(RealTime) %>%
@@ -875,7 +876,7 @@ write.xlsx(CourseListExport,
 ```
 
 ```{r}
-rm("CertifiedCountryL", "CertifiedCountryW", "CertifiedSex")
+rm("CertifiedCountryL", "CertifiedCountryW")
 ```
 
 
@@ -962,7 +963,9 @@ The distribution of grades presented below  shows the high quality of the learne
 ```{r GraphGrades , fig.height=3}
 
 # Automatic vertical scale
-GradesPositive <- Grades%>% filter(GradeFinal > 0 | !is.na(GradeFinal)) 
+GradesPositive <- Grades %>% 
+  filter(GradeFinal > 0 | !is.na(GradeFinal))
+
 histdata <- hist(GradesPositive$GradeFinal,
                  freq = TRUE,  breaks=100, plot=FALSE, right=FALSE)
 HistHeight <- max(histdata$counts)
@@ -1245,7 +1248,7 @@ course.log %>%
 
 ```
 
- > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** 
+ > *The graphic exhibits a few access differences among the **`r nrow(actname)`** 
 original activities proposed, showing a good commitment of active participants*.^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.]  
  
 ### 10 **most viewed** activities
@@ -1322,7 +1325,7 @@ Over the **`r NbLearners`** unique learners[^MyNote] registered for the course, 
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
-In the graphic below,  we emphasized **in a box** participants that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone, and we found in that zone   **`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)`** (over `r NbCertificates` certified).   
+In the graphic below,  we emphasized **in a box** participants that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone, and we found that   **`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)`** were in that zone (over `r NbCertificates` certified).   
 
 ```{r GradesVsActivities}
 
