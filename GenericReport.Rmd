@@ -891,11 +891,11 @@ rm("CertifiedCountryL", "CertifiedCountryW")
 
 ##  Success rate
 
-The success rate (`r RealSuccessRate` %) can be analysed by country and gender.
+The success rate can be analysed by country and gender.
 
 
 ```{r GraphSuccessByCountry}
-MinLearners <- 5
+MinLearners <- 2
 Learners %>%
  filter(Country != "" | Country != "NA") %>%
  filter(TotalReal > 0 | !is.na(TotalReal)) %>%
@@ -947,13 +947,25 @@ Learners %>%
   coord_flip()
 
 ```
-```{r SuccessRateWomen}
-successFemale <-  CertifiedSex["Female"]$'Nb of Certificates' / NbWomen
-successMale <- CertifiedSex["Male"]$'Nb of Certificates' / (NbLearners - NbWomen)
+```{r SuccessRates}
+LearnersWithoutNoShows <-Learners %>%
+  filter(Country != "" | Country != "NA")%>%
+  filter(TotalReal > 0 | !is.na(TotalReal)) 
+
+SuccessRates <- LearnersWithoutNoShows %>%
+  group_by(Sex) %>%
+  summarise(
+    Total = n(),
+    Certified_Count = sum(Certified),
+    Rate = round((Certified_Count / Total) * 100, 1)
+  ) %>%
+  select(Sex, Rate)
+
+#SuccessRateW <- SuccessRates$Rate[SuccessRates$Sex == "Female"]
 
 ```
 
-The success rate for women is of  `r  CertifiedSex["Female"]$'Nb of Certificates' / NbWomen`  \% , larger than for men (
+With that definition, excluding the "*no-shows*", the success rate for women is `r  SuccessRates$Rate[SuccessRates$Sex == "Female"]` \% , larger than for men ( `r SuccessRates$Rate[SuccessRates$Sex == "Male"]` \% )
 
 ##  Grades distribution
 
