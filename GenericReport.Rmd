@@ -123,8 +123,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4)
 #i.course <-8 # Climate Change 2023
 #i.course <-9 # ADV2023
 # i.course <- 10 # MLOS23
-#i.course <- 11 #RAP2024
-i.course <- 12 # MasterClass 24
+i.course <- 11 #RAP2024
+#i.course <- 12 # MasterClass 24
 
 
 ```
@@ -271,6 +271,9 @@ data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
                           data.logs$User.full.name=="Sokol Vako" |
                           data.logs$User.full.name=="Pinar Ucar" |
                           data.logs$User.full.name=="Shuji Fukuyama"|
+                          data.logs$User.full.name=="ian banda" |
+                          data.logs$User.full.name=="Jeroen Minderman"|
+                          data.logs$User.full.name=="Hugo Pigott"|  
                           data.logs$Component=="Recycle bin"),]
 ```
 
@@ -943,6 +946,13 @@ Learners %>%
   coord_flip()
 
 ```
+```{r SuccessRateWomen}
+successFemale <-  CertifiedSex["Female"]$'Nb of Certificates' / NbWomen
+successMale <- CertifiedSex["Male"]$'Nb of Certificates' / (NbLearners - NbWomen)
+
+```
+
+The success rate for women is of  `r  CertifiedSex["Female"]$'Nb of Certificates' / NbWomen`  \% , larger than for men (
 
 ##  Grades distribution
 
@@ -1193,7 +1203,11 @@ course.log %>%
   filter(Actname != CourseNameLong) %>%
   filter(ModuleID >= 0) %>% 
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",str_trunc(Event.context, 20, "right"))) %>%
+  mutate(
+    # removing right then left parts of full activities name
+    ActShort = str_trunc(Event.context, 35, "right"), 
+    ActShort = ifelse(str_detect(Event.context, "\\["), str_extract( ActShort, "\\[.*"), ActShort),       
+    ActID.lab = paste0(ActNb,"-",ActShort) ) %>%
   group_by(ActID.lab) %>%
   summarise(NbLearners = n_distinct(User.full.name),
             ActivityName = as.factor(unique(Actname)),
@@ -1231,7 +1245,8 @@ course.log %>%
 
 ```
 
- > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** original activities proposed* ^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.] . 
+ > *The graphic exhibits a few access differences among the **`r length(unique(course.log$Actname))`** 
+original activities proposed, showing a good commitment of active participants*.^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.]  
  
 ### 10 **most viewed** activities
  
@@ -1307,7 +1322,7 @@ Over the **`r NbLearners`** unique learners[^MyNote] registered for the course, 
 
 [^MyNote]: We removed SIAP's lecturers from the list  as well as some learners registered with different emails, we count here **unique** learners.  
 
-In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)` participants) that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone.  
+In the graphic below,  we emphasized **in a box** participants that have succeed in their tests and completed  more than 2/3 of the activities proposed on the LMS. All learners should be in that zone, and we found in that zone   **`r round(Grades%>% filter(GradeFinal >GradeThreshold & NbAct > 0.6*max(Grades$NbAct, na.rm = TRUE) ) %>% nrow(), 1)`** (over `r NbCertificates` certified).   
 
 ```{r GradesVsActivities}
 
@@ -1315,10 +1330,6 @@ In the graphic below we highlight learners (`r round(Grades%>% filter(GradeFinal
 p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
- ggtitle("Test Scores vs Number of Activities Viewed") +
- labs(x="Nb of activities viewed", y=" Total Grade ", 
-      subtitle = paste0("Each dot is a participant, coloured by country" ),
-       caption=  paste("Date", FileDate) )+
   ylim( c(0,GradeMax))+
   annotate("rect", 
            xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
@@ -1328,6 +1339,10 @@ p <-Grades %>%
            fill = "grey",  alpha = 0.1, 
           color= SIAP.color, alpha = 0.1) +
  aes(x = NbAct, y = GradeFinal, color = Country) +
+ ggtitle("Test Scores vs Number of Activities Viewed") +
+ labs(x="Nb of activities viewed", y=" Total Grade ", 
+      subtitle = paste0("Each dot is a participant, coloured by country" ),
+       caption=  paste("Date", FileDate) )+
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
