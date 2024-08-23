@@ -352,6 +352,7 @@ data.logs <- data.logs %>%
 
 ## Registration process
 
+The course was opened for registration on December 2023, since then the number of participants has been regularly increasing, with some peaks for specific actions in some countries. 
 
 ```{r Registration}
 course.registration <- data.logs %>%
@@ -528,7 +529,6 @@ kable(module.tab, "latex", longtable = T, booktabs = T) %>%
 ```
 
 
-
 ```{r CourseStats}
 ## Stat 
 Qoo <-data.logs %>%
@@ -562,11 +562,10 @@ NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
 rm("Qoo", "Foo", "Woo")
 ```
 
+\newpage
 
-
-## Attendance country
-
-> No information on Gender is available from the user data set
+## Attendance by country
+No information on Gender is available from the user data set, but using the user information file, we can identify learner's origins. 
 
 ```{r Countries}
 # NbWomen <- data.logs %>%
@@ -582,7 +581,8 @@ NbCountries <- data.logs %>%
   nrow()
 ```
 
- 
+> Participants from **`r NbCountries`** countries have already joined the course
+
 
 ```{r LearnersBycountry}
 temp_country <- data.logs %>%
@@ -596,7 +596,7 @@ temp_country <- data.logs %>%
 # temp_country <-  left_join(x= temp_country, y= country_df, by = c("Country.Code"))
 
 
-#removing when large differences
+#removing when large differences (a country having lots of learners) 
 cond <- max(temp_country$differ, na.rm = TRUE)>100
 message <- ifelse(cond,
                   paste("Data from ", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n as well as countries with less that 2 participants for better readability.\n "),
@@ -607,7 +607,6 @@ country_max <- temp_country %>%
   select(Country)
 
 ```
-
 
 
 ```{r GraphBycountry}
@@ -645,8 +644,10 @@ Learners <- data.logs %>%
   mutate(Certified = any(stringr::str_detect(tolower(Actname), "certificate") ))  %>%
   ungroup() %>%
   distinct(User.full.name, .keep_all=TRUE) %>%
-  select(User.full.name, Email.address, Institution, Department, TotalReal, Certified, IP.address, Time) %>%
+  select(User.full.name, Email.address, Country,  Institution, Department, TotalReal, Certified, IP.address, Time) %>%
    filter(User.full.name != "-")
+
+Learners$Country <- ifelse(is.na(Learners$Country), "Unknown", Learners$Country)
 
 # Adding Learners First and last names
 Learners <- Learners %>%
@@ -663,19 +664,6 @@ NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 ```
 
 There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered.
-
-
-```{r CountriesL}
-
-# Merge countries with learners
-
-# Learners <-   left_join(x= Learners, y= country_df, by = "Country")
-# Learners <- Learners %>%
-#   relocate(Country, .after = Country.Code ) %>%
-#   select(-Country.Code)
-
-
-```
 
 
 
@@ -695,6 +683,59 @@ write.xlsx(CourseListCertified,
            file=paste("Output/",CourseName,"-Certified-",ymd(Sys.Date()),".xlsx", sep=""))
 write.xlsx(CourseListParticipants,
            file=paste("Output/",CourseName,"-Participants-",ymd(Sys.Date()),".xlsx", sep=""))
+
+```
+
+##  Certified by country
+
+```{r CertifiedCountries}
+
+certified_country <-  Learners %>%
+  filter( Certified==TRUE) %>%
+ group_by(Country) %>%
+  summarise(Learners = n_distinct(Email.address)) %>%
+  arrange(desc(Learners)) 
+```
+
+Only `r nrow(certified_country)-1` countries have certified participants. This number is a minimum since some participants from other countries (*unknown* here) have completed the course.   
+
+```{r TableCountries}
+
+# Better looking if long list of Countries
+kable(certified_country, "latex", longtable = T, booktabs = T) %>%
+   kable_styling(latex_options = c("repeat_header"), font_size = 7)
+
+```
+
+The success rate (*i.e.* the Nb of certified/ Nb of participants) can be analysed by country.
+
+
+```{r GSuccessByCountry}
+MinLearners <- 2
+Learners %>%
+ filter(Country != "" | Country != "NA") %>%
+  mutate( One = 1, 
+          OneC = ifelse(Certified ==TRUE, 1, 0),
+          Certified = as.factor(Certified),
+          Country = as.factor(Country)) %>%
+    group_by(Country) %>%
+  mutate (TotalC = sum(OneC), 
+          Total = sum(One), 
+          PercentC = TotalC/Total) %>%
+  ungroup() %>%
+  filter(Total >= MinLearners)%>%
+  ggplot() +
+  aes(x = reorder(Country, PercentC) , y = One , fill = Certified)  +
+  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
+  ggtitle("Sucess rate by country") +
+  labs(x="Country", y="Percentage of sucess", 
+      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`noshows`) excluded \n
+                     (date:", format(FileDate, "%A %d %B"),")"))+
+  guides(fill = guide_legend(title = "Sucess")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")+ 
+  coord_flip()
+
 ```
 
 
@@ -728,7 +769,6 @@ NbStudentsNoShow <-  Grades %>%
   filter(GradeFinal ==0 | is.na(GradeFinal)) %>% nrow()
 
 ```
-
 
 
 The distribution of grades is presented below, with the threshold (*`r GradeThreshold`*) highlighted.^[This graphic excludes the  *`r paste0(NbStudentsNoShow)`* participants that did not participate in any of the tests (grade =0)].  
