@@ -90,7 +90,7 @@ AllCoursesRef <- c("Gender_Self_1",
                    "SBR22", 
                    "MLOS22", "ClimateChange2023", 
                    "ADV23", "2023-MLOS", "RAP2024",
-                   "2024-DataMaster-S"
+                   "2024-DataMaster-S", "user_2024"
                    )
 
 AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
@@ -104,10 +104,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Advanced Data Visualization for Official Statistics and SDG Indicators", 
                          "Machine Learning for Official Statistics and SDGs-2023",
                         "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-                        "Asia Pacific Data Masterclass")
+                        "Asia Pacific Data Masterclass", 
+                        "Increasing User Engagement Around Data and Statistics")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6)
 ```
 
 
@@ -123,27 +124,27 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4)
 #i.course <-8 # Climate Change 2023
 #i.course <-9 # ADV2023
 # i.course <- 10 # MLOS23
-i.course <- 11 #RAP2024
+# i.course <- 11 #RAP2024
 #i.course <- 12 # MasterClass 24
-
+i.course <- 13 # User Engagement 24
 
 ```
 
 
 ```{r CourseParameters}
 # Course general parameters
-CourseName <- AllCoursesRef[i.course]    # Gender Self
+CourseName <- AllCoursesRef[i.course]    
 CourseNameLong <- AllCoursesNameLong[i.course]
 CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
 
 # Minimum to get the certificate
-GradeMax = 40  # 4 tests with max 10
+GradeMax = 100  # 4 tests with max 10
 PercentThreshold = 70   # 70% is the norm for tests
 GradeThreshold <-GradeMax * (PercentThreshold/100)  
 
 # Dates parameters
- WebinarDay = 4 # Sunday is 1
+ WebinarDay = 4 # Sunday is 1, wednesday is  4
 # CourseLength = 7 * (NbModules +1)  # adjusted
 
 # Dates of Modules opening MLOS 
@@ -159,13 +160,23 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 # Opening3 <- as_date("2023-07-17")
 # Opening4 <- as_date("2023-07-24")
  
-# # Dates of Modules opening MLOS 23
-Opening1 <- as_date(CourseStartDate)
-Opening2 <- as_date(CourseStartDate)
-Opening3 <- as_date("2023-12-04")
-Opening4 <- as_date("2023-12-11")
-Opening5 <- as_date("2023-12-18")
-Opening6 <- as_date("2023-12-22")
+# # # Dates of Modules opening MLOS 23
+# Opening1 <- as_date(CourseStartDate)
+# Opening2 <- as_date(CourseStartDate)
+# Opening3 <- as_date("2023-12-04")
+# Opening4 <- as_date("2023-12-11")
+# Opening5 <- as_date("2023-12-18")
+ 
+# Dates of Modules opening User_2024
+Opening1 <- as_date("2023-08-12")
+Opening2 <- as_date("2023-08-12")
+Opening3 <- as_date("2023-08-19")
+Opening4 <- as_date("2023-08-19")
+Opening5 <- as_date("2023-08-26")
+ 
+ 
+ 
+# Opening6 <- as_date("2023-12-22")
 
 ### Define the Starting activity nb for each Modules --> see Actname 
 # Important: Include LAST activity!!!
@@ -174,7 +185,8 @@ Opening6 <- as_date("2023-12-22")
 # ModStartIdx <- c(1,6,16,23,33,42,58,68)  # Parameters for ForMLOS22
 # ModStartIdx <- c(1,14,24,34,44, 49, 51,55 )  # Parameters for ADV23
 # ModStartIdx <- c(1,6,17,24,34,43,58,68)  # Parameters for For MLOS23 - 10 modules !
-ModStartIdx <- c(1,8,17,28,38)  # Parameters for RAP2024 - 5 modules !
+# ModStartIdx <- c(1,8,17,28,38)  # Parameters for RAP2024 - 5 modules !
+#  Nothing for for User2024 - 7 modules !
 
 
 ```
@@ -464,20 +476,31 @@ actname <-  actname %>%
 #             mutate(ModuleID = ModuleID -2)
 
 ##For a  4+1   Module course
-actname <- actname %>%
-            mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 0,
-                                          between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 1,
-                                          between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 2,
-                                          between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 3,
-                                          between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 4,
-                                          between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
-                                          between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
-                                            )) %>%
-          mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA, ModuleID))%>%
-    filter(!is.na(ModuleID))
+# actname <- actname %>%
+#             mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 0,
+#                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 1,
+#                                           between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 2,
+#                                           between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 3,
+#                                           between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 4,
+#                                           between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
+#                                           between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
+#                                             )) %>%
+#           mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA, ModuleID))%>%
+#     filter(!is.na(ModuleID))
 
+# For user engagement (since the activity list is not complete)
 
-
+actname <- course.log  %>%
+  arrange(Time) %>%
+  select(Event.context) %>%
+  mutate(Activity = str_split(course.log$Event.context, ": ",
+                             simplify = TRUE)[,2]) %>%
+  distinct(Activity) %>%
+  mutate(ModuleID = as.numeric(str_extract(Activity, "\\d+")), 
+         ModuleID = ifelse(is.na(ModuleID), 0, ModuleID), 
+         ModuleID = ifelse(str_detect(Activity, "Peer"), 5, ModuleID) , 
+         ActNb = ModuleID) %>%
+  filter(ModuleID < NbModules & ModuleID >0) 
 
 ## Specific to MLOS22
 # actname <- actname %>%
@@ -494,7 +517,7 @@ course.log <- course.log  %>%
                              simplify = TRUE)[,2],
          Acttype = str_split(course.log$Event.context, ": ",
                              simplify = TRUE)[,1] ) %>%
-  left_join(actname, by = c("Actname" = "Activity"))
+      left_join(actname, by = c("Actname" = "Activity"))
 
 # Removing "Course activity" from log
 course.log <- course.log  %>% filter(Actname != CourseNameLong)
@@ -514,15 +537,27 @@ course.log <- course.log  %>% filter(Actname != CourseNameLong)
 ```
 
 ```{r TabModules}
+# For user engagement
 module.tab<- data.table(actname %>% 
                      filter(!stringr::str_detect(Activity, "pdf") )    %>%
                      mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
                      arrange(ActNb) %>%
-                     select(Actname2, ModuleID) %>%
-                       filter(ModuleID >=0) %>%
-                     unique() 
-                   )
-names(module.tab) <- c("Activity name","Module")
+                     # select(Actname2, ModuleID) %>%
+                     #    filter(ModuleID >=0) %>%
+                     unique() )
+
+
+# module.tab<- data.table(actname %>% 
+#                      filter(!stringr::str_detect(Activity, "pdf") )    %>%
+#                      mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
+#                      arrange(ActNb) %>%
+#                      select(Actname2, ModuleID) %>%
+#                         filter(ModuleID >=0) %>%
+#                      unique() 
+#                    )
+# names(module.tab) <- c("Activity name","Module")
+
+
 NbActivities <- nrow(module.tab)
 
 # Not used
@@ -575,9 +610,9 @@ StudentsNames <- data.act  %>%
 course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 
 # Step 2: Adding Sex and Country  to course.log using data.grades 
-# Need to adjust name of Total grade (sometimes Total..Real)
+# Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
 NameSex <- data.grades %>%
-  mutate(TotalReal =  as.numeric(Grand.Total..Real.)) %>%
+  mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
@@ -670,8 +705,8 @@ country_max <- temp_country %>%
 
 # Graphic 
 temp_country %>%
- # slice(ifelse(cond, -1, 1:n())) %>%
- # filter(Learners>1) %>%
+ slice(ifelse(cond, -1, 1:n())) %>%   # to remove "large" countries 
+ filter(Learners>1) %>%               # to remove "small" countries
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
@@ -701,7 +736,10 @@ Grades <- data.grades %>%
 
 # Total or Final grade
 
-Grades$GradeFinal <- as.numeric(Grades[ , grep(c("Total","total", "Final"), colnames(Grades))])  # Find matches
+# Danger zone!!!! Automatic  sometimes multiple match...
+# Grades$GradeFinal <- as.numeric(Grades[ , grep(c("Total","total", "Final"), colnames(Grades))])  # Find matches
+Grades$GradeFinal <- as.numeric(Grades$Course.total..Real.)
+
 # Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
 # Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
 
@@ -921,7 +959,7 @@ Learners %>%
    annotate("text", x = 1, y = RealSuccessRate/100,
           color= "red",
           label = "Mean", alpha = 0.7)+
-  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
+  geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
   coord_flip()
 
@@ -932,6 +970,7 @@ Learners %>%
 Learners %>%
  filter(Country != "" | Country != "NA")%>%
   filter(TotalReal > 0 | !is.na(TotalReal)) %>%
+  filter(!is.na(Sex) )%>%
   mutate( One = 1, 
           Certified = ifelse(Certified == 1, "Yes", "No" )) %>%
   ggplot() +
@@ -939,7 +978,7 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by gender") +
   labs(x="Gender", y="Percentage of sucess", 
-      caption = paste(" Participants with a grade of 0 (`noshows`) excluded \n
+      caption = paste(NbStudentsNoShow, " participants with a grade of 0 (`noshows`) excluded \n
                      (date:", format(FileDate, "%A %d %B"),")"))+
   theme_minimal()+
   geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
@@ -987,8 +1026,8 @@ Ymax <- round(1.5*HistHeight, 0)
 
 GradesPositive %>%
  ggplot() +
- aes(x = GradeFinal) +
- geom_histogram(bins = 100L, fill = SIAP.color, color = "white") +
+ aes(x = GradeFinal)+
+ geom_histogram(bins = 100L, fill = SIAP.color, color = "white")+
  coord_cartesian(xlim=c(0,GradeMax))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
@@ -1195,7 +1234,7 @@ LearnersByActivity <- course.log %>%
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(ActID.lab = paste(ActNb,"-",Event.context), 
          Actname = paste(ActNb, "-", Actname))%>%
-  filter(ActNb >5 )%>%
+  filter(ActNb <= NbModules )%>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
             ActivityName = as.factor(unique(Actname))) 
@@ -1324,10 +1363,10 @@ course.log %>%
         plot.title = element_text(hjust = 0.5, size=14),
         panel.background = element_blank(), text = element_text(size=10), 
         axis.line = element_line(colour = "black"), 
-        axis.text.y = element_text(face= "plain", size=4.5, color="black"),
+        axis.text.y = element_text(face= "plain", size=8, color="black"), # size can be  4.5
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 8))+
-  coord_fixed(ratio = 0.5 )
+  coord_fixed(ratio = 4 )  # can be  0.5
 ```
 
 
@@ -1452,7 +1491,7 @@ Grades %>%
       subtitle = paste0("Each dot is a participant, couloured by success"), 
       caption=  paste( NbNoGrades,  "participants with no grade ( in grey), ", "date", FileDate) )+
  geom_vline (aes(xintercept = median(GradesPositive$NbDays)), color = SIAP.color) +
- annotate("text", y = 5, x = median(GradesPositive$NbDays) + 1,
+ annotate("text", y = 1, x = median(GradesPositive$NbDays) + 1,
           color= SIAP.color,
           label = "Median nb of days of visits")+
  theme_minimal()+
