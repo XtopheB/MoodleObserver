@@ -884,6 +884,21 @@ file.copy(from = here("FeedbackReport.pdf"),
 
 ```
 
+
+
+```{r reportexport}
+# This has to run AFTER the report has been completed (we get the n-1 version!!!)
+library(here)
+Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
+# 
+# Export a copy with course name
+file.copy(from = here("FeedbackReport.pdf"),
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
+
+```
+
+
+
 ```{r}
  knitr::knit_exit()
 ```

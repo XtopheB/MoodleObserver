@@ -414,7 +414,7 @@ NbLearners <- as.numeric(count(ListUser))
 
 ```
 
-> As of *`r format(FileDate, "%A %d %B ")`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
+> As of *`r format(FileDate, "%A %d %B")`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
 
 Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorded. We can therefore gather information at the learner or activity level. 
 
