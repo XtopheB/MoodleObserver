@@ -94,7 +94,8 @@ AllCoursesRef <- c("Gender_Self_1",
                    "ClimateChange2023", 
                    "user_2023", 
                    "egriss_2023", 
-                    "ADV23", "2023-MLOS", "RAP2024"
+                    "ADV23", "2023-MLOS", "RAP2024",
+                    "user_2024"
                    )
 
 
@@ -110,10 +111,11 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Introduction to International Recommendations on Refugee and IDP Statistics", 
                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
                          "Machine Learning for Official Statistics and SDGs-2023",
-                         "Principles of Reproducible Analytical Pipelines for Official Statistics")
+                         "Principles of Reproducible Analytical Pipelines for Official Statistics", 
+                        "Increasing User Engagement Around Data and Statistics")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29" )
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8,5)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12")
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6)
 ```
 
 
@@ -134,7 +136,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8,5)
 # i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
 # i.course <-11 # ADV23   
 #i.course <- 12 # MLOS23
-i.course <- 13 #RAP2024
+# i.course <- 13 #RAP2024
+ i.course <- 14 #User engagement 2024
 
 ```
 
@@ -175,10 +178,25 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 
 # names(data.feedback)[c(2, 4, 5)] <- c("G.groups", "c.Country", "D.Date")
 
-names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[", 2))
+# names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[", 2))
 
 # Saving questions could be a good idea (does not work)
 # questions <-  unlist(lapply(strsplit(names(data.feedback), "\\.."), "[[", 2))
+
+###  New code extracting the second element
+new_colnames <- colnames(data.feedback) %>%
+  map_chr(~ {
+    if (str_detect(., "\\.")) {
+      # Split by period and take the second element
+      str_split(., "\\.")[[1]][2]
+    } else {
+      # Keep the original name if there's no period
+      .
+    }
+  })
+
+# Assign the new column names back to the data frame
+colnames(data.feedback) <- new_colnames
 
 
 
@@ -190,14 +208,27 @@ names(data.feedback) <- unlist(lapply(strsplit(names(data.feedback), "\\."), "[[
 #data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 
 data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+# Remove non-ASCII characters from all character variables
+data.feedback <- data.feedback %>%
+  mutate(across(where(is.character), ~ str_replace_all(., "[^\x01-\x7F]", "Comment in Chinese (removed)"))) %>%
+  mutate(across(where(is.character), ~ str_replace_all(., "[\\p{Han}]", "Chinese 2"))) %>%
+  mutate(across(where(is.character), ~ str_replace_all(., "弄", " Chinese 3")))
+
+# More radical:Remove rows where any string column contains Chinese characters
+# data.feedback <- data.feedback %>%
+#   filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
+#   filter(!if_any(where(is.character), ~ str_detect(., "弄")))
+
 ```
 
 
 Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form* on SIAP's Moodle platform^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
 
 ## Composition of the respondants
+> For some courses, the gender is not available 
 
-```{r StatDesc}
+```{r StatDesc, eval=FALSE, include=FALSE}
 G_Sex <- data.feedback %>%
     ggplot() +
     aes(x= Gender ) +
@@ -219,7 +250,7 @@ G_Org <- data.feedback %>%
 ```
 
 
-```{r GraphicOrganisation}
+```{r GraphicOrganisation, eval=FALSE, include=FALSE}
 
 G_Sex + G_Org +
   plot_annotation(title = 'Respondents:',
@@ -285,40 +316,39 @@ Response_plot <- function(data, xvar, title) {
 ```
 
 ```{r SurveySimple}
-G_K <- Response_plot(data.feedback, "Knowledge", "The knowledge gained from this is e-learning course is useful for my present work.")
-
-G_C <- Response_plot(data.feedback, "Content", "The content and scope of the e-learning course is appropriate for my level of understanding.")
-
-G_E <- Response_plot(data.feedback, "Efficiency", "The eLearning platform is effective.")
-
-G_Q <- Response_plot(data.feedback, "Quality", "The modules and the exercise are of high quality, concise and clear")
-
-G_D <- Response_plot(data.feedback, "Design", "The graphic design and presentations for each module are appropriate and effective.")
-
-G_U <- Response_plot(data.feedback, "Usefulness", "I plan to use the skills acquired through this e-learning course for my work in the coming six months")
+# G_K <- Response_plot(data.feedback, "Knowledge", "The knowledge gained from this is e-learning course is useful for my present work.")
+# 
+# G_C <- Response_plot(data.feedback, "Content", "The content and scope of the e-learning course is appropriate for my level of understanding.")
+# 
+# G_E <- Response_plot(data.feedback, "Efficiency", "The eLearning platform is effective.")
+# 
+# G_Q <- Response_plot(data.feedback, "Quality", "The modules and the exercise are of high quality, concise and clear")
+# 
+# G_D <- Response_plot(data.feedback, "Design", "The graphic design and presentations for each module are appropriate and effective.")
+# 
+# G_U <- Response_plot(data.feedback, "Usefulness", "I plan to use the skills acquired through this e-learning course for my work in the coming six months")
 
 
 ```
 
-```{r SurveyNewFormat, eval=FALSE}
+```{r SurveyNewFormat}
 # Creating Graphics
 ## Relevance: (3 questions)
 
-# G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
-# G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
-# G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
-# 
-# ## Effectiveness: (4 questions)
-# 
-# G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
-# G_E2 <- Response_plot(data.feedback, "Effectiveness2", "My confidence has improved in applying \n the training  received in my work.")
-# G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
-# G_E4 <- Response_plot(data.feedback, "Effectiveness4", "The course content (interactive lessons) was \n of high quality, clear and concise.  ")
-# 
-# ##Efficiency: (2 questions)
-# 
-# G_Y1 <- Response_plot(data.feedback, "Efficiency1", "I was satisfied with the technical support provided \n on the SIAP e-learning platform.")
-# G_Y2 <- Response_plot(data.feedback, "Efficiency2", "I was satisfied with navigating the SIAP \n e-learning platform." )
+G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
+G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
+G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
+
+## Effectiveness: (4 questions)
+
+G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
+G_E2 <- Response_plot(data.feedback, "Effectiveness2", "My confidence has improved in applying \n the training  received in my work.")
+G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
+G_E4 <- Response_plot(data.feedback, "Effectiveness4", "The course content (interactive lessons) was \n of high quality, clear and concise.  ")
+
+##Efficiency: (2 questions)
+G_Y1 <- Response_plot(data.feedback, "Efficiency1", "I was satisfied with the technical support provided \n on the SIAP e-learning platform.")
+G_Y2 <- Response_plot(data.feedback, "Efficiency2", "I was satisfied with navigating the SIAP \n e-learning platform." )
 
 ```
 
@@ -329,16 +359,16 @@ We asked the participants to value their experience on the course using a 5-leve
 
 
 ```{r GraphicFeed, fig.height=6}
-all<- (G_K + G_C) / (G_E + G_Q ) / (G_D + G_U ) 
-all + 
-  plot_annotation(title = 'Feedback',
-                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
-                  theme = theme(plot.title = element_text(size = 16))) 
+# all<- (G_K + G_C) / (G_E + G_Q ) / (G_D + G_U ) 
+# all + 
+#   plot_annotation(title = 'Feedback',
+#                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+#                   theme = theme(plot.title = element_text(size = 16))) 
 
 ```
 
 
-<!-- This part is for Alternative  feedback  form with  3  topics (eval = FALSE)
+<!-- This part is for Alternative  feedback  form with  3  topics (eval = FALSE) -->
 
 
 - **Relevance**: (3 questions)
@@ -348,7 +378,7 @@ all +
 ## Relevance
 
 
-```{r GraphicsRelev, fig.height=6, eval = FALSE}
+```{r GraphicsRelev, fig.height=6}
 all.R<- G_R1 / G_R2 /G_R3 
 all.R + 
   plot_annotation(title = 'Relevance of the course',
@@ -360,7 +390,7 @@ all.R +
 ## Effectiveness
 
 
-```{r GraphicsEff, fig.height=6, eval = FALSE}
+```{r GraphicsEff, fig.height=6}
 all.E <- (G_E1 | G_E2) /(G_E3 | G_E4) 
 all.E + 
   plot_annotation(title = 'Effectiveness of the course',
@@ -373,7 +403,7 @@ all.E +
 ## Efficiency
 
 
-```{r GraphicsEffy, fig.height=6, eval = FALSE}
+```{r GraphicsEffy, fig.height=6}
 all.Y <- (G_Y1 / G_Y2) 
 all.Y + 
   plot_annotation(title = 'Efficiency of the course',
@@ -382,7 +412,7 @@ all.Y +
 
 ```
 
--->
+
 
 <!-- # Consistency of the responses -->
 
@@ -394,11 +424,14 @@ all.Y +
 # data.survey <- data.feedback %>%
 #   select(Relevance1:Relevance3, Effectiveness1:Effectiveness4, Efficiency1:Efficiency2)
 
+# data.text <- data.feedback %>%
+#   select(Results, Comments)
+
 data.text <- data.feedback %>%
-  select(Results, Comments)
+  select( share, Effectiveness_open,Comments, FinalComments)
 
 data.survey <- data.feedback %>%
-  select(Knowledge:Design)
+  select(matches("Relevance|Effectiveness|Efficiency"))
 
 ```
 
@@ -555,7 +588,7 @@ words_to_remove <- c("use", "can", "training","work", "help",
                      "thank", "content", "platform", 
                      "online","course", "will", "learned", "knowledge",
                      "machine", "learning", "statistics",
-                     "data",   "Visualization","Visualizations")
+                     "data",   "Visualization","Visualizations", "rap")
 
 # Function to remove words from a single variable (from OpenAI)
 remove_words <- function(text, words) {
@@ -567,7 +600,6 @@ remove_words <- function(text, words) {
 # Apply the function to each variable in the data frame using mutate_all
 data.text <- data.text %>%
   mutate_all(~ remove_words(., words_to_remove))
-
 
 
 ```
@@ -629,7 +661,7 @@ wordcloud(words = names(Words.R),
           freq = Words.R,
           max.words = 150,
           random.order = F,
-          min.freq = 5,
+          min.freq = 2,
           colors = brewer.pal(8, 'Dark2'),
           scale = c(3, 0.6),
           rot.per = 0.2)
@@ -750,7 +782,7 @@ text(x = counts,
 
 ```{r nbAnswers}
 # Nb Answers shown 
-NbAnswers <-20
+NbAnswers <-30
 
 ```
 
@@ -761,11 +793,7 @@ Based on this satisfaction score, we present here the  *comments* and *final com
 
 
 ```{r DataNum}
-# data.feedback <- data.feedback %>%
-#   mutate(Total =  )
-
-
-
+#
 # Function to convert character variables to numeric
 char_to_num <- function(x) {
   x_levels <- c("Strongly disagree", "Disagree", "Somewhat disagree", "Somewhat agree", "Agree", "Strongly agree")
@@ -781,8 +809,11 @@ data.num<- lapply(data.survey[,1:5], function(x) if (is.character(x)) char_to_nu
 # data.num <- as.data.frame(data.num) %>%
 #   mutate(Total = Relevance1 + Relevance2 + Relevance3 + Effectiveness1 + Effectiveness2 )
 
+# data.num <- as.data.frame(data.num) %>%
+#   mutate(Total = Knowledge + Content + Efficiency  + Quality + Design  )
+
 data.num <- as.data.frame(data.num) %>%
-  mutate(Total = Knowledge + Content + Efficiency  + Quality + Design  )
+  mutate(Total = rowSums(select(., matches("Relevance|Effectiveness|Efficiency"))))
 
 # Not clean but works
 data.feedback <- cbind(data.feedback, data.num$Total)%>%
@@ -795,14 +826,14 @@ data.feedback <- cbind(data.feedback, data.num$Total)%>%
 ```{r ResultTableN}
 data.feedback %>%
   filter(str_count(Total) < 10) %>%
-  filter( Comments !="" & Comments !="-" ) %>%
+  filter( Comments !="" & FinalComments !="-" ) %>%
   arrange(Total) %>%    # Lowest Total first
   head(n= NbAnswers )%>%
-  select(Total, Results, Comments)%>%
+  select(Total, FinalComments, Comments)%>%
   filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "What use?", "Comments"), 
-       caption = paste("Comments from",NbAnswers, "**most negative** learners \n"),
+       col.names = c("Id", "Comments", "Final Comments"), 
+       caption = paste("Comments from",NbAnswers, "'most negative' learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
   kable_styling(full_width = FALSE) %>%
@@ -818,14 +849,14 @@ kable( ,
 
 data.feedback %>%
   filter(Total > 20) %>%
-  filter( Comments !="" & Comments != "-") %>%
+  filter( Comments !="" & FinalComments !="-" ) %>%
   arrange(desc(Total)) %>%    # Highest Total first
   head(n= NbAnswers )%>%
-  select(Total, Results,Comments)%>%
+  select(Total, FinalComments, Comments)%>%
   #filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese characters
 kable( ,
-       col.names = c("Id", "What use?", "Comments"), 
-       caption = paste("Comments from", NbAnswers, "most positive learners \n"),
+       col.names = c("Id", "Comments", "Final Comments"), 
+       caption = paste("Comments from", NbAnswers, "most 'positive' learners \n"),
        booktabs = TRUE,
        longtable= TRUE) %>%
  kable_styling(full_width = FALSE)  %>%
