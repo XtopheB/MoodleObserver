@@ -371,6 +371,7 @@ course.log <- course.log %>%
 The course *`r CourseNameLong `* started on *`r format(as_date(CourseStartDate), "%A %d %B ")`.* 
 The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B ")`.**
 
+
 ## Registration process
 
 
@@ -619,6 +620,30 @@ NameSex <- data.grades %>%
 course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
 
 ```
+
+
+
+```{r Remove Myanmar}
+# Counting particpants from Myanmar
+distinct_users_my <- course.log %>%
+  filter(Country == "MY") %>%
+  distinct(User.full.name) %>%
+  nrow()
+
+if (distinct_users_my > 0) {
+  print(paste("Filtering out", distinct_users_my, "particpants from Myanmar"))
+} else {
+  print("")
+}
+
+
+# Removing the country 
+course.log <- course.log %>%
+  mutate( Country = ifelse(Country =="MY", "", Country))
+
+
+```
+
 
 ```{r CourseStats}
 ## Stat 
