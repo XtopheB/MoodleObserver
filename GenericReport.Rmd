@@ -599,8 +599,6 @@ actname %>%
 ```
 
 
-
-
 ```{r MergeLogsGrades}
 # Step 1: Adding email address to course.log using data.act
 
@@ -621,7 +619,7 @@ course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
 
 ```
 
-
+## Attendance 
 
 ```{r Remove Myanmar}
 # Counting particpants from Myanmar
@@ -631,16 +629,14 @@ distinct_users_my <- course.log %>%
   nrow()
 
 if (distinct_users_my > 0) {
-  print(paste("Filtering out", distinct_users_my, "particpants from Myanmar"))
+  print(paste("Filtering out", distinct_users_my, "participants from Myanmar"))
 } else {
   print("")
 }
 
-
-# Removing the country 
+# Removing country for participants from Myanmar
 course.log <- course.log %>%
-  mutate( Country = ifelse(Country =="MY", "", Country))
-
+  mutate( Country = ifelse(Country =="MM", "", Country))
 
 ```
 
@@ -678,9 +674,6 @@ NbLearnersActive <- max(NbLearnersQuiz,NbLearnersPost,NbLearnersProject)
 rm("Qoo", "Foo", "Woo")
 ```
 
-
-
-## Attendance 
 
 ```{r WomenCountries}
 NbWomen <- course.log %>%
