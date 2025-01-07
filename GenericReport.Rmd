@@ -224,7 +224,7 @@ select(ISO.alpha2.Code, Country.or.Area)%>%
 ### Recovering Log file name on the data repo (parse the repo, take the  most recent)
 
 # list.logs<- list.files(path="Data/",pattern="logs",full.names = TRUE,recursive = TRUE)
-list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,"*")),
+list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,"*.csv")),
                        full.names = TRUE,recursive = TRUE)
 name_last_logs <- list.logs[which.max(file.mtime(list.logs))]
 data.logs <- read.csv(name_last_logs)
@@ -270,7 +270,7 @@ We base our analysis on the **data collected on `r FileDate`** recorded on the  
 -  `r name_last_grades ` (*latest grades compiled*)
 
 
-[^FileNote]: Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on the user, the activity and the event can be extracted.
+[^FileNote]: Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on participants, grades, certificates and activities can be extracted.
 
 ## Cleaning log files
 
@@ -294,6 +294,13 @@ data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
                           data.logs$User.full.name=="Jeroen Minderman"|
                           data.logs$User.full.name=="Hugo Pigott"|  
                           data.logs$Component=="Recycle bin"),]
+
+# Remove everything linked to me 
+# (as admin my name may appear for a specific user task like certificates! )
+library(stringr)
+data.logs <- data.logs %>%
+   filter(!if_any(everything(), ~ str_detect(as.character(.), "Bontemps")))
+
 ```
 
 * Remove events recorded but not useful
@@ -376,7 +383,7 @@ course.log <- course.log %>%
 ## Main figures
 
 The course *`r CourseNameLong `* started on *`r format(as_date(CourseStartDate), "%A %d %B ")`.* 
-The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B ")`.**
+The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B")`.**
 
 
 ## Registration process
@@ -632,7 +639,7 @@ course.log <- left_join(course.log ,NameSex, by = c("Email.address"))
 
 ## Attendance 
 
-```{r Remove Myanmar}
+```{r Remove Myanmar, include=FALSE}
 # Counting particpants from Myanmar
 distinct_users_my <- course.log %>%
   filter(Country == "MY") %>%
