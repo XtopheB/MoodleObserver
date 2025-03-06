@@ -20,6 +20,7 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+always_allow_html: true
 ---
 
 
@@ -88,12 +89,17 @@ AllCoursesRef <- c("Gender_Self_1",
                    "HealthStats2",
                    "SEEA_CF_2022", 
                    "SBR22", 
-                   "MLOS22", "ClimateChange2023", 
-                   "ADV23", "2023-MLOS", "RAP2024",
-                   "2024-DataMaster-S", "user_2024", 
-                   "DTV24")                 
+                   "MLOS22", 
+                   "ClimateChange2023", 
+                   "user_2023", 
+                   "egriss_2023", 
+                    "ADV23", "2023-MLOS", "RAP2024",
+                    "user_2024", 
+                    "2025-UAD-F-1"
+                   )
 
-AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
+
+AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
                         "Principles of Machine Learning for Official Statistics and SDGs", 
                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
@@ -101,14 +107,16 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Statistical Business Registers", 
                         "Machine Learning for Official Statistics and SDGs-2022", 
                         "Compiling climate change indicators: an accounting approach", 
-                        "Advanced Data Visualization for Official Statistics and SDG Indicators", 
-                         "Machine Learning for Official Statistics and SDGs-2023",
-                        "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-                        "Asia Pacific Data Masterclass", 
                         "Increasing User Engagement Around Data and Statistics", 
-                        "Data Visualization for Official Statistics and the SDGs")
+                        "Introduction to International Recommendations on Refugee and IDP Statistics", 
+                        "Advanced Data Visualization for Official Statistics and SDG Indicators",  
+                         "Machine Learning for Official Statistics and SDGs-2023",
+                         "Principles of Reproducible Analytical Pipelines for Official Statistics", 
+                        "Increasing User Engagement Around Data and Statistics",
+                        "Using administrative data to produce official statistics ")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "2024-11-11")
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "","2025-01-20")
+
 AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6)
 ```
 
@@ -128,7 +136,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6)
 # i.course <- 11 #RAP2024
 #i.course <- 12 # MasterClass 24
 # i.course <- 13 # User Engagement 24
-i.course <- 14  # Dataviz
+# i.course <- 14  # Dataviz
+i.course <- 15 # Admin 2025
 
 ```
 
@@ -141,12 +150,12 @@ CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
 
 # Minimum to get the certificate
-GradeMax = 60  # 4 tests with max 10
+GradeMax = 100  # 4 tests with max 10
 PercentThreshold = 70   # 70% is the norm for tests
 GradeThreshold <-GradeMax * (PercentThreshold/100)  
 
 # Dates parameters
- WebinarDay = 4 # Sunday is 1, wednesday is  4
+ WebinarDay = 2 # Sunday is 1, wednesday is  4
 # CourseLength = 7 * (NbModules +1)  # adjusted
 
 # Dates of Modules opening MLOS 
@@ -194,6 +203,8 @@ Opening6 <- as_date("2024-12-02")
 # ModStartIdx <- c(1,8,17,28,38)  # Parameters for RAP2024 - 5 modules !
 ModStartIdx <- c(1,13, 22, 33, 46, 61, 74)  # Parameters for DTV24 - 6 modules !
 #  Nothing for for User2024 - 7 modules !
+
+
 
 
 ```
@@ -741,8 +752,8 @@ country_max <- temp_country %>%
 
 # Graphic 
 temp_country %>%
-# slice(ifelse(cond, -1, 1:n())) %>%   # to remove "large" countries 
-# filter(Learners>1) %>%               # to remove "small" countries
+slice(ifelse(cond, -1, 1:n())) %>%   # to remove "large" countries 
+filter(Learners>1) %>%               # to remove "small" countries
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
@@ -861,7 +872,7 @@ write.xlsx(CourseListParticipants,
 learners_Time <-  course.log %>%
   select(Email.address,  Actname, ActNb,Date, Time) %>%
   filter(!grepl("feedback|certificate|Announcements", Actname, ignore.case = TRUE)) %>%
-  mutate(RealTime = lubridate::dmy_hm(Time)) %>%
+  mutate(RealTime = lubridate::dmy_hms(Time)) %>%
   group_by(Email.address, Date) %>%
   arrange(RealTime) %>%
   mutate(RawDiff = RealTime - lag(RealTime))  %>%
@@ -989,9 +1000,9 @@ Learners %>%
                      (date:", format(FileDate, "%A %d %B"),")"))+
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
-   annotate("text", x = 1, y = RealSuccessRate/100,
-          color= "red",
-          label = "Mean", alpha = 0.7)+
+   # annotate("text", x = 1, y = RealSuccessRate/100,
+   #        color= "red",
+   #        label = "Mean", alpha = 0.7)+
   geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
   coord_flip()
@@ -1067,12 +1078,12 @@ GradesPositive %>%
       caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
       subtitle = paste0("(as of ", format(FileDate, "%A %d %B "),",",
                       NbStudentsAboveThreshold," learners are above the threshold)") )+
- annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
-                  ymin = 0, ymax = Ymax,
-                  fill = SIAP.color , alpha = .2)+
-   annotate("text", x = GradeThreshold+10, y = Ymax*0.75,
-          color= SIAP.color,
-          label = "Success")+
+ # annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
+ #                  ymin = 0, ymax = Ymax,
+ #                  fill = SIAP.color , alpha = .2)+
+   # annotate("text", x = GradeThreshold+10, y = Ymax*0.75,
+   #        color= SIAP.color,
+   #        label = "Success")+
  theme_minimal()
 
 ```
@@ -1107,9 +1118,9 @@ GradesPositive %>%
       subtitle = paste("(date:", format(FileDate, "%A %d %B "),")")) +
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+5, y = 0.75,
-          color= "red",
-          label = "Success")+
+  # annotate("text", x = GradeThreshold+5, y = 0.75,
+  #         color= "red",
+  #         label = "Success")+
   #theme_minimal()+
   theme(legend.position = "none")
  
@@ -1144,9 +1155,9 @@ GradesPositive %>%
                      (date:", format(FileDate, "%A %d %B "),")"))+
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+12, y = 0.75,
-          color= "red",
-          label = "Success")+
+  # annotate("text", x = GradeThreshold+12, y = 0.75,
+  #         color= "red",
+  #         label = "Success")+
   #theme_minimal()+
   theme(legend.position = "none")
  
@@ -1323,9 +1334,9 @@ course.log %>%
         axis.line = element_line(colour = "black"),
         plot.subtitle = element_text(hjust = 0.5, size=8),
         axis.title.y = element_text(size = 12))+
-   annotate("text", x = 1, y = MedianLearnersActivity,
-          color= "red",
-          label = "Median", alpha = 0.7)+
+   # annotate("text", x = 1, y = MedianLearnersActivity,
+   #        color= "red",
+   #        label = "Median", alpha = 0.7)+
   geom_hline( yintercept = MedianLearnersActivity,  color = "red" ) 
 
 # For  interactive plot
@@ -1419,13 +1430,13 @@ p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
   ylim( c(0,GradeMax))+
-  annotate("rect", 
-           xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
-           xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
-           ymin = GradeThreshold,
-           ymax = GradeMax, 
-           fill = "grey",  alpha = 0.1, 
-          color= SIAP.color, alpha = 0.1) +
+  # annotate("rect", 
+  #          xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
+  #          xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
+  #          ymin = GradeThreshold,
+  #          ymax = GradeMax, 
+  #          fill = "grey",  alpha = 0.1, 
+  #         color= SIAP.color, alpha = 0.1) +
  aes(x = NbAct, y = GradeFinal, color = Country) +
  ggtitle("Test Scores vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total Grade ", 
