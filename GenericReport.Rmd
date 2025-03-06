@@ -4,8 +4,6 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  word_document:
-    toc: yes
   pdf_document:
     df_print: kable
     toc: yes
@@ -13,6 +11,8 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
+  word_document:
+    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -117,7 +117,7 @@ AllCoursesNameLong <-c( "Using gender data for analysis,communications and polic
 
 AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "","2025-01-20")
 
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6)
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6, 6)
 ```
 
 
@@ -637,9 +637,11 @@ StudentsNames <- data.act  %>%
 course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 
 # Step 2: Adding Sex and Country  to course.log using data.grades 
-# Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
+# !!!! Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
+
 NameSex <- data.grades %>%
-  mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
+  #mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
+  mutate(TotalReal =  as.numeric(Quiz..Final.Test..Real.)) %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
