@@ -4,6 +4,8 @@ subtitle: ""
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  word_document:
+    toc: no
   pdf_document:
     df_print: kable
     toc: no
@@ -11,8 +13,6 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
-  word_document:
-    toc: no
   html_document:
     df_print: paged
     toc: yes
@@ -20,6 +20,7 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+always_allow_html: true
 ---
 
 
@@ -95,11 +96,12 @@ AllCoursesRef <- c("Gender_Self_1",
                    "user_2023", 
                    "egriss_2023", 
                     "ADV23", "2023-MLOS", "RAP2024",
-                    "user_2024"
+                    "user_2024", 
+                    "2025-UAD-F-1"
                    )
 
 
-AllCoursesNameLong <-c( "Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
+AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
                         "Principles of Machine Learning for Official Statistics and SDGs", 
                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
@@ -112,10 +114,12 @@ AllCoursesNameLong <-c( "Using gender data for analysis, communications and poli
                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
                          "Machine Learning for Official Statistics and SDGs-2023",
                          "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-                        "Increasing User Engagement Around Data and Statistics")
+                        "Increasing User Engagement Around Data and Statistics",
+                        "Using administrative data to produce official statistics ")
 
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12")
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6)
+AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "2025-01-20")
+
+AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6)
 ```
 
 
@@ -137,7 +141,8 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6)
 # i.course <-11 # ADV23   
 #i.course <- 12 # MLOS23
 # i.course <- 13 #RAP2024
- i.course <- 14 #User engagement 2024
+#i.course <- 14 #User engagement 2024
+i.course <- 15 # Admin 2025
 
 ```
 
@@ -148,8 +153,6 @@ CourseName <- AllCoursesRef[i.course]
 CourseNameLong <- AllCoursesNameLong[i.course]
 CourseStartDate <-AllCoursesStartDate[i.course]
 NbModules <- AllCoursesNbModules[i.course]              
-
-
 
 ```
 # ***`r CourseNameLong `***:  
@@ -881,19 +884,6 @@ file.copy(from = here("FeedbackReport.pdf"),
           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
 
 
-
-```
-
-
-
-```{r reportexport}
-# This has to run AFTER the report has been completed (we get the n-1 version!!!)
-library(here)
-Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
-# 
-# Export a copy with course name
-file.copy(from = here("FeedbackReport.pdf"),
-          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
 
 ```
 

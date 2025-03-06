@@ -4,6 +4,8 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  word_document:
+    toc: yes
   pdf_document:
     df_print: kable
     toc: yes
@@ -11,8 +13,6 @@ output:
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
-  word_document:
-    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -201,10 +201,9 @@ Opening6 <- as_date("2024-12-02")
 # ModStartIdx <- c(1,14,24,34,44, 49, 51,55 )  # Parameters for ADV23
 # ModStartIdx <- c(1,6,17,24,34,43,58,68)  # Parameters for For MLOS23 - 10 modules !
 # ModStartIdx <- c(1,8,17,28,38)  # Parameters for RAP2024 - 5 modules !
-ModStartIdx <- c(1,13, 22, 33, 46, 61, 74)  # Parameters for DTV24 - 6 modules !
+# ModStartIdx <- c(1,13, 22, 33, 46, 61, 74)  # Parameters for DTV24 - 6 modules !
 #  Nothing for for User2024 - 7 modules !
-
-
+ModStartIdx <- c(1,2,3,4,5,6,7,8)  # Parameters for Admin Data - 6 modules !
 
 
 ```
@@ -735,8 +734,11 @@ temp_country <-  left_join(x= temp_country, y= country_df, by = c("Country.Code"
 
 #removing when large differences 
 cond <- max(temp_country$differ, na.rm = TRUE)>100
+# Sometimes one want to remove countries with less than XXX lezarners
+MinNbLearners <- 7
+
 message <- ifelse(cond,
-                  paste("For better readability, data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n as well as countries with less that 2 participants.\n "),
+                  paste("For better readability, data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n as well as countries with less than",MinNbLearners,"participants.\n "),
                   "" )
 # Stats for text
 country_max <- temp_country %>% 
@@ -753,7 +755,7 @@ country_max <- temp_country %>%
 # Graphic 
 temp_country %>%
 slice(ifelse(cond, -1, 1:n())) %>%   # to remove "large" countries 
-filter(Learners>1) %>%               # to remove "small" countries
+filter(Learners>MinNbLearners) %>%               # to remove "small" countries
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
@@ -1300,7 +1302,7 @@ myPaletteModulesDark <- c("grey",'#1f78b4','#33a02c','#e31a1c', "purple")
 course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(Actname != CourseNameLong) %>%
-  filter(ModuleID >= 0 & ModuleID <7 & !is.na(ModuleID) )%>% 
+  #filter(ModuleID >= 0 & ModuleID <7 & !is.na(ModuleID) )%>% 
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(
     # removing right then left parts of full activities name
@@ -1549,7 +1551,7 @@ Grades %>%
 
 
 
-```{r reportexport}
+```{r reportexport, include=FALSE}
 # This has to run AFTER the generic report has been completed (we get the n-1 version!!!)
 library(here)
 Report.name <- paste0("Report-", CourseName,"-", FileDate)
@@ -1562,7 +1564,7 @@ file.copy(from = here("GenericReport.pdf"),
 
 
 
-```{r EXIT}
+```{r EXIT, include=FALSE}
 knitr::knit_exit()
 ```
 
