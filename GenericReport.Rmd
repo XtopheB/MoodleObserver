@@ -639,9 +639,11 @@ course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 # Step 2: Adding Sex and Country  to course.log using data.grades 
 # !!!! Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
 
-NameSex <- data.grades %>%
+data.grades <- data.grades %>%
   #mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
-  mutate(TotalReal =  as.numeric(Quiz..Final.Test..Real.)) %>%
+  mutate(TotalReal =  as.numeric(Quiz..Final.Test..Real.) *10)  #" Some course the total is on 10
+
+NameSex <- data.grades %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
   mutate(Country = ifelse(Country =="", "CN", Country)) #### <- Unknown are China!!!!
 
@@ -789,7 +791,7 @@ Grades <- data.grades %>%
 
 # Danger zone!!!! Automatic  sometimes multiple match...
 # Grades$GradeFinal <- as.numeric(Grades[ , grep(c("Total","total", "Final"), colnames(Grades))])  # Find matches
-Grades$GradeFinal <- as.numeric(Grades$Course.total..Real.)
+Grades$GradeFinal <- as.numeric(Grades$TotalReal)
 
 # Grades$GradeFinal <- Grades[ , grep("Final", colnames(Grades))]  # Find matches
 # Grades$GradeFinal <- Grades$Quiz...Test..Final.Test..Real.
