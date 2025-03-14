@@ -1532,18 +1532,18 @@ p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
   ylim( c(0,GradeMax))+
-  # annotate("rect", 
-  #          xmin= round(0.6* max(Grades$NbAct, na.rm = TRUE), 0), 
-  #          xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
-  #          ymin = GradeThreshold,
-  #          ymax = GradeMax, 
-  #          fill = "grey",  alpha = 0.1, 
-  #         color= SIAP.color, alpha = 0.1) +
+  annotate("rect",
+           xmin= GradeThreshold,
+           xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
+           ymin = GradeThreshold,
+           ymax = GradeMax,
+           fill = "grey",  alpha = 0.1,
+          color= SIAP.color, alpha = 0.1) +
  aes(x = NbAct, y = GradeFinal, color = Country) +
  ggtitle("Test Scores vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total Grade ", 
       subtitle = paste0("Each dot is a participant, coloured by country" ),
-       caption=  paste("Date", FileDate) )+
+      caption=  paste("All succeful learners should be in the box\n","Date", FileDate) )+
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
