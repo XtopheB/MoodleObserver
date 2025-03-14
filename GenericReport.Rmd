@@ -471,7 +471,7 @@ course.log <- course.log %>%
 # ***`r CourseNameLong `***:  
 ## Main figures
 
-The course *`r CourseNameLong `* started on *`r format(as_date(CourseStartDate), "%A %d %B ")`.* 
+The course *`r CourseNameLong `* started on *`r format(as.Date(CourseStartDate, format = "%d/%m/%Y"),  "%A %d %B ")`.* 
 The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B")`.**
 
 
@@ -1177,12 +1177,12 @@ GradesPositive %>%
       caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
       subtitle = paste0("(as of ", format(FileDate, "%A %d %B "),",",
                       NbStudentsAboveThreshold," learners are above the threshold)") )+
- # annotate("rect", xmin = GradeThreshold, xmax = max(Grades$GradeFinal, na.rm = TRUE)+1,
- #                  ymin = 0, ymax = Ymax,
- #                  fill = SIAP.color , alpha = .2)+
-   # annotate("text", x = GradeThreshold+10, y = Ymax*0.75,
-   #        color= SIAP.color,
-   #        label = "Success")+
+ annotate("rect", xmin = GradeThreshold, xmax = GradeMax,
+                  ymin = 0, ymax = Ymax,
+                  fill = SIAP.color , alpha = .2)+
+ annotate("text", x = GradeThreshold*1.2, y = Ymax*0.75,
+        color= SIAP.color,
+        label = "Success")+
  theme_minimal()
 
 ```
@@ -1217,10 +1217,10 @@ GradesPositive %>%
       subtitle = paste("(date:", format(FileDate, "%A %d %B "),")")) +
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  # annotate("text", x = GradeThreshold+5, y = 0.75,
-  #         color= "red",
-  #         label = "Success")+
-  #theme_minimal()+
+  annotate("text", x = GradeThreshold+5, y = 0.75,
+          color= "red",
+          label = "Success")+
+  theme_minimal()+
   theme(legend.position = "none")
  
 
@@ -1313,6 +1313,7 @@ course.log %>%
                                  ifelse(DayOfWeek ==WebinarDay & DayID < 7 * NbModules,
                                         "Webinar day", "Regular"))  ) %>%
   filter(!is.na(User.full.name)) %>%
+  filter(Date >= as.Date(CourseStartDate, format = "%d/%m/%Y")) %>%
   ggplot()+
   #aes(x=fct_infreq(Date))+
   aes(x = as.factor(DayID),  fill = ParticularDays)+
@@ -1488,6 +1489,7 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 library(colorspace)
 course.log %>%
  filter(!is.na(ActNb))  %>%
+ filter(Date >= as.Date(CourseStartDate, format = "%d/%m/%Y")) %>%
   mutate(ActID.lab = paste(ActNb,"-",str_trunc(Actname, 30, "right") )) %>%
   group_by(ActID.lab, Date) %>%
   summarise(Learners = n_distinct(User.full.name)) %>% 
@@ -1509,8 +1511,9 @@ course.log %>%
         axis.line = element_line(colour = "black"), 
         axis.text.y = element_text(face= "plain", size=8, color="black"), # size can be  4.5
         plot.subtitle = element_text(hjust = 0.5, size=8),
+        legend.position = "bottom",
         axis.title.y = element_text(size = 8))+
-  coord_fixed(ratio = 4 )  # can be  0.5
+  coord_fixed(ratio = 0.5 )  # can be  0.5
 ```
 
 
