@@ -82,42 +82,44 @@ There are some elements that are really specific to a course:
 
 ```{r AllCourseParameters}
 # List of courses
-
-AllCoursesRef <- c("Gender_Self_1",
-                   "DTV20_S",
-                   "MLOS_S", 
-                   "HealthStats2",
-                   "SEEA_CF_2022", 
-                   "SBR22", 
-                   "MLOS22", 
-                   "ClimateChange2023", 
-                   "user_2023", 
-                   "egriss_2023", 
-                    "ADV23", "2023-MLOS", "RAP2024",
-                    "user_2024", 
-                    "2025-UAD-F-1"
-                   )
-
-
-AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
-                        "Principles of Data Visualization for Official Statistics and SDG Indicators",
-                        "Principles of Machine Learning for Official Statistics and SDGs", 
-                        "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
-                        "Introduction to the System of Environmental Economic Accounting-Central Framework", 
-                        "Statistical Business Registers", 
-                        "Machine Learning for Official Statistics and SDGs-2022", 
-                        "Compiling climate change indicators: an accounting approach", 
-                        "Increasing User Engagement Around Data and Statistics", 
-                        "Introduction to International Recommendations on Refugee and IDP Statistics", 
-                        "Advanced Data Visualization for Official Statistics and SDG Indicators",  
-                         "Machine Learning for Official Statistics and SDGs-2023",
-                         "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-                        "Increasing User Engagement Around Data and Statistics",
-                        "Using administrative data to produce official statistics ")
-
-AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "","2025-01-20")
-
-AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6, 6)
+# 
+# AllCoursesRef <- c("Gender_Self_1",
+#                    "DTV20_S",
+#                    "MLOS_S", 
+#                    "HealthStats2",
+#                    "SEEA_CF_2022", 
+#                    "SBR22", 
+#                    "MLOS22", 
+#                    "ClimateChange2023", 
+#                    "user_2023", 
+#                    "egriss_2023", 
+#                     "ADV23", "2023-MLOS", "RAP2024",
+#                     "user_2024", 
+#                     "2025-UAD-F-1",
+#                    "RAP"
+#                    )
+# 
+# 
+# AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
+#                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
+#                         "Principles of Machine Learning for Official Statistics and SDGs", 
+#                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
+#                         "Introduction to the System of Environmental Economic Accounting-Central Framework", 
+#                         "Statistical Business Registers", 
+#                         "Machine Learning for Official Statistics and SDGs-2022", 
+#                         "Compiling climate change indicators: an accounting approach", 
+#                         "Increasing User Engagement Around Data and Statistics", 
+#                         "Introduction to International Recommendations on Refugee and IDP Statistics", 
+#                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
+#                          "Machine Learning for Official Statistics and SDGs-2023",
+#                          "Principles of Reproducible Analytical Pipelines for Official Statistics", 
+#                         "Increasing User Engagement Around Data and Statistics",
+#                         "Using administrative data to produce official statistics ", 
+#                         "Principles of Reproducible Analytical Pipelines for Official Statistics ")
+# 
+# AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "","2025-01-20", "2025-02-17")
+# 
+# AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6, 6, 4 )
 ```
 
 
@@ -137,26 +139,103 @@ AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6, 6)
 #i.course <- 12 # MasterClass 24
 # i.course <- 13 # User Engagement 24
 # i.course <- 14  # Dataviz
-i.course <- 15 # Admin 2025
+# i.course <- 15 # Admin 2025
+# i.course <- 16 # RAP 2025
 
 ```
 
 
-```{r CourseParameters}
-# Course general parameters
-CourseName <- AllCoursesRef[i.course]    
-CourseNameLong <- AllCoursesNameLong[i.course]
-CourseStartDate <-AllCoursesStartDate[i.course]
-NbModules <- AllCoursesNbModules[i.course]              
+```{r CourseList}
+# Create the data frame directly with raw values
+# AllCourses <- tibble(
+#   Id = 1:16,
+#   Ref = c("Gender_Self_1", "DTV20_S", "MLOS_S", "HealthStats2", "SEEA_CF_2022", 
+#           "SBR22", "MLOS22", "ClimateChange2023", "user_2023", "egriss_2023", 
+#           "ADV23", "2023-MLOS", "RAP2024", "user_2024", "2025-UAD-F-1", "RAP"),
+#   Name = c("Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
+#            "Principles of Data Visualization for Official Statistics and SDG Indicators",
+#            "Principles of Machine Learning for Official Statistics and SDGs", 
+#            "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
+#            "Introduction to the System of Environmental Economic Accounting-Central Framework", 
+#            "Statistical Business Registers", 
+#            "Machine Learning for Official Statistics and SDGs-2022", 
+#            "Compiling climate change indicators: an accounting approach", 
+#            "Increasing User Engagement Around Data and Statistics", 
+#            "Introduction to International Recommendations on Refugee and IDP Statistics", 
+#            "Advanced Data Visualization for Official Statistics and SDG Indicators",  
+#            "Machine Learning for Official Statistics and SDGs-2023",
+#            "Principles of Reproducible Analytical Pipelines for Official Statistics", 
+#            "Increasing User Engagement Around Data and Statistics",
+#            "Using administrative data to produce official statistics ", 
+#            "Principles of Reproducible Analytical Pipelines for Official Statistics"),
+#    Starts = as.Date(c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", 
+#                      "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", 
+#                      "2024-04-29", "2024-06-01", "2024-08-12", NA, "2025-01-20", "2025-02-17")),
+#   NbMod = c(3, 6, 6, 5, 5, 7, 8, 6, 7, 8, 5, 4, 6, 6, 6, 4),
+#   GradeMax = 100,
+#   Threshold = 70, 
+#   Webinar = 4 # Sunday is 1, Wednesday is  4 
+# )
+# 
+# write.csv(AllCourses, file = "AllCoursesSIAP.csv")
+# 
 
-# Minimum to get the certificate
-GradeMax = 100  # 4 tests with max 10
-PercentThreshold = 70   # 70% is the norm for tests
+```
+
+```{r}
+# Loading All the courses and their features 
+
+ AllCourses <- read.csv("AllCoursesSIAP.csv")
+```
+
+
+```{r ParametersCourse}
+# Loading course parameters. 
+i.course <- 16
+
+# Specific parameters
+CourseName <- as.character(AllCourses[i.course, "Ref"])
+CourseNameLong <- as.character(AllCourses[i.course, "Name"])
+NbModules <- as.numeric(AllCourses[i.course, "NbMod"])
+GradeMax <- as.numeric(AllCourses[i.course, "GradeMax"])
+PercentThreshold <- as.numeric(AllCourses[i.course, "Threshold"])
+WebinarDay <- as.numeric(AllCourses[i.course, "Webinar"])
+
+# A bit tricky for the date...
+CourseStartDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Starts)
+
+# Additional parameters 
 GradeThreshold <-GradeMax * (PercentThreshold/100)  
 
-# Dates parameters
- WebinarDay = 2 # Sunday is 1, wednesday is  4
-# CourseLength = 7 * (NbModules +1)  # adjusted
+# TODO for each course! 
+## Manual Modules definition 
+ModStartIdx <- c(1,2,3,4,5,6,7,8)  # Parameters for Admin Data - 6 modules !
+
+##  Define the string that identify the Total Grade 
+StringIdentiyingGrades <- "grand"  # Can be "total"
+
+
+```
+
+
+
+```{r CourseParameters}
+# Course general parameters
+# CourseName <- AllCoursesRef[i.course]    
+# CourseNameLong <- AllCoursesNameLong[i.course]
+# CourseStartDate <-AllCoursesStartDate[i.course]
+# NbModules <- AllCoursesNbModules[i.course]              
+# 
+# # Minimum to get the certificate
+# GradeMax = 100  # 4 tests with max 10
+# PercentThreshold = 70   # 70% is the norm for tests
+# GradeThreshold <-GradeMax * (PercentThreshold/100)  
+# 
+# # Dates parameters
+#  WebinarDay = 2 # Sunday is 1, wednesday is  4
+# # CourseLength = 7 * (NbModules +1)  # adjusted
 
 # Dates of Modules opening MLOS 
 # Opening1 <- as_date("2021-11-12")
@@ -186,12 +265,12 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 # Opening5 <- as_date("2023-08-26")
  
 # Dates of Modules opening DTV24 
-Opening1 <- as_date("2024-11-11")
-Opening2 <- as_date("2024-11-11")
-Opening3 <- as_date("2024-11-18")
-Opening4 <- as_date("2024-11-25")
-Opening5 <- as_date("2024-12-02")
-Opening6 <- as_date("2024-12-02")
+# Opening1 <- as_date("2024-11-11")
+# Opening2 <- as_date("2024-11-11")
+# Opening3 <- as_date("2024-11-18")
+# Opening4 <- as_date("2024-11-25")
+# Opening5 <- as_date("2024-12-02")
+# Opening6 <- as_date("2024-12-02")
 
 ### Define the Starting activity nb for each Modules --> see Actname 
 # Important: Include LAST activity!!!
@@ -635,13 +714,25 @@ StudentsNames <- data.act  %>%
   rename( User.full.name = X)
 
 course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
+```
 
+
+```{r GradeVar}
 # Step 2: Adding Sex and Country  to course.log using data.grades 
 # !!!! Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
 
+
+
+# Detect which columns contain the search string
+matched_col <- names(data.grades)[str_detect(names(data.grades), regex(StringIdentiyingGrades, ignore_case = TRUE))]
+
 data.grades <- data.grades %>%
-  #mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
-  mutate(TotalReal =  as.numeric(Quiz..Final.Test..Real.) *10)  #" Some course the total is on 10
+  mutate(TotalReal =  as.numeric(data.grades[,matched_col]))
+
+
+# data.grades <- data.grades %>%
+#   #mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
+#   mutate(TotalReal =  as.numeric(Quiz..Final.Test..Real.) *10)  #" Some course the total is on 10
 
 NameSex <- data.grades %>%
   select(Email.address, Sex, Country, Position, Organization, TotalReal ) %>%
@@ -735,19 +826,30 @@ temp_country <- course.log %>%
 # adding real name of countries 
 temp_country <-  left_join(x= temp_country, y= country_df, by = c("Country.Code"))
 
-
 #removing when large differences 
 cond <- max(temp_country$differ, na.rm = TRUE)>100
-# Sometimes one want to remove countries with less than XXX lezarners
-MinNbLearners <- 7
 
-message <- ifelse(cond,
-                  paste("For better readability, data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n as well as countries with less than",MinNbLearners,"participants.\n "),
-                  "" )
-# Stats for text
+# Extracting name of large country t
 country_max <- temp_country %>% 
   slice_max(Learners)%>%
   select(Country)
+
+```
+
+
+```{r Messages}
+# Sometimes one want to remove countries with less than XXX learners
+MinNbLearners <- 1
+
+# Automatic messages
+# Few learners by countries
+Message1  <- paste("For better readability, countries with less than",MinNbLearners,"participants have been removed\n")
+
+# Countries with too many particpants 
+message2 <- paste("data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
+
+# Full message
+message <- ifelse(cond,paste(Message1, Message2), Message1 )
 
 ```
 
@@ -758,7 +860,7 @@ country_max <- temp_country %>%
 
 # Graphic 
 temp_country %>%
-slice(ifelse(cond, -1, 1:n())) %>%   # to remove "large" countries 
+ dplyr::slice(if (cond) -1 else 1:n()) %>%  # to remove "large" countries 
 filter(Learners>MinNbLearners) %>%               # to remove "small" countries
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
@@ -967,15 +1069,6 @@ write.xlsx(CourseListExport,
 rm("CertifiedCountryL", "CertifiedCountryW")
 ```
 
-
-```{r ExportDataReport}
-# #For report (not usefull anymore) 
-# CourseReportExport <- data.frame(NbLearners, NbCertificates)
-# write.xlsx(CourseReportExport,
-#            file=paste("Output/",CourseName,"-Report-",ymd(Sys.Date()),".xlsx", sep=""))
-
-
-```
 
 ##  Success rate
 
