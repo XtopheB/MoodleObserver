@@ -546,6 +546,13 @@ actname <-  actname %>%
   filter(!row_number() %in% c(1,2)) %>%
   mutate(ActNb = row_number())
 
+## Removing anything after : in activity name
+actname <-  actname %>%
+  mutate(Activity = str_split(actname$Activity, ": ",
+                             simplify = TRUE)[,1] )
+
+
+
 #rm("data.act.temp")
 
 ## Attempt to a newer version (but names of activities are with dots "General.Information"
@@ -617,7 +624,8 @@ actname <- actname %>%
 
 
 ```{r ModuleNb}
-# Matching and adding columns
+# Matching and adding columns- Including activity name and ModuleId
+## ACTUNG: Does not work for activities with : in the text!!!
 
 course.log <- course.log  %>%
   mutate(Actname = str_split(course.log$Event.context, ": ",
@@ -700,7 +708,7 @@ actname %>%
     Type = str_extract(Activity, "(?<=\\[)[^\\]]+"),  # Extract elements between '[' and ']'
     Title = str_extract(Activity, "(?<=\\])[^\n]+")  # Extract elements after ']'
   )%>%
-  select(Actnumber, Type, Title) %>%
+  select(ModuleID, Actnumber, Type, Title) %>%
   # save the current structure of the course in an excel file 
   write.xlsx(.,
            file=paste("Output/",CourseName,"-Activities-",ymd(Sys.Date()),".xlsx", sep=""))
@@ -723,14 +731,11 @@ course.log <- left_join(course.log ,StudentsNames, by = c("User.full.name"))
 # Step 2: Adding Sex and Country  to course.log using data.grades 
 # !!!! Need to adjust name of Total grade (sometimes Total..Real,  Course.total..Real. ,  Grand.Total..Real.)
 
-
-
 # Detect which columns contain the search string
 matched_col <- names(data.grades)[str_detect(names(data.grades), regex(StringIdentiyingGrades, ignore_case = TRUE))]
 
 data.grades <- data.grades %>%
   mutate(TotalReal =  as.numeric(data.grades[,matched_col]))
-
 
 # data.grades <- data.grades %>%
 #   #mutate(TotalReal =  as.numeric(Course.total..Real.)) %>%
@@ -947,15 +952,12 @@ NbCertificates <- nrow(subset(Learners, Certified == TRUE))
 
 
 ```{r Countries}
-
 # Merge countries with learners
 
 Learners <-   left_join(x= Learners, y= country_df, by = "Country.Code")
 Learners <- Learners %>%
   relocate(Country, .after = Country.Code ) %>%
   select(-Country.Code)
-
-
 ```
 
 
@@ -1390,8 +1392,6 @@ MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 
 
 ```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
-
-
 
 # myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
 myPaletteModules6 <- c( '#fdbf6f',  '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99')
