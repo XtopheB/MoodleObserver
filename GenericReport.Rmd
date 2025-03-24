@@ -1155,7 +1155,7 @@ Learners %>%
    #        label = "Mean", alpha = 0.7)+
   # geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
-  theme(axis.text.x = element_text(size = 6)) +
+  theme(axis.text.x = element_text(size = 4)) +
   coord_flip()
 
 ```
