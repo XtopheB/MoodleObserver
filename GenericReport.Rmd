@@ -71,14 +71,17 @@ library(wesanderson)
  
 \newpage
 
-# -- *Data technical details* --
+# -- Data technical details  (*for internal use*)--
+```{r eval=FALSE, include=FALSE}
 ##  Course specific parameters
 
-There are some elements that are really specific to a course: 
+# There are some elements that are really specific to a course: 
+# 
+# * CourseNameLong: for example "Machine Learning for Official Statistics and SDGs"
+# * CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
+# * CourseStartDate: in a standard format *YYYY-MM-DD*
+```
 
-* CourseNameLong: for example "Machine Learning for Official Statistics and SDGs"
-* CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
-* CourseStartDate: in a standard format *YYYY-MM-DD*
 
 ```{r AllCourseParameters}
 # List of courses
@@ -214,9 +217,9 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 ```{r ManualParameters}
 # TODO for each course! 
 ## Manual Modules definition  (use actame created later)
-ModStartIdx <- c(1,9,18, 28, 37, 47)  # Parameters for RAP!
+ModStartIdx <- c(1,9,18, 28, 37, 48)  # Parameters for RAP 2025!
 
-##  Define the string that identify the Total Grade 
+##  Define the string that identify the "Final" grade used for certification 
 StringIdentiyingGrades <- "grand"  # Can be "total"
 
 ```
@@ -303,9 +306,10 @@ country_df <- read.csv("SourceData/UNSD-CountryCodes.csv", sep = ";")
 
 # Select relevant columns 
 country_df <- country_df %>% 
-select(ISO.alpha2.Code, Country.or.Area)%>%
+select(ISO.alpha2.Code, Country.or.Area, Region.Name)%>%
   rename( Country.Code = ISO.alpha2.Code, 
-          Country = Country.or.Area)
+          Country = Country.or.Area, 
+          Region = Region.Name)
 
 ```
 
@@ -356,9 +360,9 @@ The Moodle platform allows the recording of many events during a course. Several
 
 We base our analysis on the **data collected on `r FileDate`** recorded on the  following files:
 
--  `r name_last_logs` (*Logs on the LMS[^FileNote]*)
--  `r name_last_act `  (*Learners activities*)
--  `r name_last_grades ` (*latest grades compiled*)
+-  `r name_last_logs` ($\rightarrow$ *Logs on the L MS[^FileNote]*)
+-  `r name_last_act `  ($\rightarrow$ *Learners activities*)
+-  `r name_last_grades ` ($\rightarrow$ *Grades*)
 
 
 [^FileNote]: Each row of the *LMS log file* is an event and so all the events (course viewed, post, attempt to a test, etc.) are recorded, with a time stamp, in a single log file.  One field gathers the detail of each event as a text message. This field can be parsed and information on participants, grades, certificates and activities can be extracted.
@@ -470,10 +474,9 @@ course.log <- course.log %>%
 
 \newpage
 
-# ***`r CourseNameLong `***:  
-## Main figures
+# ***`r CourseNameLong `***: Main figures
 
-The course *`r CourseNameLong `* started on *`r format(as.Date(CourseStartDate, format = "%d/%m/%Y"),  "%A %d %B ")`.* 
+The course *`r CourseNameLong `* started on **`r format(as.Date(CourseStartDate, format = "%d/%m/%Y"),  "%A %d %B")`.**  
 The current analysis used the data compiled from the LMS on **`r format(FileDate, "%A %d %B")`.**
 
 
@@ -520,7 +523,7 @@ NbLearners <- as.numeric(count(ListUser))
 
 ```
 
-> As of *`r format(FileDate, "%A %d %B")`, **`r paste0(NbLearners)`** different learners **visited**  the course*.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not *visit* the LMS are thus not counted] 
+> As of `r format(FileDate, "%A %d %B")`, **`r paste0(NbLearners)`** different learners **visited**  the course.^[This number can be smaller than the number of people who registered since it only counts **visitors**. People who did not ***visit*** the LMS are thus not counted. We use the term *participants* to identify these *visitors* all over this document.]  
 
 Many different information can be extracted  from the log file: all the events, for all learners,  as well as the precise *time* of each event are recorded. We can therefore gather information at the learner or activity level. 
 
@@ -546,7 +549,8 @@ actname <-  actname %>%
   filter(!row_number() %in% c(1,2)) %>%
   mutate(ActNb = row_number())
 
-## Removing anything after : in activity name
+## Removing anything after ":" in activity name
+## Compliance  with course_ log later on 
 actname <-  actname %>%
   mutate(Activity = str_split(actname$Activity, ": ",
                              simplify = TRUE)[,1] )
@@ -672,7 +676,6 @@ module.tab<- data.table(actname %>%
 #                    )
 # names(module.tab) <- c("Activity name","Module")
 
-
 NbActivities <- nrow(module.tab)
 
 # Not used
@@ -682,9 +685,9 @@ NbActivities <- nrow(module.tab)
 # NbActivities <- length(unique(course.log$Actname))
 ```
 
-Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r NbActivities`**  different *activities* proposed for the learners in *`r NbModules`* modules. 
+Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r NbActivities`**  different *activities* proposed for the learners in *`r NbModules`* modules.^[An additional module, *M0*, is sometimes proposed with documents, prerequisites and Ice-Breaker or a forum.] 
 
-Below is a table with the specific pedagogical activities of the course, excluding pdfs and other resources to download. 
+Below is a table with the`r NbActivities` pedagogical activities proposed in the course, excluding pdfs and other resources to download. 
 
 
 ```{r TablePrint}
@@ -846,13 +849,13 @@ country_max <- temp_country %>%
 
 ```{r Messages}
 # Sometimes one want to remove countries with less than XXX learners
-MinNbLearners <- 1
+MinNbLearners <- 2
 
 # Automatic messages
 # Few learners by countries
-Message1  <- paste("For better readability, countries with less than",MinNbLearners,"participants have been removed\n")
+Message1  <- paste("For better readability, countries with less than",MinNbLearners+1,"participants have been removed\n")
 
-# Countries with too many particpants 
+# Countries with too many participants 
 message2 <- paste("data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
 
 # Full message
@@ -864,26 +867,54 @@ message <- ifelse(cond,paste(Message1, Message2), Message1 )
 **`r NbWomen`** women participated the course (`r round(100*NbWomen/NbLearners, 2)` %). A vast diversity of people from **`r NbCountries`** different countries attended the course. We present some statistics on the origin of the learners by country. The most important country in terms of participation is **`r as.character(country_max)`**  with **`r as.character(temp_country[1, 2])`** participants.  
 
 ```{r GraphBycountry}
-
 # Graphic 
 temp_country %>%
  dplyr::slice(if (cond) -1 else 1:n()) %>%  # to remove "large" countries 
-filter(Learners>MinNbLearners) %>%               # to remove "small" countries
+filter(Learners>MinNbLearners) %>%           # to remove "small" countries
  ggplot() +
  aes( x=reorder(Country, Learners), y=  Learners) +
  geom_bar(aes(fill = Country),stat='identity', alpha = 0.3)+
 geom_text(aes(label= Learners, color = Country), vjust= 0.4, size=3.5,)+
  scale_fill_hue() +
- ggtitle(paste("Learners origin by country, (Total",NbCountries , "countries)")) +
+ ggtitle(paste("Learners by country, (Total",NbCountries , "countries)")) +
  labs(y = paste(NbLearners, "Learners, by country" ), 
       x = paste("Countries"),
       caption = paste(message, "(file date ", FileDate,")"))+
  coord_flip() +
  theme_minimal() +
- theme(legend.position = "none", panel.grid.major = element_blank())
+ theme(legend.position = "none", panel.grid.major = element_blank(), axis.text.x = element_text(size = 7))
 
 
 ```
+
+## Attendance in the Asia-Pacific region. 
+
+
+```{r  RegionParticpants}
+PacificAttendance <- temp_country %>%
+  mutate(Region = ifelse(Region == "Oceania", "Pacific", Region)) %>%
+  filter(Region %in% c("Asia", "Pacific") ) %>%
+  group_by(Region, Country) %>%
+  dplyr::summarize(Total_Learners = sum(Learners, na.rm = TRUE)) %>%
+  ungroup() %>%
+  arrange(desc(Total_Learners))
+
+NbAPLearners <- PacificAttendance %>%
+  summarise(Nblearners = sum(Total_Learners))
+
+```
+
+In the Asia-Pacific region, we have **`r nrow(PacificAttendance)`** different countries, representing `r NbAPLearners$Nblearners`  learners (`r round(100*NbAPLearners$Nblearners/NbLearners,1)`  \%). More details in the table below. 
+
+```{r  TableRegion}
+# Generate the table with grouped rows by Region
+PacificAttendance %>%
+  arrange(Region, desc(Total_Learners) ) %>%
+  kbl(col.names = c("Region", "Country", "Total Learners"), align = "llr", longtable = T) %>%
+  kable_classic(full_width = FALSE, ) %>%
+  pack_rows(index = table(PacificAttendance$Region))
+```
+
 
 ## Certified people
 
@@ -961,8 +992,6 @@ Learners <- Learners %>%
 ```
 
 
-
-
 ```{r ExportParticipants}
 library(openxlsx)
 # For Shuji
@@ -975,8 +1004,6 @@ CourseListParticipants <- Learners %>%
 write.xlsx(CourseListParticipants,
            file=paste("Output/",CourseName,"-Participants-",ymd(Sys.Date()),".xlsx", sep=""))
 ```
-
-
 
 
 ```{r ActivityTime}
@@ -1020,11 +1047,31 @@ NbStudentsNoShow <-  Grades %>%
 # Success Rates
 RawSuccessRate <- round(100*NbCertificates/NbLearners, 1)
 RealSuccessRate <-round(100*NbCertificates/(NbLearners - NbStudentsNoShow) , 1)
+```
 
+
+```{r CountryAnalysis}
+NbCountries <- Learners %>%  
+  filter(Certified==TRUE) %>%
+  select(Country)%>%
+  group_by(Country) %>% 
+  n_distinct()
+  
+CertifiedByCountry <-  Learners %>%  
+  filter(Certified==TRUE) %>%
+  group_by(Country) %>% 
+  count() %>%
+  arrange(desc(n))
+
+# Extracting for text
+BestCountry <- paste(CertifiedByCountry[1,1]) 
+NbBestCountry <- paste(CertifiedByCountry[1,2])
 
 ```
 
-There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r PercentThreshold` % threshold (and are eligible for a certificate).
+There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r PercentThreshold` % threshold (and are eligible for a certificate). 
+
+Certified people come from **`r NbCountries` different countries**. The country with most certified is `r BestCountry` with  `r NbBestCountry` certified participants.
 
  
 
@@ -1099,15 +1146,16 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by country") +
   labs(x="Country", y="Percentage of sucess", 
-      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`noshows`) excluded \n
+      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`no-shows`) excluded \n
                      (date:", format(FileDate, "%A %d %B"),")"))+
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
    # annotate("text", x = 1, y = RealSuccessRate/100,
    #        color= "red",
    #        label = "Mean", alpha = 0.7)+
-  geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
+  # geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
+  theme(axis.text.x = element_text(size = 6)) +
   coord_flip()
 
 ```
@@ -1125,14 +1173,16 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by gender") +
   labs(x="Gender", y="Percentage of sucess", 
-      caption = paste(NbStudentsNoShow, " participants with a grade of 0 (`noshows`) excluded \n
+      caption = paste(NbStudentsNoShow, " participants with a grade of 0 (`no-shows`) excluded \n
                      (date:", format(FileDate, "%A %d %B"),")"))+
   theme_minimal()+
-  geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
+ # geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
   coord_flip()
 
 ```
+
+
 ```{r SuccessRates}
 LearnersWithoutNoShows <-Learners %>%
   filter(Country != "" | Country != "NA")%>%
@@ -1179,12 +1229,12 @@ GradesPositive %>%
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
       caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
-      subtitle = paste0("(as of ", format(FileDate, "%A %d %B "),",",
+      subtitle = paste0("(as of ", format(FileDate, "%A %d %B"),", ",
                       NbStudentsAboveThreshold," learners are above the threshold)") )+
  annotate("rect", xmin = GradeThreshold, xmax = GradeMax,
                   ymin = 0, ymax = Ymax,
                   fill = SIAP.color , alpha = .2)+
- annotate("text", x = GradeThreshold*1.2, y = Ymax*0.75,
+ annotate("text", x = 1.2 * GradeThreshold, y = Ymax*0.75,
         color= SIAP.color,
         label = "Success")+
  theme_minimal()
@@ -1221,7 +1271,7 @@ GradesPositive %>%
       subtitle = paste("(date:", format(FileDate, "%A %d %B "),")")) +
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  annotate("text", x = GradeThreshold+5, y = 0.75,
+  annotate("text", x = 1.2 * GradeThreshold , y = 0.75,
           color= "red",
           label = "Success")+
   theme_minimal()+
@@ -1258,9 +1308,9 @@ GradesPositive %>%
                      (date:", format(FileDate, "%A %d %B "),")"))+
     theme_ridges(grid = FALSE) +
   geom_vline( xintercept = GradeThreshold,  color = "red" ) +
-  # annotate("text", x = GradeThreshold+12, y = 0.75,
-  #         color= "red",
-  #         label = "Success")+
+   annotate("text", x = 1.1 * GradeThreshold, y = 0.75,
+          color= "red",
+          label = "Success")+
   #theme_minimal()+
   theme(legend.position = "none")
  
@@ -1447,7 +1497,7 @@ course.log %>%
 ```
 
  > *The graphic exhibits a few access differences among the **`r nrow(actname)`** 
-original activities proposed, showing a good commitment of active participants*.^[This number excludes the communication and administrative activities such as announcements, feedback, concept note, etc.]  
+original activities proposed, showing a good commitment of active participants*.^[For the webinars, the numbers reports the views of the webinar's **recording**, not the number of particpant who attended live.]  
  
 ### 10 **most viewed** activities
  
@@ -1576,7 +1626,7 @@ rm("Too")
 
 The time spent by learners on the platform is, of course, proportional to the number of activities viewed, with a greater heterogeneity for the most serious learners who viewed most of the activities.[^Time] 
 
-> It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent more than 3 hours/Module on the course.
+> It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent more than 3 hours/Module on the course  *(`r round(100*NbLearners3hours/NbLearners,1)` \% )*.
 
 [^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.  
 
@@ -1619,8 +1669,13 @@ p
 
 ```
 
+\newpage
+
 ## Activities viewed and visits on the LMS
-Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow`, "participants with grade = 0 who never really *engaged* with the course]. 
+
+The vertical axis on the graphic below reports the number of activities visited by learners, colored depending on success. Horizontally is the number of visits on the LMS(unique days). One expect to see very few reds in the upper and right sides of the graphic. 
+
+Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow`, "participants with grade = 0 who never really *engaged* with the course] 
 
 ```{r VisitsVsActivities}
 
