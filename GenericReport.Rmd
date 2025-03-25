@@ -836,6 +836,10 @@ temp_country <- course.log %>%
 # adding real name of countries 
 temp_country <-  left_join(x= temp_country, y= country_df, by = c("Country.Code"))
 
+temp_country <- temp_country %>%
+  mutate(Region = ifelse(Region == "Oceania", "Pacific", Region))
+
+
 #removing when large differences 
 cond <- max(temp_country$differ, na.rm = TRUE)>100
 
@@ -892,7 +896,6 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.4, size=3.5,)+
 
 ```{r  RegionParticpants}
 PacificAttendance <- temp_country %>%
-  mutate(Region = ifelse(Region == "Oceania", "Pacific", Region)) %>%
   filter(Region %in% c("Asia", "Pacific") ) %>%
   group_by(Region, Country) %>%
   dplyr::summarize(Total_Learners = sum(Learners, na.rm = TRUE)) %>%
@@ -1160,7 +1163,6 @@ Learners %>%
 
 ```
 
-
 ```{r GraphSuccessBySex, fig.height= 3}
 Learners %>%
  filter(Country != "" | Country != "NA")%>%
@@ -1201,7 +1203,86 @@ SuccessRates <- LearnersWithoutNoShows %>%
 
 ```
 
-With that definition, excluding the "*no-shows*", the success rate for women is `r  SuccessRates$Rate[SuccessRates$Sex == "Female"]` \% , larger than for men ( `r SuccessRates$Rate[SuccessRates$Sex == "Male"]` \% )
+With that definition, excluding the "*no-shows*", the success rate for women is `r  SuccessRates$Rate[SuccessRates$Sex == "Female"]` \% (`r SuccessRates$Rate[SuccessRates$Sex == "Male"]` \%for men)
+
+## Focus on Asia-Pacific
+
+```{r GraphSuccessRateP}
+MinLearners <- 2
+Learners %>%
+ filter(Region %in% c("Asia", "Pacific") ) %>%
+ filter(TotalReal > 0 | !is.na(TotalReal)) %>%
+  mutate( One = 1, 
+          OneC = ifelse(Certified ==TRUE, 1, 0),
+          Certified = as.factor(Certified),
+          Country = as.factor(Country)) %>%
+    group_by(Country) %>%
+  mutate (TotalC = sum(OneC), 
+          Total = sum(One), 
+          PercentC = TotalC/Total) %>%
+  ungroup() %>%
+  filter(Total >= MinLearners)%>%
+  ggplot() +
+  aes(x = reorder(Country, PercentC) , y = One , fill = Certified)  +
+  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
+  ggtitle("Sucess rate by country in the Asia-Pacific") +
+  labs(x="Country", y="Percentage of sucess", 
+      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`no-shows`) excluded \n
+                     (date:", format(FileDate, "%A %d %B"),")"))+
+  guides(fill = guide_legend(title = "Sucess")) +
+  theme_minimal()+
+   # annotate("text", x = 1, y = RealSuccessRate/100,
+   #        color= "red",
+   #        label = "Mean", alpha = 0.7)+
+  # geom_hline( yintercept = RealSuccessRate /100,  color = "red" ) +
+  theme(legend.position = "bottom")+ 
+  theme(axis.text.x = element_text(size = 4)) +
+  coord_flip()
+
+```
+
+```{r GraphSuccessBySexP, fig.height= 3}
+Learners %>%
+  filter(Region %in% c("Asia", "Pacific") ) %>%
+ filter(Country != "" | Country != "NA")%>%
+  filter(TotalReal > 0 | !is.na(TotalReal)) %>%
+  filter(!is.na(Sex) )%>%
+  mutate( One = 1, 
+          Certified = ifelse(Certified == 1, "Yes", "No" )) %>%
+  ggplot() +
+  aes(x = Sex , y = One , fill = Certified) +
+  geom_bar(position="fill", stat="identity",  alpha = 0.5) +
+  ggtitle("Sucess rate by gender in the Asia-Pacific") +
+  labs(x="Gender", y="Percentage of sucess", 
+      caption = paste(NbStudentsNoShow, " participants with a grade of 0 (`no-shows`) excluded \n
+                     (date:", format(FileDate, "%A %d %B"),")"))+
+  theme_minimal()+
+ # geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
+  theme(legend.position = "bottom")+ 
+  coord_flip()
+
+```
+
+
+```{r SuccessRatesP}
+LearnersWithoutNoShowsP <-Learners %>%
+  filter(Region %in% c("Asia", "Pacific") ) %>%
+  filter(Country != "" | Country != "NA")%>%
+  filter(TotalReal > 0 | !is.na(TotalReal)) 
+
+SuccessRatesP <- LearnersWithoutNoShowsP %>%
+  group_by(Sex) %>%
+  summarise(
+    Total = n(),
+    Certified_Count = sum(Certified),
+    Rate = round((Certified_Count / Total) * 100, 1)
+  ) %>%
+  select(Sex, Rate)
+
+```
+
+With that definition, excluding the "*no-shows*", the success rate in the Asia-Pacific is for women  `r  SuccessRatesP$Rate[SuccessRates$Sex == "Female"]` \% , while for men it is  `r SuccessRatesP$Rate[SuccessRates$Sex == "Male"]` \%.
+
 
 ##  Grades distribution
 
