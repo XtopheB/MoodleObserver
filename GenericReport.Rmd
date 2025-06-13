@@ -4,6 +4,15 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
+  word_document:
+    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -12,15 +21,6 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
-  word_document:
-    toc: yes
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -849,7 +849,7 @@ course.log <- course.log %>%
 
 # Certification
 Learners <- course.log %>%
-  distinct(User.full.name, .keep_all=TRUE) %>%
+  distinct(User.full.name,Email.address, .keep_all=TRUE) %>%
   mutate(Sex = replace_na(Sex, "NA"))%>%
   # filter(Certified ==TRUE)%>%
   select(User.full.name, Email.address,  Sex, Country, Position, Organization, TotalReal, Certified)%>%
@@ -867,7 +867,7 @@ Learners <- Learners %>%
 
 
 ```{r NBCertified}
-NbCertificates <- nrow(subset(Learners, Certified == TRUE))
+NbCertificates <- nrow(subset(Learners, Certified == TRUE & !is.na(TotalReal)))
 ```
 
 
@@ -970,7 +970,7 @@ Certified people come from **`r NbCountries` different countries**. The country 
 The distribution of certificates delivered by country  and by gender is the following.
 
 ```{r CertifiedbyCountry}
-DTCertified <- data.table(Learners %>%  filter(Certified==TRUE))
+DTCertified <- data.table(Learners %>%  filter(Certified==TRUE & !is.na(TotalReal)))
 
 CertifiedCountryL<-  DTCertified[, .N, keyby = c("Country", "Sex")]
 CertifiedCountryL$N <- as.numeric(CertifiedCountryL$N)
