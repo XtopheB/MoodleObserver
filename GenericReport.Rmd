@@ -960,7 +960,7 @@ NbBestCountry <- paste(CertifiedByCountry[1,2])
 
 There are currently (as of *`r format(FileDate, "%A %d %B ")`*)  **`r NbCertificates` certified learners** in this course,  out of  **`r paste0(NbLearners)`** registered participants and of  **`r paste0(NbStudentsAboveThreshold)`** who are above the `r PercentThreshold` % threshold (and are eligible for a certificate). 
 
-Certified people come from **`r NbCountries` different countries**. The country with most certified is `r BestCountry` with  `r NbBestCountry` certified participants.
+Certified people come from **`r NbCountries` different countries**. The country with most certified participants is **`r BestCountry`** with  **`r NbBestCountry`** certified participants.
 
  
 
