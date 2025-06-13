@@ -16,6 +16,7 @@ output:
   html_document:
     df_print: paged
     toc: yes
+    toc_float: true
     keep_md: yes
     code_folding: show
     fig_width: 6.5
