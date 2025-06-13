@@ -194,7 +194,7 @@ library(wesanderson)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 16
+i.course <- 17
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -217,10 +217,11 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 ```{r ManualParameters}
 # TODO for each course! 
 ## Manual Modules definition  (use actame created later)
-ModStartIdx <- c(1,9,18, 28, 37, 48)  # Parameters for RAP 2025!
+ModStartIdx <- c(1,3,4)  # Parameters for ROS - 3 modules !
+
 
 ##  Define the string that identify the "Final" grade used for certification 
-StringIdentiyingGrades <- "grand"  # Can be "total"
+StringIdentiyingGrades <- "Final"  # Can be "total"
 
 ```
 
@@ -288,6 +289,7 @@ StringIdentiyingGrades <- "grand"  # Can be "total"
 # ModStartIdx <- c(1,13, 22, 33, 46, 61, 74)  # Parameters for DTV24 - 6 modules !
 #  Nothing for for User2024 - 7 modules !
 # ModStartIdx <- c(1,2,3,4,5,6,7,8)  # Parameters for Admin Data - 6 modules !
+# ModStartIdx <- c(1,9,18, 28, 37, 48)  # Parameters for RAP 2025!
 
 
 ```
@@ -604,7 +606,8 @@ actname <- actname %>%
                                           # between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
                                           # between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
                                             )) %>%
-          mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA, ModuleID))%>%
+          mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA,
+                                   ModuleID))%>%
     filter(!is.na(ModuleID))
 
 # For user engagement (since the activity list is not complete)
@@ -853,14 +856,14 @@ country_max <- temp_country %>%
 
 ```{r Messages}
 # Sometimes one want to remove countries with less than XXX learners
-MinNbLearners <- 2
+MinNbLearners <- 5
 
 # Automatic messages
 # Few learners by countries
 Message1  <- paste("For better readability, countries with less than",MinNbLearners+1,"participants have been removed\n")
 
 # Countries with too many participants 
-message2 <- paste("data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
+Message2 <- paste("data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
 
 # Full message
 message <- ifelse(cond,paste(Message1, Message2), Message1 )
@@ -883,7 +886,8 @@ geom_text(aes(label= Learners, color = Country), vjust= 0.4, size=3.5,)+
  ggtitle(paste("Learners by country, (Total",NbCountries , "countries)")) +
  labs(y = paste(NbLearners, "Learners, by country" ), 
       x = paste("Countries"),
-      caption = paste(message, "(file date ", FileDate,")"))+
+      caption = paste(message, "(file date ", FileDate,")") 
+      )+
  coord_flip() +
  theme_minimal() +
  theme(legend.position = "none", panel.grid.major = element_blank(), axis.text.x = element_text(size = 7))
@@ -947,8 +951,6 @@ Grades$GradeFinal <- as.numeric(Grades$TotalReal)
 #    GradeFinal = Quiz...Final.Test..Real.
 # )
 ```
-
-
 
 
 ```{r Certified}
@@ -1227,8 +1229,7 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by country in the Asia-Pacific") +
   labs(x="Country", y="Percentage of sucess", 
-      caption = paste(" Only countries with more than", MinLearners, "participants are represented \n Participants with a grade of  0 (`no-shows`) excluded \n
-                     (date:", format(FileDate, "%A %d %B"),")"))+
+      caption = paste("(date:", format(FileDate, "%A %d %B"),")"))+
   guides(fill = guide_legend(title = "Sucess")) +
   theme_minimal()+
    # annotate("text", x = 1, y = RealSuccessRate/100,
@@ -1254,8 +1255,7 @@ Learners %>%
   geom_bar(position="fill", stat="identity",  alpha = 0.5) +
   ggtitle("Sucess rate by gender in the Asia-Pacific") +
   labs(x="Gender", y="Percentage of sucess", 
-      caption = paste(NbStudentsNoShow, " participants with a grade of 0 (`no-shows`) excluded \n
-                     (date:", format(FileDate, "%A %d %B"),")"))+
+      caption = paste("(date:", format(FileDate, "%A %d %B"),")"))+
   theme_minimal()+
  # geom_hline( yintercept = RealSuccessRate/100,  color = "red" ) +
   theme(legend.position = "bottom")+ 
@@ -1281,7 +1281,7 @@ SuccessRatesP <- LearnersWithoutNoShowsP %>%
 
 ```
 
-With that definition, excluding the "*no-shows*", the success rate in the Asia-Pacific is for women  `r  SuccessRatesP$Rate[SuccessRates$Sex == "Female"]` \% , while for men it is  `r SuccessRatesP$Rate[SuccessRates$Sex == "Male"]` \%.
+With that definition, excluding the "*no-shows*", the success rate in the Asia-Pacific is for women  `r  SuccessRatesP$Rate[SuccessRatesP$Sex == "Female"]` \% , while for men it is  `r SuccessRatesP$Rate[SuccessRatesP$Sex == "Male"]` \%.
 
 
 ##  Grades distribution
