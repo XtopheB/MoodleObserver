@@ -81,74 +81,6 @@ library(textdata)
 
 ```
 
- 
-
-```{r AllCourseParameters, eval=FALSE, include=FALSE}
-# List of courses
-# 
-# AllCoursesRef <- c("Gender_Self_1",
-#                    "DTV20_S",
-#                    "MLOS_S", 
-#                    "HealthStats2",
-#                    "SEEA_CF_2022", 
-#                    "SBR22", 
-#                    "MLOS22", 
-#                    "ClimateChange2023", 
-#                    "user_2023", 
-#                    "egriss_2023", 
-#                     "ADV23", "2023-MLOS", "RAP2024",
-#                     "user_2024", 
-#                     "2025-UAD-F-1"
-#                    )
-# 
-# 
-# AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
-#                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
-#                         "Principles of Machine Learning for Official Statistics and SDGs", 
-#                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
-#                         "Introduction to the System of Environmental Economic Accounting-Central Framework", 
-#                         "Statistical Business Registers", 
-#                         "Machine Learning for Official Statistics and SDGs-2022", 
-#                         "Compiling climate change indicators: an accounting approach", 
-#                         "Increasing User Engagement Around Data and Statistics", 
-#                         "Introduction to International Recommendations on Refugee and IDP Statistics", 
-#                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
-#                          "Machine Learning for Official Statistics and SDGs-2023",
-#                          "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-#                         "Increasing User Engagement Around Data and Statistics",
-#                         "Using administrative data to produce official statistics ")
-# 
-# AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "2025-01-20")
-# 
-# AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6)
-```
-
-
-```{r CourseChoice}
-# Course Index <<<<<< =====  Choose the course here
-### ACHTUNG this list is not the same than for GenericReport.Rmd
-
-
-#i.course <- 1  # Gender
-# i.course <- 2  # Dataviz -self
-# i.course <- 3  # MLOS- Self
-# i.course <- 4  # Health
-# i.course <- 5 # SEEA Central Framework
-# i.course <- 6 # SBR
-#i.course <- 7 # MLOS22
-# i.course <-8 # Climate Change 2023
-# i.course <-9 # User Engagement
-# i.course <-10 # Refugees <--- NO MOST USED WORDS IN THIS REPORT (Blank for whatever reason)  results = 'hide' in the TopWords
-# i.course <-11 # ADV23   
-#i.course <- 12 # MLOS23
-# i.course <- 13 #RAP2024
-#i.course <- 14 #User engagement 2024
-#i.course <- 15 # Admin 2025
-
-```
-
-
-
 
 ```{r}
 # Loading All the courses and their features 
@@ -176,8 +108,6 @@ CourseStartDate <- AllCourses %>%
 # Additional parameters 
 GradeThreshold <-GradeMax * (PercentThreshold/100)
 ```
-
-
 
 # ***`r CourseNameLong `***:  
 
@@ -253,7 +183,7 @@ data.feedback <- data.feedback %>%
 Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form* on SIAP's Moodle platform^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
 
 ## Composition of the respondants
-> For some courses, the gender is not available 
+> For some courses, the gender is not available - this section may be empty ;-)
 
 ```{r StatDesc, eval=FALSE, include=FALSE}
 G_Sex <- data.feedback %>%
@@ -914,9 +844,6 @@ file.copy(from = here("FeedbackReport.pdf"),
 ```{r}
  knitr::knit_exit()
 ```
-
-
-
 
 
 \newpage
