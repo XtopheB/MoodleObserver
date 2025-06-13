@@ -4,15 +4,6 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
-  word_document:
-    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -21,6 +12,15 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+  word_document:
+    toc: yes
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -73,118 +73,6 @@ library(wesanderson)
 \newpage
 
 # -- Data technical details  (*for internal use*)--
-```{r eval=FALSE, include=FALSE}
-##  Course specific parameters
-
-# There are some elements that are really specific to a course: 
-# 
-# * CourseNameLong: for example "Machine Learning for Official Statistics and SDGs"
-# * CourseName used: in the name of the files (such as *MLOS* or *DV22*, ...)
-# * CourseStartDate: in a standard format *YYYY-MM-DD*
-```
-
-
-```{r AllCourseParameters}
-# List of courses
-# 
-# AllCoursesRef <- c("Gender_Self_1",
-#                    "DTV20_S",
-#                    "MLOS_S", 
-#                    "HealthStats2",
-#                    "SEEA_CF_2022", 
-#                    "SBR22", 
-#                    "MLOS22", 
-#                    "ClimateChange2023", 
-#                    "user_2023", 
-#                    "egriss_2023", 
-#                     "ADV23", "2023-MLOS", "RAP2024",
-#                     "user_2024", 
-#                     "2025-UAD-F-1",
-#                    "RAP"
-#                    )
-# 
-# 
-# AllCoursesNameLong <-c( "Using gender data for analysis,communications and policy making in the context of SDG monitoring and beyond",
-#                         "Principles of Data Visualization for Official Statistics and SDG Indicators",
-#                         "Principles of Machine Learning for Official Statistics and SDGs", 
-#                         "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
-#                         "Introduction to the System of Environmental Economic Accounting-Central Framework", 
-#                         "Statistical Business Registers", 
-#                         "Machine Learning for Official Statistics and SDGs-2022", 
-#                         "Compiling climate change indicators: an accounting approach", 
-#                         "Increasing User Engagement Around Data and Statistics", 
-#                         "Introduction to International Recommendations on Refugee and IDP Statistics", 
-#                         "Advanced Data Visualization for Official Statistics and SDG Indicators",  
-#                          "Machine Learning for Official Statistics and SDGs-2023",
-#                          "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-#                         "Increasing User Engagement Around Data and Statistics",
-#                         "Using administrative data to produce official statistics ", 
-#                         "Principles of Reproducible Analytical Pipelines for Official Statistics ")
-# 
-# AllCoursesStartDate <-c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", "2024-04-29", "2024-06-01", "2024-08-12", "","2025-01-20", "2025-02-17")
-# 
-# AllCoursesNbModules <-c(3,6,6,5,5,7,8,6,7,8, 5, 4, 6, 6, 6, 4 )
-```
-
-
-```{r CourseChoice}
-# Course Index <<<<<< =====  Choose the course here
-#i.course <- 1  # Gender
-# i.course <- 2  # Dataviz
-# i.course <- 3  # MLOS
-# i.course <- 4  # Health
-# i.course <- 5 # SEEA Central Framework
-# i.course <- 6 # SBR
-#i.course <- 7 # MLOS22
-#i.course <-8 # Climate Change 2023
-#i.course <-9 # ADV2023
-# i.course <- 10 # MLOS23
-# i.course <- 11 #RAP2024
-#i.course <- 12 # MasterClass 24
-# i.course <- 13 # User Engagement 24
-# i.course <- 14  # Dataviz
-# i.course <- 15 # Admin 2025
-# i.course <- 16 # RAP 2025
-
-```
-
-
-```{r CourseList}
-# Create the data frame directly with raw values
-# AllCourses <- tibble(
-#   Id = 1:16,
-#   Ref = c("Gender_Self_1", "DTV20_S", "MLOS_S", "HealthStats2", "SEEA_CF_2022", 
-#           "SBR22", "MLOS22", "ClimateChange2023", "user_2023", "egriss_2023", 
-#           "ADV23", "2023-MLOS", "RAP2024", "user_2024", "2025-UAD-F-1", "RAP"),
-#   Name = c("Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",
-#            "Principles of Data Visualization for Official Statistics and SDG Indicators",
-#            "Principles of Machine Learning for Official Statistics and SDGs", 
-#            "Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022",
-#            "Introduction to the System of Environmental Economic Accounting-Central Framework", 
-#            "Statistical Business Registers", 
-#            "Machine Learning for Official Statistics and SDGs-2022", 
-#            "Compiling climate change indicators: an accounting approach", 
-#            "Increasing User Engagement Around Data and Statistics", 
-#            "Introduction to International Recommendations on Refugee and IDP Statistics", 
-#            "Advanced Data Visualization for Official Statistics and SDG Indicators",  
-#            "Machine Learning for Official Statistics and SDGs-2023",
-#            "Principles of Reproducible Analytical Pipelines for Official Statistics", 
-#            "Increasing User Engagement Around Data and Statistics",
-#            "Using administrative data to produce official statistics ", 
-#            "Principles of Reproducible Analytical Pipelines for Official Statistics"),
-#    Starts = as.Date(c("2022-05-25", "2022-01-24", "2022-06-06", "2022-07-04", "2022-08-01", 
-#                      "2022-09-26", "2022-11-21", "2023-01-16", "2023-07-03", "2023-11-27", 
-#                      "2024-04-29", "2024-06-01", "2024-08-12", NA, "2025-01-20", "2025-02-17")),
-#   NbMod = c(3, 6, 6, 5, 5, 7, 8, 6, 7, 8, 5, 4, 6, 6, 6, 4),
-#   GradeMax = 100,
-#   Threshold = 70, 
-#   Webinar = 4 # Sunday is 1, Wednesday is  4 
-# )
-# 
-# write.csv(AllCourses, file = "AllCoursesSIAP.csv")
-# 
-
-```
 
 ```{r}
 # Loading All the courses and their features 
@@ -225,7 +113,6 @@ ModStartIdx <- c(1,3,4)  # Parameters for ROS - 3 modules !
 StringIdentiyingGrades <- "Final"  # Can be "total"
 
 ```
-
 
 
 ```{r CourseParameters}
@@ -295,13 +182,10 @@ StringIdentiyingGrades <- "Final"  # Can be "total"
 
 ```
 
-
 ## Gathering the data
 
 > The data can be downloaded from the **Course management page** (then> reports) or here
  https://siap-elearning.org/report/log/index.php?id=**XXX**  where **XXX** is the course id (ex: 158 for Data visualization, 129 for ML, ... )
-
-
 
 ```{r listcountries}
 # Data used https://unstats.un.org/unsd/methodology/m49/overview/
@@ -313,7 +197,6 @@ select(ISO.alpha2.Code, Country.or.Area, Region.Name)%>%
   rename( Country.Code = ISO.alpha2.Code, 
           Country = Country.or.Area, 
           Region = Region.Name)
-
 ```
 
 ```{r LoadData}
