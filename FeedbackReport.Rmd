@@ -79,6 +79,10 @@ library(tm)
 library(tidytext)  
 library(textdata)
 
+
+# Export
+library(openxlsx)
+
 ```
 
 
@@ -578,7 +582,6 @@ data.text <- data.text %>%
 
 ## Word cloud on open comments fields
 
-
 ```{r TextRelevance}
 # Create corpus
 # All.Comments.R <- rbind(data.text$share, data.text$Effectiveness_open)
@@ -696,9 +699,42 @@ wordcloud(words = names(Words.C),
           rot.per = 0.2)
 ```
 
-
-
 -->
+
+
+```{r textexport}
+# Export all Comments
+# But remove  lines with repeated words
+
+remove_words <- c("no", "none", "nothing")
+
+# Triming
+text.export <- data.text %>%
+  filter(!if_all(everything(), ~ is.na(.) | str_trim(.) == "" | 
+                   str_to_lower(.) %in% remove_words))
+
+# Creating worksheet
+wb <- createWorkbook()
+addWorksheet(wb, "Sheet 1")
+writeData(wb, "Sheet 1", text.export)
+
+# Set fixed widths 
+setColWidths(wb, "Sheet 1", cols = 1:ncol(text.export), widths = 30)
+
+# Create a wrap-text style
+wrap_style <- createStyle(wrapText = TRUE, valign = "top")  # optional: align to top
+
+# Apply style to all cells
+addStyle(wb, "Sheet 1",
+         style = wrap_style,
+         rows = 1:(nrow(text.export) + 1),  # +1 includes the header
+         cols = 1:ncol(text.export),
+         gridExpand = TRUE)
+# Export
+saveWorkbook(wb, file=paste("Output/",CourseName,"-comments-",ymd(Sys.Date()),".xlsx", sep=""),
+             overwrite = TRUE)
+
+```
 
 
 \newpage
@@ -894,8 +930,6 @@ toexport <- cbind(CourseNameLong, CourseYear, CourseStartDate, CourseEndDate,
                   "-", "E-learn", "methodology", "EL", NbTotal, "NB-fem",  
                   t(Dt1),"", "CtrlV", "CtrlV",t(Dt2))
 
-
-library(openxlsx)
 # save the file 
 write.xlsx(toexport,
            file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
