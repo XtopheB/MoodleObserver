@@ -104,6 +104,10 @@ WebinarDay <- as.numeric(AllCourses[i.course, "Webinar"])
 CourseStartDate <- AllCourses %>% 
   slice(i.course) %>% 
   pull(Starts)
+CourseEndDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Ends)
+
 
 # Additional parameters 
 GradeThreshold <-GradeMax * (PercentThreshold/100)
@@ -177,6 +181,11 @@ data.feedback <- data.feedback %>%
 #   filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
 #   filter(!if_any(where(is.character), ~ str_detect(., "弄")))
 
+```
+
+
+```{r}
+NbTotal <- nrow(data.feedback)
 ```
 
 
@@ -844,6 +853,62 @@ file.copy(from = here("FeedbackReport.pdf"),
 ```{r}
  knitr::knit_exit()
 ```
+
+
+# Building an export for SIAP's compilation 
+```{r ExportSIAP}
+
+CourseYear <- year(dmy(CourseStartDate))
+
+# Define the correct Likert scale order
+likert_levels <- c(
+  "Strongly disagree",
+  "Disagree",
+  "Somewhat disagree",
+  "Somewhat agree",
+  "Agree",
+  "Strongly agree"
+)
+
+# For relevance: Relevance1
+Dt1 <- data.feedback %>%
+  select(Relevance1)%>%
+  group_by(Relevance1)%>%
+  count() %>% 
+  rename(C1 = n) %>%
+  # Now reordering according to likert
+  mutate(Relevance1 = factor(Relevance1, levels = likert_levels, ordered = TRUE)) %>%
+  arrange(Relevance1) %>%
+  pull(C1)  # To extract only the values 
+
+# For confidence =  Effectiveness2
+Dt2 <- data.feedback %>%
+  select(Effectiveness2)%>%
+  group_by(Effectiveness2)%>%
+  count() %>% 
+  rename(C1 = n) %>%
+  # Now reordering according to likert
+  mutate(Effectiveness2 = factor(Effectiveness2, levels = likert_levels, ordered = TRUE)) %>%
+  arrange(Effectiveness2) %>%
+  pull(C1)  # To extract only the values 
+
+# Combining all information 
+toexport <- cbind(CourseNameLong, CourseYear, CourseStartDate, CourseEndDate,
+                  "-", "E-learn", "methodology", "EL", NbTotal, "NB-fem",  
+                  t(Dt1),"", "CtrlV", "CtrlV",t(Dt2))
+
+
+library(openxlsx)
+# save the file 
+write.xlsx(toexport,
+           file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
+
+
+
+
+
+```
+
 
 
 \newpage
