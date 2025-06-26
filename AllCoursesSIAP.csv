@@ -1,18 +1,18 @@
-,Id,Ref,Name,Starts,NbMod,GradeMax,Threshold,Webinar
-1,1,Gender_Self_1,"Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",25/05/2022,3,100,70,4
-2,2,DTV20_S,Principles of Data Visualization for Official Statistics and SDG Indicators,24/01/2022,6,100,70,4
-3,3,MLOS_S,Principles of Machine Learning for Official Statistics and SDGs,06/06/2022,6,100,70,4
-4,4,HealthStats2,Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022,04/07/2022,5,100,70,4
-5,5,SEEA_CF_2022,Introduction to the System of Environmental Economic Accounting-Central Framework,01/08/2022,5,100,70,4
-6,6,SBR22,Statistical Business Registers,26/09/2022,7,100,70,4
-7,7,MLOS22,Machine Learning for Official Statistics and SDGs-2022,21/11/2022,8,100,70,4
-8,8,ClimateChange2023,Compiling climate change indicators: an accounting approach,16/01/2023,6,100,70,4
-9,9,user_2023,Increasing User Engagement Around Data and Statistics,03/07/2023,7,100,70,4
-10,10,egriss_2023,Introduction to International Recommendations on Refugee and IDP Statistics,27/11/2023,8,100,70,4
-11,11,ADV23,Advanced Data Visualization for Official Statistics and SDG Indicators,29/04/2024,5,100,70,4
-12,12,2023-MLOS,Machine Learning for Official Statistics and SDGs-2023,01/06/2024,4,100,70,4
-13,13,RAP2024,Principles of Reproducible Analytical Pipelines for Official Statistics,12/08/2024,6,100,70,4
-14,14,user_2024,Increasing User Engagement Around Data and Statistics,NA,6,100,70,4
-15,15,2025-UAD-F-1,Using administrative data to produce official statistics ,20/01/2025,6,100,70,4
-16,16,RAP,Principles of Reproducible Analytical Pipelines for Official Statistics,17/02/2025,4,40,70,4
-17,17,ROS,R for Official Statistics,02/06/2025,3,10,70,3
+,Id,Ref,Name,Starts,Ends,NbMod,GradeMax,Threshold,Webinar
+1,1,Gender_Self_1,"Using gender data for analysis, communications and policy making in the context of SDG monitoring and beyond",25/05/2022,,3,100,70,4
+2,2,DTV20_S,Principles of Data Visualization for Official Statistics and SDG Indicators,24/01/2022,,6,100,70,4
+3,3,MLOS_S,Principles of Machine Learning for Official Statistics and SDGs,06/06/2022,,6,100,70,4
+4,4,HealthStats2,Health Statistics for Monitoring Sustainable Development Goals (SDGs) - 2022,04/07/2022,,5,100,70,4
+5,5,SEEA_CF_2022,Introduction to the System of Environmental Economic Accounting-Central Framework,01/08/2022,,5,100,70,4
+6,6,SBR22,Statistical Business Registers,26/09/2022,,7,100,70,4
+7,7,MLOS22,Machine Learning for Official Statistics and SDGs-2022,21/11/2022,,8,100,70,4
+8,8,ClimateChange2023,Compiling climate change indicators: an accounting approach,16/01/2023,,6,100,70,4
+9,9,user_2023,Increasing User Engagement Around Data and Statistics,03/07/2023,,7,100,70,4
+10,10,egriss_2023,Introduction to International Recommendations on Refugee and IDP Statistics,27/11/2023,,8,100,70,4
+11,11,ADV23,Advanced Data Visualization for Official Statistics and SDG Indicators,29/04/2024,,5,100,70,4
+12,12,2023-MLOS,Machine Learning for Official Statistics and SDGs-2023,01/06/2024,,4,100,70,4
+13,13,RAP2024,Principles of Reproducible Analytical Pipelines for Official Statistics,12/08/2024,,6,100,70,4
+14,14,user_2024,Increasing User Engagement Around Data and Statistics,NA,,6,100,70,4
+15,15,2025-UAD-F-1,Using administrative data to produce official statistics ,20/01/2025,,6,100,70,4
+16,16,RAP,Principles of Reproducible Analytical Pipelines for Official Statistics,17/02/2025,,4,40,70,4
+17,17,ROS,R for Official Statistics,02/06/2025,05/05/2025,3,10,70,3
