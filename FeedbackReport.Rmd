@@ -265,12 +265,19 @@ Response_plot <- function(data, xvar, title) {
 
   # Convert each variable into a factor with 6 levels
    data[[xvar]] <- factor_6_levels( data[[xvar]])
-  
+   
+  # Compute the percentages
+  data<- data %>%
+  group_by(!!sym(xvar)) %>%
+  summarise(n = n()) %>%
+  mutate(percent = n / sum(n) * 100)
+   
   # Graphic
-
   ggplot(data)+
-  aes_string(x= xvar) +
-  geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
+  aes_string(x= xvar, y = "n") +
+  # geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
+  geom_col(fill = SIAP.color, alpha = 0.5) +
+  geom_text(aes(label = paste0(round(percent, 1), "%")), hjust = 1.1, color = "white") +
   ggtitle(paste(title)) +
   coord_flip() +
   theme_minimal( ) +
@@ -706,8 +713,6 @@ Each comment can then be associated with one or several "sentiments" in a matrix
 
 
 ```{r SentimentScores}
-
-
 library(syuzhet) # For generating sentiment scores
 
 # cleanset <- c(unlist(cleanset.R),unlist(cleanset.C))
@@ -848,16 +853,8 @@ file.copy(from = here("FeedbackReport.pdf"),
 
 ```
 
-
-
-```{r}
- knitr::knit_exit()
-```
-
-
-# Building an export for SIAP's compilation 
 ```{r ExportSIAP}
-
+# Building an export for SIAP's compilation 
 CourseYear <- year(dmy(CourseStartDate))
 
 # Define the correct Likert scale order
@@ -903,12 +900,12 @@ library(openxlsx)
 write.xlsx(toexport,
            file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
 
-
-
-
-
 ```
 
+
+```{r}
+ knitr::knit_exit()
+```
 
 
 \newpage
