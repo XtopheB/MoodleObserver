@@ -83,7 +83,7 @@ library(wesanderson)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 17
+i.course <- 18
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -105,8 +105,8 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 
 ```{r ManualParameters}
 # TODO for each course! 
-## Manual Modules definition  (use actame created later)
-ModStartIdx <- c(1,3,4)  # Parameters for ROS - 3 modules !
+## Manual Modules definition  -->   use actname created later
+ModStartIdx <- c(1,10,27,36, 45, 57,67)  # Parameters
 
 
 ##  Define the string that identify the "Final" grade used for certification 
@@ -480,15 +480,15 @@ actname <-  actname %>%
 # actname <- actname %>%
 #             mutate(ModuleID = ModuleID -2)
 
-##For a  4+1   Module course
+##For a 6+1   Module course
 actname <- actname %>%
             mutate(ModuleID = case_when(between(ActNb, ModStartIdx[1], ModStartIdx[2]-1) ~ 0,
                                           between(ActNb, ModStartIdx[2], ModStartIdx[3]-1) ~ 1,
                                           between(ActNb, ModStartIdx[3], ModStartIdx[4]-1) ~ 2,
                                           between(ActNb, ModStartIdx[4], ModStartIdx[5]-1) ~ 3,
                                           between(ActNb, ModStartIdx[5], ModStartIdx[6]-1) ~ 4,
-                                          # between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
-                                          # between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
+                                          between(ActNb, ModStartIdx[6], ModStartIdx[7]-1) ~ 5,
+                                          between(ActNb, ModStartIdx[7], ModStartIdx[8]) ~ 6,
                                             )) %>%
           mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA,
                                    ModuleID))%>%
@@ -544,24 +544,24 @@ course.log <- course.log  %>% filter(Actname != CourseNameLong)
 
 ```{r TabModules}
 # For user engagement
-module.tab<- data.table(actname %>% 
-                     filter(!stringr::str_detect(Activity, "pdf") )    %>%
-                     mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
-                     arrange(ActNb) %>%
-                     # select(Actname2, ModuleID) %>%
-                     #    filter(ModuleID >=0) %>%
-                     unique() )
-
-
 # module.tab<- data.table(actname %>% 
 #                      filter(!stringr::str_detect(Activity, "pdf") )    %>%
 #                      mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
 #                      arrange(ActNb) %>%
-#                      select(Actname2, ModuleID) %>%
-#                         filter(ModuleID >=0) %>%
-#                      unique() 
-#                    )
-# names(module.tab) <- c("Activity name","Module")
+#                      # select(Actname2, ModuleID) %>%
+#                      #    filter(ModuleID >=0) %>%
+#                      unique() )
+
+
+module.tab<- data.table(actname %>%
+                     filter(!stringr::str_detect(Activity, "pdf") )    %>%
+                     mutate(Actname2 = paste(ActNb, "-", Activity)) %>%
+                     arrange(ActNb) %>%
+                     select(Actname2, ModuleID) %>%
+                        filter(ModuleID >=0) %>%
+                     unique()
+                   )
+names(module.tab) <- c("Activity name","Module")
 
 NbActivities <- nrow(module.tab)
 
@@ -574,14 +574,15 @@ NbActivities <- nrow(module.tab)
 
 Each course is specific in its form and in the organisation of each Module and the number of activities proposed. After cleaning and refining the data, we  identified  **`r NbActivities`**  different *activities* proposed for the learners in *`r NbModules`* modules.^[An additional module, *M0*, is sometimes proposed with documents, prerequisites and Ice-Breaker or a forum.] 
 
-Below is a table with the`r NbActivities` pedagogical activities proposed in the course, excluding pdfs and other resources to download. 
+Below is a table with the **`r NbActivities`** different pedagogical activities proposed in the course, excluding pdfs and other resources to download. 
 
 
 ```{r TablePrint}
 # module.tab
 # Better looking if long list of Modules
-ModuleToPrint <- module.tab %>%
-  select(ModuleID, ActNb, Activity)
+ModuleToPrint <- module.tab
+# %>%
+#   select(ModuleID, ActNb, Activity)
 
 kable(ModuleToPrint, "latex", longtable = T, booktabs = T) %>%
   kable_styling(latex_options = c("repeat_header"), font_size = 7)
@@ -740,7 +741,7 @@ country_max <- temp_country %>%
 
 ```{r Messages}
 # Sometimes one want to remove countries with less than XXX learners
-MinNbLearners <- 5
+MinNbLearners <- 3
 
 # Automatic messages
 # Few learners by countries
@@ -1193,9 +1194,9 @@ GradesPositive %>%
  coord_cartesian(xlim=c(0,GradeMax))+
  ggtitle("Grades distribution") +
  labs(x="Grades", y=" Nb of sucessful learners",
-      caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0)"),
-      subtitle = paste0("(as of ", format(FileDate, "%A %d %B"),", ",
-                      NbStudentsAboveThreshold," learners are above the threshold)") )+
+      caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0) \n
+                     (date:", format(FileDate, "%A %d %B") ,")"),
+      subtitle = paste0(NbStudentsAboveThreshold," learners reached the threshold") )+
  annotate("rect", xmin = GradeThreshold, xmax = GradeMax,
                   ymin = 0, ymax = Ymax,
                   fill = SIAP.color , alpha = .2)+
@@ -1360,7 +1361,7 @@ Since there is an important **time difference** between the teacher and the lear
 ```{r GraphHourlyActivity, fig.height=3}
 #Active time by Learners
 
-ThreshodlLowActivity <- 10
+ThreshodlLowActivity <- 100
 
 course.log %>%
   filter(!is.na(Time_range)) %>%
@@ -1408,12 +1409,15 @@ MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 
 ```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
 
-# myPaletteModules <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
-myPaletteModules6 <- c( '#fdbf6f',  '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99')
+ myPaletteModules7 <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
+# myPaletteModules6 <- c( '#fdbf6f',  '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99')
 # myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
 
-#myPaletteModules <- c("lightgrey",'#a6cee3',  '#b2df8a','#fb9a99', "purple")
-myPaletteModulesDark <- c("grey",'#1f78b4','#33a02c','#e31a1c', "purple")
+# myPaletteModules <- c("lightgrey",'#a6cee3',  '#b2df8a','#fb9a99', "purple")
+# myPaletteModulesDark <- c("grey",'#1f78b4','#33a02c','#e31a1c', "purple")
+
+myPalette <-  myPaletteModules7
+
 course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(Actname != CourseNameLong) %>%
@@ -1435,11 +1439,11 @@ course.log %>%
   ggplot() +
   aes(x = ActID.lab,  y = NbLearners, fill = ModuleID) +
   geom_bar(stat='identity') +
-  scale_fill_manual("ModuleID", values = myPaletteModules6 ) +
+  scale_fill_manual("ModuleID", values = myPalette ) +
   # scale_fill_manual(values = c(wes_palette("Royal1")[1:2],wes_palette("Zissou1")) ) +
   geom_text(aes(label= NbLearners, color = ModuleID),
             vjust= 0.5, hjust = -0.5,  size=3.5)+
-   scale_color_manual("ModuleID", values = myPaletteModules6 ) +
+   scale_color_manual("ModuleID", values = myPalette ) +
   labs(x="Activities", y="Number of Learners per activity") +
   ggtitle("Activities accessed by Learners")+
   coord_flip() +
@@ -1545,13 +1549,15 @@ In the graphic below,  we emphasized **in a box** participants that have succeed
 ```{r GradesVsActivities}
 
 # Here we put the points AFTER the annotation for Plotly... 
+
+
 p <-Grades %>%
   filter(Country != "") %>%
  ggplot() +
   ylim( c(0,GradeMax))+
   annotate("rect",
-           xmin= GradeThreshold,
-           xmax = max(Grades$NbAct +1 , na.rm = TRUE)+1,
+           xmin= NbActivities *0.8,  # Assuming participants should do  80% of activities
+           xmax = NbActivities-1,    
            ymin = GradeThreshold,
            ymax = GradeMax,
            fill = "grey",  alpha = 0.1,
@@ -1591,7 +1597,7 @@ rm("Too")
 
 The time spent by learners on the platform is, of course, proportional to the number of activities viewed, with a greater heterogeneity for the most serious learners who viewed most of the activities.[^Time] 
 
-> It is still difficult to measure precisely the time spent by learners on the LMS,  but **`r NbLearners3hours`**  learners have spent more than 3 hours/Module on the course  *(`r round(100*NbLearners3hours/NbLearners,1)` \% )*.
+> It is still difficult to measure precisely the time spent by learners on the LMS,  but **only `r NbLearners3hours`**  learners have spent more than 3 hours/Module on the course  *(`r round(100*NbLearners3hours/NbLearners,1)` \% )*.
 
 [^Time]: We do not always observe when someone leaves the platform. The duration reported here may reflect *"shadow"* activities while the learner was doing something else.  
 
@@ -1617,8 +1623,8 @@ mutate(TotalTime = TotalTime/60,
       subtitle = paste0("Each dot is a participant. ", 
                         NbLearners3hours," learners spent more than 3 hours/week"), 
       caption=  paste( NbNoGrades,  "participants with no grade ( in grey), ", "date", FileDate) )+
- geom_hline (aes(yintercept = 3*NbModules*60), color = SIAP.color) +
- annotate("text", x = 15, y = 3*NbModules*60 + 200,
+ geom_hline (aes(yintercept = 3*(NbModules-1)*60), color = SIAP.color) +  # Adjust NbModules 
+ annotate("text", x = 15, y = 3*(NbModules-1)*60 + 200,
           color= SIAP.color,
           label = "Course  requirement (3 hours/Module)")+
 # geom_vline (aes(xintercept =  median(TotalTime))) +
@@ -1634,13 +1640,49 @@ p
 
 ```
 
+
+```{r}
+# Compute the  time spent per activity
+
+learners_Time  <- learners_Time %>%
+  mutate(MinPerAct =  (as.numeric(TotalTime) / NbAct)/60 )
+
+# We wil  remove some outliers
+MinutesQ99 <-quantile(learners_Time$MinPerAct , 0.99)
+MinutesQ50 <- round(median(learners_Time$MinPerAct),1)
+```
+
+ It is also to note that not all the participants spent the same amount of time on activities. A more detailed analysis would show which activities were the most time consuming as well as the distribution of time spend per module.  Still, we can observe that **half of the participants spent more than  `r MinutesQ50 `  minutes per activity**.[^Time2] 
+ 
+[^Time2]: Computing the duration and time spent on each activity is not perfect, and exhibits a lot of variabilty depending on the type of activity.  
+
+```{r}
+# Distribution 
+learners_Time %>%
+  filter(MinPerAct < MinutesQ99) %>%
+  ggplot() +
+  aes(x = MinPerAct)+
+  geom_histogram(bins = 100L, fill = SIAP.color, color = "white")+
+  geom_vline(xintercept = MinutesQ50, linetype = "dashed", color = "red", size = 1) +
+   annotate("text", x = 2*MinutesQ50 , y = NbCertificates/20,
+          color= "red",
+          label = paste0("median ", MinutesQ50, " minutes") )+
+  ggtitle("Time per activity (Minutes)") +
+  labs(x="Minutes per activity (estimated)")+
+  theme_minimal()
+
+
+```
+
+
+
 \newpage
 
 ## Activities viewed and visits on the LMS
 
 The vertical axis on the graphic below reports the number of activities visited by learners, colored depending on success. Horizontally is the number of visits on the LMS(unique days). One expect to see very few reds in the upper and right sides of the graphic. 
 
-Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow`, "participants with grade = 0 who never really *engaged* with the course] 
+Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow` "participants with grade = 0 who never really *engaged* with the course] 
 
 ```{r VisitsVsActivities}
 
@@ -1670,6 +1712,27 @@ Grades %>%
 
 
 ```
+
+
+# Conclusion
+
+
+With **`r NbCertificates` certified learners**  out of  **`r paste0(NbLearners)`** registered participants from **`r NbCountries` different countries**, the course has certainly been useful for many, even if  **`r BestCountry`** with  **`r NbBestCountry`** certified participants represented the vast majority of our learners ( `r  round((100* as.numeric(NbBestCountry)/NbCertificates), 2)` %).  
+
+```{r}
+# counting the number of optional reports completed
+
+
+NbProjects <- data.act  %>%
+  filter(Your.turn...Work.with.a.data.set.and.use..Machine.Learning =="Completed") %>%
+  nrow()
+```
+
+
+The optional data-based exercise has been completed by  **`r NbProjects`** participants and manually reviewed (*by your devoted lecturer* ;-) ), among which many files were not satisfactory or just random files uploaded in an attempt to gain some bonus points without producing anything. We also received very good and personalized reports, some using Python instead of the R template. 
+
+The course was quite long (8 weeks), but we have not experienced too much attrition, and a good engagement in forums. Many participants shared their resources (ML case-studies), providing us with some new materials to examine. Finally, the  success rate is  **`r RealSuccessRate`** %  and similar to previous editions.
+
 
 
 
@@ -1940,13 +2003,6 @@ p
 #ggplotly(p)
 
 ```
-
-
-
-
-# leftovers
-
-
 
 
 ```{r}
