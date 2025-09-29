@@ -890,19 +890,6 @@ kable( ,
 
 
 
-```{r reportexport, message=FALSE, warning=FALSE, echo = FALSE, results='hide',}
-# This will copy the previous feedback report not the current one
-library(here)
-Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
-# 
-# Export a copy with course name
-file.copy(from = here("FeedbackReport.pdf"),
-          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
-
-
-
-```
-
 ```{r ExportSIAP}
 # Building an export for SIAP's compilation 
 CourseYear <- year(dmy(CourseStartDate))
@@ -969,6 +956,18 @@ Finally, to the questions:
 
 These numbers will be reported in SIAP's global courses data base. 
 
+```{r reportexport, message=FALSE, warning=FALSE, echo = FALSE, results='hide',}
+# This will copy the previous feedback report not the current one
+library(here)
+Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
+# 
+# Export a copy with course name
+file.copy(from = here("FeedbackReport.pdf"),
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
+
+
+
+```
 
 ```{r}
  knitr::knit_exit()
