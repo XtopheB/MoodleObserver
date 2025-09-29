@@ -6,7 +6,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document:
     df_print: kable
-    toc: no
+    toc: yes
     keep_tex: yes
     fig_width: 6.5
     fig_height: 4
@@ -94,7 +94,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 17
+i.course <- 18
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -117,6 +117,8 @@ CourseEndDate <- AllCourses %>%
 GradeThreshold <-GradeMax * (PercentThreshold/100)
 ```
 
+\newpage
+
 # ***`r CourseNameLong `***:  
 
 ## Data sets
@@ -130,6 +132,7 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",CourseName,"*")),
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
+
 data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
 #data.feedback <- read.csv(name_last_feedback, locale = locale(encoding = "Latin1"))
 
@@ -168,32 +171,29 @@ colnames(data.feedback) <- new_colnames
 ```
 
 
-```{r NonUnicode}
-# remove comments written in Chinese (maybe not necessary since we imported in utf-8)
-#data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
-
-data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
-
-# Remove non-ASCII characters from all character variables
-data.feedback <- data.feedback %>%
-  mutate(across(where(is.character), ~ str_replace_all(., "[^\x01-\x7F]", "Comment in Chinese (removed)"))) %>%
-  mutate(across(where(is.character), ~ str_replace_all(., "[\\p{Han}]", "Chinese 2"))) %>%
-  mutate(across(where(is.character), ~ str_replace_all(., "弄", " Chinese 3")))
-
-# More radical:Remove rows where any string column contains Chinese characters
-# data.feedback <- data.feedback %>%
-#   filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
-#   filter(!if_any(where(is.character), ~ str_detect(., "弄")))
-
-```
-
-
 ```{r}
+data.feedback <- data.feedback %>%
+  filter(!if_any(where(is.character), ~ str_detect(., "Xtophe")))    # remove My test evaluation
+
 NbTotal <- nrow(data.feedback)
 ```
 
 
 Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form* on SIAP's Moodle platform^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
+
+
+```{r NonUnicode}
+
+# Data cleaning 
+# remove comments written in Chinese (maybe not necessary since we imported in utf-8)
+#data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+
+
+```
+
 
 ## Composition of the respondants
 > For some courses, the gender is not available - this section may be empty ;-)
@@ -402,10 +402,24 @@ all.Y +
 # data.text <- data.feedback %>%
 #   select(Results, Comments)
 
-data.text <- data.feedback %>%
+# Remove non-ASCII characters from all character variables
+# data.feedback <- data.feedback %>%
+#   mutate(across(where(is.character), ~ str_replace_all(., "[^\x01-\x7F]", "Comment in Chinese (removed)"))) %>%
+#   mutate(across(where(is.character), ~ str_replace_all(., "[\\p{Han}]", "Chinese 2"))) %>%
+#   mutate(across(where(is.character), ~ str_replace_all(., "弄", " Chinese 3")))
+
+
+# More radical:Remove rows where any string column contains Chinese characters
+data.feedback.cleanned <- data.feedback %>%
+  filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
+  filter(!if_any(where(is.character), ~ str_detect(., "弄"))) 
+
+
+
+data.text <- data.feedback.cleanned %>%
   select( share, Effectiveness_open,Comments, FinalComments)
 
-data.survey <- data.feedback %>%
+data.survey <- data.feedback.cleanned %>%
   select(matches("Relevance|Effectiveness|Efficiency"))
 
 ```
@@ -821,7 +835,7 @@ data.num <- as.data.frame(data.num) %>%
   mutate(Total = rowSums(select(., matches("Relevance|Effectiveness|Efficiency"))))
 
 # Not clean but works
-data.feedback <- cbind(data.feedback, data.num$Total)%>%
+data.feedback.cleanned <- cbind(data.feedback.cleanned, data.num$Total)%>%
   rename( "Total" = "data.num$Total" )
 
 
@@ -829,7 +843,7 @@ data.feedback <- cbind(data.feedback, data.num$Total)%>%
 
 
 ```{r ResultTableN}
-data.feedback %>%
+data.feedback.cleanned %>%
   filter(str_count(Total) < 10) %>%
   filter( Comments !="" & FinalComments !="-" ) %>%
   arrange(Total) %>%    # Lowest Total first
@@ -852,7 +866,7 @@ kable( ,
 
 ```{r ResultTableP}
 
-data.feedback %>%
+data.feedback.cleanned %>%
   filter(Total > 20) %>%
   filter( Comments !="" & FinalComments !="-" ) %>%
   arrange(desc(Total)) %>%    # Highest Total first
@@ -935,6 +949,25 @@ write.xlsx(toexport,
            file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
 
 ```
+
+
+```{r}
+# To do  compute the 2 percentages needed for reporting 
+
+RelevancePerc <- round((100 *(Dt1[5] +Dt1[6])/ NbTotal),2)
+
+ConfidencePerc <- round((100 *(Dt2[5] +Dt2[6])/ NbTotal),2)
+
+```
+
+# Conclusion 
+
+Finally, to the questions: 
+
+- *"The training was relevant to my work"*: **`r RelevancePerc`** %  answered they  “Agree” or “Strongly Agree”, and 
+- *"My confidence has improved"*: **`r ConfidencePerc`** %  answered they  “Agree” or “Strongly Agree”.
+
+These numbers will be reported in SIAP's global courses data base. 
 
 
 ```{r}
