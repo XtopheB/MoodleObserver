@@ -1,0 +1,762 @@
+---
+title: "Feedback Report (F2F courses)"
+subtitle: ""
+author: "Christophe Bontemps"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
+  word_document:
+    toc: no
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: true
+    keep_md: yes
+    code_folding: show
+    fig_width: 6.5
+    fig_height: 4
+always_allow_html: true
+---
+
+
+```{r Knitr_Global_Options, include=FALSE, cache=FALSE, echo=FALSE}
+library(knitr)
+
+# No code is shown here
+knitr::opts_chunk$set(echo = FALSE)
+
+# Other options used here 
+opts_chunk$set(warning = FALSE, message = FALSE,
+               fig.pos = "!H", fig.align = "center",
+               autodep = TRUE, tidy = FALSE, cache = FALSE)
+
+# In case of "weird" problem, uncomment the line below (cache issue)
+# opts_chunk$set(cache.rebuild=TRUE) 
+
+# My colors:
+SIAP.color <- "#0385a8"
+```
+
+`r if(knitr:::pandoc_to() == "latex") {paste("\\large")}` 
+
+
+```{r libraries}
+# Analysis
+
+library(tidyverse)
+library(stringr)
+# library(dplyr)
+# library(tidyr)
+# library(forcats)
+library(lubridate)
+
+# Nice presentation of results
+library(Cairo)
+library(papeR)
+library(xtable)
+library(data.table)
+library(kableExtra)
+library(modelsummary)
+
+# Graphics 
+
+library(plotly)
+library(wesanderson)
+library(patchwork)
+library(wordcloud)
+
+#Text analysis
+library(stringr)        
+library(tm)
+
+### using Tidytext
+library(tidytext)  
+library(textdata)
+
+# Export
+library(openxlsx)
+
+```
+
+
+```{r}
+# Loading All the courses and their features 
+
+ AllCourses <- read.csv("AllCoursesSIAP.csv")
+```
+
+```{r LoadedParameters}
+# Loading course parameters. 
+i.course <- 20
+
+# Specific parameters
+CourseName <- as.character(AllCourses[i.course, "Ref"])
+CourseNameLong <- as.character(AllCourses[i.course, "Name"])
+NbModules <- as.numeric(AllCourses[i.course, "NbMod"])
+GradeMax <- as.numeric(AllCourses[i.course, "GradeMax"])
+PercentThreshold <- as.numeric(AllCourses[i.course, "Threshold"])
+WebinarDay <- as.numeric(AllCourses[i.course, "Webinar"])
+
+# A bit tricky for the date...
+CourseStartDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Starts)
+CourseEndDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Ends)
+
+
+# Additional parameters 
+GradeThreshold <-GradeMax * (PercentThreshold/100)
+```
+
+\newpage
+
+# ***`r CourseNameLong `***:  
+
+## Data sets
+
+```{r LoadData}
+# Parse the data folder to find the latest files 
+
+#### Feedback  File
+# --> use Comma separated values
+
+list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",CourseName,"*")),
+                       full.names = TRUE,recursive = TRUE)
+name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
+
+# Normal take this one
+data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+```
+
+
+```{r LoadDataDirect}
+# Date of the last file found
+FileDate <-as_date(file.mtime(name_last_feedback))
+
+```
+
+```{r RenameVars}
+# For F2F courses (MS FORMS)
+
+data.feedback <- data.feedback %>%
+  rename(
+    ResponseNumber = ID,
+    Relevance1 = The.information.from.this.training.is.relevant.to.my.present.work.assignment.,
+    Relevance2 = The.level.of.the.training.content.was.appropriate.for.my.professional.background..it.was.not.too.advanced.or.too.elementary..,
+    Relevance3 = The.scope.of.the.training.was.appropriate..it.covered.the.information.provided.adequately..,
+    Relevance_comments = Please.share.comments.and.suggestions.on.how.to.improve.the.relevance.of.the.training.to.your.work.,
+    
+    Effectiveness1 = The.training.effectively.enhanced.my.knowledge.and.skills,
+    Effectiveness2 = The.content.covered.in.the.training.was.arranged.in.a.clear.and.logical.manner..,
+    Effectiveness3 = The.facilitation.method.was.appropriate.and.effective.,
+    Effectiveness4 = My.confidence.has.improved.in.applying.the.knowledge.received.in.my.work.,
+    Effectiveness_comments = X.Please.share.comments.and.suggestions.on.how.to.improve.the.effectiveness.of.the.course.in.enhancing.your.skills.and.knowledge.,
+    
+    Logistics_open = Would.you.like.to.share.some.feedback.on.travel.arrangements.,
+    Other_comments = Other.feedback.you.would.like.to.share.,
+    
+    Improve_Comments = Please.share.any.additional.comments...recommendations.on.how.to.improve.this.training.,
+    Topics_Comments = Which.topics.were.not.covered.to.the.extent.that.you.would.have.expected..
+  )
+
+```
+
+
+```{r}
+# data.feedback <- data.feedback %>%
+#   filter(!if_any(where(is.character), ~ str_detect(., "Xtophe")))    # remove My test evaluation
+
+NbTotal <- nrow(data.feedback)
+```
+
+
+Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form*^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
+
+
+```{r NonUnicode}
+# Data cleaning 
+# remove comments written in Chinese (maybe not necessary since we imported in utf-8)
+#data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+# data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+
+```
+
+
+```{r TransformFactors}
+# Transforming answers into factors
+library(purrr)
+
+# Define a function to harmonize the answers
+harmonize_answers <- function(answer) {
+  answer <- tolower(answer)
+  if (grepl("strongly agree", answer)) {
+    return("Strongly agree")
+  } else if (grepl("somewhat agree", answer)) {
+    return("Somewhat agree")
+  } else if (grepl("strongly disagree", answer)) {
+    return("Strongly disagree")
+  } else if (grepl("disagree", answer)) {
+    return("Disagree")
+  } else if (grepl("agree", answer)) {
+    return("Agree")
+  } else {
+    return(NA)
+  }
+}
+
+# Define a function to convert a variable into a factor with 6 levels
+factor_6_levels <- function(variable) {
+  variable <- factor(variable, levels = c("Strongly disagree", "Disagree", "Somewhat disagree", "Somewhat agree", "Agree", "Strongly agree"))
+  return(variable)
+}
+
+```
+
+
+```{r GraphicFunction}
+library(rlang)
+Response_plot <- function(data, xvar, title) {
+  # Harmonize the answers for each variable
+  data[[xvar]]<- sapply(data[[xvar]], harmonize_answers)
+
+  # Convert each variable into a factor with 6 levels
+   data[[xvar]] <- factor_6_levels( data[[xvar]])
+   
+  # Compute the percentages
+  data<- data %>%
+  group_by(!!sym(xvar)) %>%
+  summarise(n = n()) %>%
+  mutate(percent = n / sum(n) * 100)
+   
+  # Graphic
+  ggplot(data)+
+  aes_string(x= xvar, y = "n") +
+  # geom_histogram(stat = "count", fill = SIAP.color, alpha = 0.5) +
+  geom_col(fill = SIAP.color, alpha = 0.5) +
+  geom_text(aes(label = paste0(round(percent, 1), "%")), hjust = 1.1, color = "white") +
+  ggtitle(paste(title)) +
+  coord_flip() +
+  theme_minimal( ) +
+ theme(legend.position = "none", 
+       plot.title = element_text(size = 10))
+}
+```
+
+
+```{r SurveyNewFormat}
+# Creating Graphics
+## Relevance: (3 questions)
+
+G_R1 <- Response_plot(data.feedback, "Relevance1", "The training was relevant to my work.")
+G_R2 <- Response_plot(data.feedback, "Relevance2", "The level of e-learning course content was \n appropriate for my professional background")
+G_R3 <- Response_plot(data.feedback, "Relevance3", "The scope of the e-learning course was appropriate" )
+
+## Effectiveness: (4 questions)
+
+G_E1 <- Response_plot(data.feedback, "Effectiveness1", "The training effectively enhanced my knowledge \n and skills.")
+G_E2 <- Response_plot(data.feedback, "Effectiveness2", "The content covered in the training was arranged \n in a clear and logical manner.")
+G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was appropriate and effective.")
+G_E4 <- Response_plot(data.feedback, "Effectiveness4", "My confidence has improved in applying \n the training  received in my work.")
+
+```
+
+
+#  Evaluation of the different dimensions of the course
+
+We asked the participants to value their experience on the course using a 5-level scale, on  different dimensions (*Knowledge, Usefulness, Quality*,...) 
+
+
+- **Relevance**: (3 questions)
+- **Effectiveness**: (4 questions)
+
+
+## Relevance
+
+
+```{r GraphicsRelev, fig.height=6}
+all.R<- G_R1 / G_R2 /G_R3 
+all.R + 
+  plot_annotation(title = 'Relevance of the course',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+## Effectiveness
+
+
+```{r GraphicsEff, fig.height=6}
+all.E <- (G_E1 | G_E2) /(G_E3 | G_E4) 
+all.E + 
+  plot_annotation(title = 'Effectiveness of the course',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+
+
+
+
+<!-- # Consistency of the responses -->
+
+```{r textdata}
+
+# More radical:Remove rows where any string column contains Chinese characters
+data.feedback.cleanned <- data.feedback %>%
+  filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
+  filter(!if_any(where(is.character), ~ str_detect(., "弄"))) 
+
+
+data.text <- data.feedback.cleanned %>%
+  select(matches("open|comment", ignore.case = TRUE))
+
+
+data.survey <- data.feedback.cleanned %>%
+  select(matches("Relevance|Effectiveness|Efficiency"))
+
+```
+
+
+```{r Likert1}
+# Building an export for SIAP's compilation 
+CourseYear <- year(dmy(CourseStartDate))
+
+# Define the correct Likert scale order
+likert_levels <- c(
+  "Strongly disagree",
+  "Disagree",
+  "Somewhat disagree",
+  "Somewhat agree",
+  "Agree",
+  "Strongly agree"
+)
+
+# Counting relevance: Relevance1
+Dt1 <- data.feedback %>%
+  # Make sure Relevance1 is a factor with all desired levels
+  mutate(Relevance1 = factor(Relevance1,
+                                 levels = likert_levels,
+                                 ordered = TRUE)) %>%
+  # Count occurrences (zeros will appear for missing levels)
+  count(Relevance1, name = "C1") %>%
+  complete(Relevance1 = likert_levels, fill = list(C1 = 0)) %>%  # Adding zeros! 
+ # Ensure factor is still ordered
+  mutate(Relevance1 = factor(Relevance1,
+                                 levels = likert_levels,
+                                 ordered = TRUE)) %>%
+  arrange(Relevance1)%>%
+  pull(C1)
+
+```
+
+
+```{r Likert2}
+# For report on confidence =  Effectiveness2
+Dt2 <- data.feedback %>%
+  # Make sure Effectiveness2 is a factor with all desired levels
+  mutate(Effectiveness2 = factor(Effectiveness2,
+                                 levels = likert_levels,
+                                 ordered = TRUE)) %>%
+  # Count occurrences (zeros will appear for missing levels)
+  count(Effectiveness2, name = "C2") %>%
+  complete(Effectiveness2 = likert_levels, fill = list(C2 = 0)) %>%
+ # Ensure factor is still ordered
+  mutate(Effectiveness2 = factor(Effectiveness2,
+                                 levels = likert_levels,
+                                 ordered = TRUE)) %>%
+  arrange(Effectiveness2)%>%
+  pull(C2)
+
+```
+
+
+
+
+```{r ExportSIAP}
+# Combining all information 
+toexport <- cbind(CourseNameLong, CourseYear, CourseStartDate, CourseEndDate,
+                  "-", "E-learn", "methodology", "EL", NbTotal, "NB-fem",  
+                  t(Dt1),"", "CtrlV", "CtrlV",t(Dt2))
+
+# save the file 
+write.xlsx(toexport,
+           file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
+
+```
+
+
+
+```{r}
+# To do  compute the 2 percentages needed for reporting 
+
+RelevancePerc <- round((100 *(Dt1[5] +Dt1[6])/ NbTotal),2)
+
+ConfidencePerc <- round((100 *(Dt2[5] +Dt2[6])/ NbTotal),2)
+
+```
+
+To the questions: 
+
+- *"The training was relevant to my work"*: **`r RelevancePerc`** %  answered they  “Agree” or “Strongly Agree”, and 
+- *"My confidence has improved"*: **`r ConfidencePerc`** %  answered they  “Agree” or “Strongly Agree”.
+
+These numbers will be reported in SIAP's global courses data base. 
+
+
+# Text analysis from the open fields
+
+```{r Questions}
+Text.R <- "Please share comments and suggestions on how to improve the relevance of the training to your work. "
+Text.E <- "Please share comments and suggestions on how to improve the effectiveness of the course in enhancing your skills and knowledge."
+Text.C <- "Please share further comments and suggestions, if any, on logistical arrangements of the e-learning course."
+Text.F <-"Please let us know of any other comments you would like to share with us about the course."
+
+
+```
+
+Free-text comments are probably the most valuable elements for lecturers as suggestions and relevant critics can be spotted in these comments. 
+
+
+
+We provide here a first descriptive analysis of the comments received. This analysis is quite limited, but allows to spot some of the most important terms used by the participants in their comments. 
+
+
+```{r }
+# from https://www.r-bloggers.com/2021/05/sentiment-analysis-in-r-3/
+
+
+# Get text corpus
+# remove some specific terms (does not work inside sentences)
+data.text <- data.text %>%
+   mutate_all(~gsub("use |machine |learning| learned|can| training|
+                    |course| will |data| work | Visualization | thank ", "", .))
+```
+
+
+```{r TextCleaning}
+
+# Words to remove
+words_to_remove <- c("use", "can", "training","work", "help", "however",
+                     "thank", "content", "platform", "maybe", "day",
+                     "online","course", "will", "learned", "knowledge",
+                     "machine", "learning", "statistics",
+                     "data",   "Visualization","Visualizations", "rap")
+
+# Function to remove words from a single variable (from OpenAI)
+remove_words <- function(text, words) {
+  pattern <- paste0("\\b", paste(words, collapse = "|"), "\\b")
+  text <- gsub(pattern, "", text, ignore.case = TRUE)
+  text
+}
+
+# Apply the function to each variable in the data frame using mutate_all
+data.text <- data.text %>%
+  mutate_all(~ remove_words(., words_to_remove))
+
+
+```
+
+
+## Word cloud on open comments fields
+
+```{r TextRelevance}
+# Create corpus
+
+#All.Comments.R <- rbind(data.text$Relevance_comments, data.text$FinalComments)
+
+All.Comments.R <- unlist(data.text, use.names = FALSE)
+
+corpus.R <- iconv(All.Comments.R)
+corpus.R <- Corpus(VectorSource(corpus.R))
+
+# Clean text
+corpus.R <- tm_map(corpus.R, tolower)
+corpus.R <- tm_map(corpus.R, removePunctuation)
+corpus.R <- tm_map(corpus.R, removeNumbers)
+
+cleanset.R <- tm_map(corpus.R, removeWords, stopwords('english'))
+# inspect(cleanset.R[1:5])
+
+#Text stemming – which reduces words to their root form
+#cleanset.R <- tm_map(cleanset.R, stemDocument)
+cleanset.R <- tm_map(cleanset.R, stripWhitespace)
+
+# we reduce the dimension here 
+#cleanset.R <- cleanset.R[1:100]
+
+```
+
+```{r TopWordsRelevance, fig.height=6, results ='hide', fig.show='hide'}
+### NO FIGURE SHOWED HERE !!!
+
+Terms.R <- TermDocumentMatrix(cleanset.R)
+Terms.R <- as.matrix(Terms.R)
+
+Words.R <- rowSums(Terms.R)
+
+# Filter 
+Words.R <- subset(Words.R, Words.R>=3)
+
+barplot(Words.R,
+        main = "Most popular words (Results and Comments)", 
+        # sub = "Relevance and Effectiveness",
+        #xlim = c(0, 100), 
+        #ylim = c(0, 100), 
+        las = 2,
+        horiz=TRUE,
+        col = SIAP.color)
+
+```
+
+```{r}
+
+Words.R <- sort(rowSums(Terms.R), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(Words.R),
+          freq = Words.R,
+          max.words = 150,
+          random.order = F,
+          min.freq = 2,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(3, 0.6),
+          rot.per = 0.2)
+```
+
+
+```{r textexport}
+# Export all Comments
+# But remove  lines with repeated words
+
+remove_words <- c("no", "none", "nothing")
+
+# Triming
+text.export <- data.text %>%
+  filter(!if_all(everything(), ~ is.na(.) | str_trim(.) == "" | 
+                   str_to_lower(.) %in% remove_words))
+
+# Creating worksheet
+wb <- createWorkbook()
+addWorksheet(wb, "Sheet 1")
+writeData(wb, "Sheet 1", text.export)
+
+# Set fixed widths 
+setColWidths(wb, "Sheet 1", cols = 1:ncol(text.export), widths = 30)
+
+# Create a wrap-text style
+wrap_style <- createStyle(wrapText = TRUE, valign = "top")  # optional: align to top
+
+# Apply style to all cells
+addStyle(wb, "Sheet 1",
+         style = wrap_style,
+         rows = 1:(nrow(text.export) + 1),  # +1 includes the header
+         cols = 1:ncol(text.export),
+         gridExpand = TRUE)
+# Export
+saveWorkbook(wb, file=paste("Output/",CourseName,"-comments-",ymd(Sys.Date()),".xlsx", sep=""),
+             overwrite = TRUE)
+
+```
+
+
+\newpage
+
+#  Sentiment analysis
+
+We  use *sentiment analysis* to determine  whether comments belong to some sort of  " predefined opinions". This method is basically a classification algorithm based on a reference list (*Word-Emotion Association Lexicon*, Mohammad and Turney 2013) where a large set of words are already classified as "positive", "negative", "happy", "sad", "angry", etc. We use here the  comments left by the participants on the free-text fields in the evaluation form  as the raw corpus of text.  
+
+Each comment is decomposed into words^[Only "meaningful"  extracted from each sentence, excluding stop words like  “the", "is", "at", "on”]  associated to its semantic root  ([*Stemmization*](https://towardsdatascience.com/stemming-lemmatization-what-ba782b7c0bd8) ) in order to reduce the complexity of the process. After cleaning each "meaningful"  word can be related (or not) to one class *i.e.* to a sentiment.
+
+Each comment can then be associated with one or several "sentiments" in a matrix form and some statistics can be derived, including a basic count for each category, as below:  
+
+
+```{r SentimentScores}
+library(syuzhet) # For generating sentiment scores
+
+# cleanset <- c(unlist(cleanset.R),unlist(cleanset.C))
+
+cleanset <- c(unlist(cleanset.R))
+# This takes time
+scores <- get_nrc_sentiment(cleanset)
+
+
+
+# The tidytext version consist of matching with NRC sentiment source
+# see https://ladal.edu.au/sentiment.html
+# nrc <-tidytext::get_sentiments("nrc")
+```
+
+
+```{r}
+counts <-colSums(scores)
+barplot(counts, horiz = TRUE, 
+        col = "lightblue", 
+        xlim = c(0, max(counts) * 1.1), 
+        las = 2,
+        border = NA,
+        main = "Sentiment Scores (All text) ")
+
+text(x = counts, 
+     y = 1:length(counts), 
+     labels = paste0(names(counts), ": ", counts), 
+     col = "blue", pos = 3)
+```
+
+
+\newpage
+
+# Comments from learners
+
+```{r nbAnswers}
+# Nb Answers shown 
+NbAnswers <-30
+
+```
+
+
+We present here the  *comments* for `r  nrow(data.feedback)` responses in 2 Tables.  
+
+
+```{r ResultTable1}
+# First table 
+
+data.text %>%
+  select( Relevance_comments, Effectiveness_comments , Logistics_open) %>%
+  kable(
+    caption = paste(" Comments on Relevance, efficiency, Logisitcs from", NbTotal, "learners"),
+    booktabs = TRUE,
+    longtable = TRUE,
+    escape = FALSE
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    font_size = 9  # smaller font to fit wide tables
+  ) %>%
+  # Set all 6 columns to a fixed width and allow wrapping
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "5cm") %>%
+  column_spec(3, width = "5cm") %>%
+  row_spec(0, bold = TRUE)  # optional: make header bold
+
+
+```
+
+\newpage
+
+```{r ResultTable2}
+# second  table 
+
+data.text %>%
+  select(Improve_Comments, Topics_Comments, Other_comments ) %>%
+  kable(
+    caption = paste("Comments on Topics and Improvements from", NbTotal, "learners"),
+    booktabs = TRUE,
+    longtable = TRUE,
+    escape = FALSE
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    font_size = 9  # smaller font to fit wide tables
+  ) %>%
+  # Set all 6 columns to a fixed width and allow wrapping
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "5cm") %>%
+  column_spec(3, width = "5cm") %>%
+  row_spec(0, bold = TRUE)  # optional: make header bold
+
+
+```
+
+\newpage
+
+
+
+
+# Conclusion 
+
+Finally, to the questions: 
+
+- *"The training was relevant to my work"*: **`r RelevancePerc`** %  answered they  “Agree” or “Strongly Agree”, and 
+- *"My confidence has improved"*: **`r ConfidencePerc`** %  answered they  “Agree” or “Strongly Agree”.
+
+These numbers will be reported in SIAP's global courses data base. 
+
+```{r reportexport, message=FALSE, warning=FALSE, echo = FALSE, results='hide',}
+# This will copy the previous feedback report not the current one
+library(here)
+Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
+# 
+# Export a copy with course name
+file.copy(from = here("FeedbackReport.pdf"),
+          to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
+
+
+
+```
+
+```{r}
+ knitr::knit_exit()
+```
+
+
+\newpage
+
+## Answers for  *`r Text.C`*
+```{r CommentsTableN}
+
+data.num %>%
+  filter(str_count(Comments) >20) %>%
+  arrange(Total) %>%    # Lowest Total first
+  head(n= NbAnswers )%>%
+  select(Total, Comments)%>%
+  filter(xfun::is_ascii(Comments)== T) %>%   # remove Chinese pcp
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste("Most negative learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE) %>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
+
+```{r CommentsTableP}
+
+data.num %>%
+  filter(Total>15 &  str_count(Comments) >20) %>%
+  arrange(desc(Total)) %>%    # Highest Total first
+  head(n= NbAnswers )%>%
+  select(number, Comments)%>%
+  filter(xfun::is_ascii(Comments)== T)%>%   # remove Chinese characters
+kable( ,
+       col.names = c("Id", "Comments"), 
+       caption = paste("Most positive learners \n"),
+       booktabs = TRUE,
+       longtable= TRUE)%>%
+  kable_styling(full_width = FALSE) %>%
+  column_spec(1, width ="1cm") %>%
+  column_spec(2 ,width = "30em")
+
+
+```
+
+
+
+
+```{r EXIT}
+knitr::knit_exit()
+```
+
