@@ -51,7 +51,6 @@ SIAP.color <- "#0385a8"
 
 library(tidyverse)
 library(stringr)
-# library(dplyr)
 # library(tidyr)
 # library(forcats)
 library(lubridate)
@@ -93,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 20
+i.course <- 19
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -146,26 +145,60 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 ```{r RenameVars}
 # For F2F courses (MS FORMS)
 
+# data.feedback <- data.feedback %>%
+#   rename(
+#     ResponseNumber = ID,
+#     Relevance1 = The.information.from.this.training.is.relevant.to.my.present.work.assignment.,
+#     Relevance2 = The.level.of.the.training.content.was.appropriate.for.my.professional.background..it.was.not.too.advanced.or.too.elementary..,
+#     Relevance3 = The.scope.of.the.training.was.appropriate..it.covered.the.information.provided.adequately..,
+#     Relevance_comments = Please.share.comments.and.suggestions.on.how.to.improve.the.relevance.of.the.training.to.your.work.,
+# 
+#     Effectiveness1 = The.training.effectively.enhanced.my.knowledge.and.skills,
+#     Effectiveness2 = The.content.covered.in.the.training.was.arranged.in.a.clear.and.logical.manner..,
+#     Effectiveness3 = The.facilitation.method.was.appropriate.and.effective.,
+#     Effectiveness4 = My.confidence.has.improved.in.applying.the.knowledge.received.in.my.work.,
+#     Effectiveness_comments = X.Please.share.comments.and.suggestions.on.how.to.improve.the.effectiveness.of.the.course.in.enhancing.your.skills.and.knowledge.,
+# 
+#     Logistics_open = Would.you.like.to.share.some.feedback.on.travel.arrangements.,
+#     Other_comments = Other.feedback.you.would.like.to.share.,
+# 
+#     Improve_Comments = Please.share.any.additional.comments...recommendations.on.how.to.improve.this.training.,
+#     Topics_Comments = Which.topics.were.not.covered.to.the.extent.that.you.would.have.expected..
+#   )
+
+```
+
+
+```{r}
+# robust renaming approach
+
 data.feedback <- data.feedback %>%
-  rename(
-    ResponseNumber = ID,
-    Relevance1 = The.information.from.this.training.is.relevant.to.my.present.work.assignment.,
-    Relevance2 = The.level.of.the.training.content.was.appropriate.for.my.professional.background..it.was.not.too.advanced.or.too.elementary..,
-    Relevance3 = The.scope.of.the.training.was.appropriate..it.covered.the.information.provided.adequately..,
-    Relevance_comments = Please.share.comments.and.suggestions.on.how.to.improve.the.relevance.of.the.training.to.your.work.,
-    
-    Effectiveness1 = The.training.effectively.enhanced.my.knowledge.and.skills,
-    Effectiveness2 = The.content.covered.in.the.training.was.arranged.in.a.clear.and.logical.manner..,
-    Effectiveness3 = The.facilitation.method.was.appropriate.and.effective.,
-    Effectiveness4 = My.confidence.has.improved.in.applying.the.knowledge.received.in.my.work.,
-    Effectiveness_comments = X.Please.share.comments.and.suggestions.on.how.to.improve.the.effectiveness.of.the.course.in.enhancing.your.skills.and.knowledge.,
-    
-    Logistics_open = Would.you.like.to.share.some.feedback.on.travel.arrangements.,
-    Other_comments = Other.feedback.you.would.like.to.share.,
-    
-    Improve_Comments = Please.share.any.additional.comments...recommendations.on.how.to.improve.this.training.,
-    Topics_Comments = Which.topics.were.not.covered.to.the.extent.that.you.would.have.expected..
-  )
+  rename_with(~ "Relevance1",
+              .cols = matches("*relevant.*", ignore.case = TRUE))%>%
+  rename_with(~ "Relevance2",
+              .cols = matches("*professional.*background", ignore.case = TRUE))%>%
+  rename_with(~ "Relevance3",
+              .cols = matches("scope.*training", ignore.case = TRUE)) %>%
+  rename_with(~ "Relevance_comments",
+              .cols = matches("comments.*relevance.*training", ignore.case = TRUE))%>%
+  rename_with(~ "Effectiveness1",
+              .cols = matches(".effectively.enhanced.*knowledge", ignore.case = TRUE))%>%
+  rename_with(~ "Effectiveness2",
+              .cols = matches(".content.*.clear.*logical", ignore.case = TRUE))%>%
+  rename_with(~ "Effectiveness3",
+              .cols = matches(".method", ignore.case = TRUE))%>%
+  rename_with(~ "Effectiveness4",
+              .cols = matches(".confidence", ignore.case = TRUE)) %>%
+  rename_with(~ "Effectiveness_comments",
+              .cols = matches(".comments.*.effectiveness.*", ignore.case = TRUE)) %>%
+  rename_with(~ "Logistics_open",
+              .cols = matches(".feedback.*.travel|logistic", ignore.case = TRUE)) %>%
+  rename_with(~ "Other_comments",
+             .cols = matches(".additional|.other.*comment*", ignore.case = TRUE))%>%
+  # rename_with(~ "Improve_Comments",
+  #             .cols = matches(".improve*", ignore.case = TRUE)) %>%
+  rename_with(~ "Topics_Comments",
+              .cols = matches(".topics.were.not*", ignore.case = TRUE))
 
 ```
 
@@ -412,6 +445,12 @@ To the questions:
 - *"My confidence has improved"*: **`r ConfidencePerc`** %  answered they  “Agree” or “Strongly Agree”.
 
 These numbers will be reported in SIAP's global courses data base. 
+
+
+
+```{r}
+ knitr::knit_exit()
+```
 
 
 # Text analysis from the open fields
@@ -697,7 +736,7 @@ library(here)
 Report.name <- paste0("Feedback-", CourseName,"-", FileDate)
 # 
 # Export a copy with course name
-file.copy(from = here("FeedbackReport.pdf"),
+file.copy(from = here("FeedbackReport-F2F.pdf"),
           to = paste0(here("Output/Reports"),"/",Report.name,".pdf"),overwrite = TRUE)
 
 
@@ -705,7 +744,7 @@ file.copy(from = here("FeedbackReport.pdf"),
 ```
 
 ```{r}
- knitr::knit_exit()
+ # knitr::knit_exit()
 ```
 
 
