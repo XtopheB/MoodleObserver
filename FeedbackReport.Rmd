@@ -4,15 +4,6 @@ subtitle: ""
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
-  word_document:
-    toc: no
   html_document:
     df_print: paged
     toc: yes
@@ -21,6 +12,15 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+  word_document:
+    toc: no
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -71,14 +71,12 @@ library(wesanderson)
 library(patchwork)
 library(wordcloud)
 
-
 #Text analysis
 library(stringr)        
 library(tm)
 ### using Tidytext
 library(tidytext)  
 library(textdata)
-
 
 # Export
 library(openxlsx)
@@ -94,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 18
+i.course <- 20
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -133,7 +131,18 @@ list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",Cou
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
 
+# Normal take this one
 data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+```
+
+
+```{r LoadDataDirect}
+
+library(readxl)
+# data.feedback <- readxl::read_excel("Data/Feedback-DataVizAstana2025.xlsx")
+
+# data.feedback <- openxlsx::read.xlsx("Data/Feedback-DataVizAstana2025.xlsx")
+
 #data.feedback <- read.csv(name_last_feedback, locale = locale(encoding = "Latin1"))
 
 # Date of the last file found
@@ -163,8 +172,8 @@ new_colnames <- colnames(data.feedback) %>%
     }
   })
 
-# Assign the new column names back to the data frame
-colnames(data.feedback) <- new_colnames
+# Assign the new column names back to the data frame 
+colnames(data.feedback) <- new_colnames   # <- New names may be blank causing errors...
 
 
 
@@ -172,8 +181,8 @@ colnames(data.feedback) <- new_colnames
 
 
 ```{r}
-data.feedback <- data.feedback %>%
-  filter(!if_any(where(is.character), ~ str_detect(., "Xtophe")))    # remove My test evaluation
+# data.feedback <- data.feedback %>%
+#   filter(!if_any(where(is.character), ~ str_detect(., "Xtophe")))    # remove My test evaluation
 
 NbTotal <- nrow(data.feedback)
 ```
@@ -188,7 +197,7 @@ Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** fro
 # remove comments written in Chinese (maybe not necessary since we imported in utf-8)
 #data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 
-data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+# data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
 
 
 
