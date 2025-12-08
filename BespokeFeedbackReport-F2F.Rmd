@@ -1,0 +1,455 @@
+---
+title: "Feedback Report (F2F courses - Bespoke)"
+subtitle: ""
+author: "Christophe Bontemps"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
+  word_document:
+    toc: no
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: true
+    keep_md: yes
+    code_folding: show
+    fig_width: 6.5
+    fig_height: 4
+always_allow_html: true
+---
+
+
+```{r Knitr_Global_Options, include=FALSE, cache=FALSE, echo=FALSE}
+library(knitr)
+
+# No code is shown here
+knitr::opts_chunk$set(echo = FALSE)
+
+# Other options used here 
+opts_chunk$set(warning = FALSE, message = FALSE,
+               fig.pos = "!H", fig.align = "center",
+               autodep = TRUE, tidy = FALSE, cache = FALSE)
+
+# In case of "weird" problem, uncomment the line below (cache issue)
+# opts_chunk$set(cache.rebuild=TRUE) 
+
+# My colors:
+SIAP.color <- "#0385a8"
+```
+
+`r if(knitr:::pandoc_to() == "latex") {paste("\\large")}` 
+
+
+```{r libraries}
+# Analysis
+
+library(tidyverse)
+library(stringr)
+# library(tidyr)
+# library(forcats)
+library(lubridate)
+
+# Nice presentation of results
+library(Cairo)
+library(papeR)
+library(xtable)
+library(data.table)
+library(kableExtra)
+library(modelsummary)
+
+# Graphics 
+
+library(plotly)
+library(wesanderson)
+library(patchwork)
+library(wordcloud)
+
+#Text analysis
+library(stringr)        
+library(tm)
+
+### using Tidytext
+library(tidytext)  
+library(textdata)
+
+# Export
+library(openxlsx)
+
+```
+
+
+```{r}
+# Loading All the courses and their features 
+
+ AllCourses <- read.csv("AllCoursesSIAP.csv")
+```
+
+```{r LoadedParameters}
+# Loading course parameters. 
+i.course <- 21
+
+# Specific parameters
+CourseName <- as.character(AllCourses[i.course, "Ref"])
+CourseNameLong <- as.character(AllCourses[i.course, "Name"])
+NbModules <- as.numeric(AllCourses[i.course, "NbMod"])
+GradeMax <- as.numeric(AllCourses[i.course, "GradeMax"])
+PercentThreshold <- as.numeric(AllCourses[i.course, "Threshold"])
+WebinarDay <- as.numeric(AllCourses[i.course, "Webinar"])
+
+# A bit tricky for the date...
+CourseStartDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Starts)
+CourseEndDate <- AllCourses %>% 
+  slice(i.course) %>% 
+  pull(Ends)
+
+
+# Additional parameters 
+GradeThreshold <-GradeMax * (PercentThreshold/100)
+```
+
+\newpage
+
+# ***`r CourseNameLong `***:  
+
+## Data sets
+
+```{r LoadData}
+# Parse the data folder to find the latest files 
+
+#### Feedback  File
+# --> use Comma separated values
+
+list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",CourseName,"*")),
+                       full.names = TRUE,recursive = TRUE)
+name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
+
+# Normal take this one
+data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+```
+
+
+```{r LoadDataDirect}
+# Date of the last file found
+FileDate <-as_date(file.mtime(name_last_feedback))
+
+```
+
+
+```{r}
+# data.feedback <- data.feedback %>%
+#   filter(!if_any(where(is.character), ~ str_detect(., "Xtophe")))    # remove My test evaluation
+
+NbTotal <- nrow(data.feedback)
+```
+
+
+Our analysis uses the data collected on **`r format(FileDate, "%A %d %B")`** from the  *Feedback Form*^[File used is  *`r name_last_feedback`*]. A total of  **`r nrow(data.feedback)`** different learners provided **anonymously** their feedback and comments on the course.^[As of `r format(FileDate, "%A %d %B")`]
+
+
+```{r NonUnicode}
+# Data cleaning 
+# remove comments written in Chinese (maybe not necessary since we imported in utf-8)
+#data.feedback$Results  <- str_replace_all(data.feedback$Results, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+# data.feedback$Comments  <- str_replace_all(data.feedback$Comments, "[\u2E80-\u2FD5\u3190-\u319f\u3400-\u4DBF\u4E00-\u9FCC\uF900-\uFAAD]", "")
+
+
+```
+
+
+```{r TransformFactors}
+# Transforming answers into factors
+library(purrr)
+
+# Define a function to harmonize the answers
+harmonize_answers <- function(answer) {
+  answer <- tolower(answer)
+  if (grepl("strongly agree", answer)) {
+    return("Strongly agree")
+  } else if (grepl("somewhat agree", answer)) {
+    return("Somewhat agree")
+  } else if (grepl("strongly disagree", answer)) {
+    return("Strongly disagree")
+  } else if (grepl("disagree", answer)) {
+    return("Disagree")
+  } else if (grepl("agree", answer)) {
+    return("Agree")
+  } else {
+    return(NA)
+  }
+}
+
+# Define a function to convert a variable into a factor with 6 levels
+factor_6_levels <- function(variable) {
+  variable <- factor(variable, 
+                     levels = c(
+                       "Strongly disagree",
+                       "Disagree",
+                       "Somewhat disagree",
+                       "Somewhat agree",
+                       "Agree",
+                       "Strongly agree"))
+  return(variable)
+}
+```
+
+
+```{r TransformFactors4}
+
+
+# Define a function to harmonize the answers
+harmonize_answers_4 <- function(answer) {
+  answer <- tolower(answer)
+  if (grepl("very useful", answer)) {
+    return("Very useful")
+  } else if (grepl("useful", answer)) {
+    return("Useful")
+  } else if (grepl("Somewhat useful", answer)) {
+    return("Somewhat useful")
+  } else if (grepl("not useful", answer)) {
+    return("Not useful")
+  } else {
+    return(NA)
+  }
+}
+
+
+
+factor_4_levels_Useful <- function(variable) {
+  variable <- factor(variable, 
+                     levels = c(
+                       "Not useful",
+                       "Somewhat useful",
+                       "Useful",
+                       "Very useful"))
+  return(variable)
+}
+
+
+```
+
+```{r NewGraphicFunction}
+library(rlang)
+response_plot_new <- function(data, idx, levels) {
+  
+  # ---- 1. Variable name from index ----
+  xvar <- names(data)[idx]
+  
+  # ---- 2. Nice automatic title ----
+  title <- gsub("\\.", " ", xvar)
+  title <- stringr::str_squish(title)
+  
+ 
+  
+  # Convert to ordered factor with 6 levels
+  if (levels ==6){
+     
+    data[[xvar]] <- sapply(data[[xvar]], harmonize_answers)
+    data[[xvar]] <- factor_6_levels(data[[xvar]])
+  }
+  else
+  {
+    data[[xvar]] <- sapply(data[[xvar]], harmonize_answers_4)
+    data[[xvar]] <-factor_4_levels_Useful(data[[xvar]])
+  }
+  
+  # ---- 4. Count including empty factor levels ----
+  plotdata <- data %>%
+    count(.data[[xvar]], drop = FALSE) %>%
+    mutate(percent = n / sum(n) * 100)
+  
+  # Wrap the  title.
+  title_clean <- str_wrap(title, width = 30)
+  
+  # ---- 5. Plot ----
+  ggplot(plotdata, aes(x = .data[[xvar]], y = n)) +
+    geom_col(fill = SIAP.color, alpha = 0.5) +
+    geom_text(aes(label = paste0(round(percent, 1), "%")),
+              hjust = 1.1, color = "white") +
+    ggtitle(title_clean) +
+    coord_flip() +
+    labs(x = NULL)+
+    scale_x_discrete(drop = FALSE) +  # <<< KEY LINE to have 6 levels
+    scale_y_continuous(limits = c(0, NbTotal)) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(size = 10)
+    )
+}
+
+```
+
+```{r SurveyNewFormat}
+# Creating Graphics
+## Relevance: (4 questions)
+
+G_R1 <- response_plot_new(data.feedback, 7, 6)
+G_R2 <- response_plot_new(data.feedback, 8,6)
+G_R3 <- response_plot_new(data.feedback, 9,6)
+G_R4 <- response_plot_new(data.feedback, 10,6)
+
+## Sessions: (6 questions)
+
+G_S1 <- response_plot_new(data.feedback, 11, 4)
+G_S2 <- response_plot_new(data.feedback, 12, 4)
+G_S3 <- response_plot_new(data.feedback, 13, 4)
+G_S4 <- response_plot_new(data.feedback, 14, 4)
+G_S5 <- response_plot_new(data.feedback, 15, 4)
+G_S6 <- response_plot_new(data.feedback, 16, 4)
+
+```
+
+#  Evaluation of the different dimensions of the course
+
+We asked the participants to value their experience on the course using a 6-level scale, on  different dimensions (*Knowledge, Usefulness, Quality*,...) 
+
+
+- **Relevance**: (4 questions)
+- **Session by Session**: 
+
+## Relevance
+
+```{r GraphicsRelev, fig.height=6}
+all.R<- (G_R1 | G_R2) /(G_R3 | G_R4) 
+all.R + 
+  plot_annotation(title = 'About the course (Knowledge, Relevance, Quality) ',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+
+## Sessions
+
+We asked questions about the sessions
+
+```{r GraphicsEff, fig.height=6}
+all.S <- (G_S1 | G_S2) /(G_S3 | G_S4) /(G_S5 | G_S6) 
+all.S + 
+  plot_annotation(title = 'Session by Session answers',
+                  caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
+                  theme = theme(plot.title = element_text(size = 16))) 
+
+```
+\newpage
+
+# Free text answers from particpants
+
+
+```{r}
+feedback_text <- function(data, idx) {
+  
+  # Extract column name
+  colname <- names(data)[idx]
+  
+  # Extract the text column
+  comments <- data[[idx]]
+  
+  # Convert to character to avoid factor issues
+  comments <- as.character(comments)
+  
+  # Clean entries: remove empty, NA, and variations of "none"
+  comments_clean <- comments %>%
+    str_trim() %>%
+    na_if("") %>%
+    na_if("NA") %>%
+    na_if("N/A") %>%
+    na_if("n/a") %>%
+    na_if("N/a") %>%
+    na_if("None") %>%
+    na_if("none") %>%
+    na_if("NONe") %>%
+    na_if("Non") %>%
+    na_if("non") 
+  
+  # Remove NAs
+  comments_clean <- comments_clean[!is.na(comments_clean)]
+  
+  # If nothing left, return an empty tibble with a message
+  if (length(comments_clean) == 0) {
+    return(tibble(Comment = "No valid feedback provided."))
+  }
+  
+  # Extract raw column name
+  raw_title <- names(data)[idx]
+  
+  # Clean title: remove dots and format nicely
+  clean_title <- raw_title %>%
+    str_replace_all("\\.", " ") %>%
+    str_to_sentence()      # or str_to_title()
+  
+  
+  # Create a clean table with wrapped text
+  tbl <- tibble(
+    title = clean_title,
+    Comment = str_wrap(comments_clean, width = 80)  # adjust width if needed
+  )
+  
+  return(tbl)
+   
+}
+
+```
+
+
+```{r}
+# There are 3 free  text questions 
+comments1 <- feedback_text(data.feedback, 17)
+comments2 <- feedback_text(data.feedback, 18)
+comments3 <- feedback_text(data.feedback, 19)
+```
+
+
+**`r strwrap(comments1$title[1])`**
+
+```{r}
+kable(comments1$Comment, align = "l",
+      escape = TRUE) %>%
+    kable_styling(full_width = FALSE,
+                  position = "left") %>%
+    column_spec(1, width = "40em")
+```
+
+
+
+**`r strwrap(comments2$title[1])`**
+
+```{r}
+
+kable(comments2$Comment, align = "l",
+      escape = TRUE) %>%
+    kable_styling(full_width = FALSE,
+                  position = "left") %>%
+    column_spec(1, width = "40em")
+```
+
+
+**`r strwrap(comments3$title[1])`**
+
+```{r}
+
+kable(comments3$Comment, align = "l",
+      escape = TRUE) %>%
+    kable_styling(full_width = FALSE,
+                  position = "left") %>%
+    column_spec(1, width = "40em")
+```
+
+
+
+
+
+
+```{r}
+ knitr::knit_exit()
+```
+
+
