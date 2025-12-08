@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 19
+i.course <- 21
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -302,6 +302,9 @@ G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was 
 G_E4 <- Response_plot(data.feedback, "Effectiveness4", "My confidence has improved in applying \n the training  received in my work.")
 
 ```
+
+
+
 
 
 #  Evaluation of the different dimensions of the course
