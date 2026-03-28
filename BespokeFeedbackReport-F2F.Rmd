@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 21
+i.course <- 22
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -131,7 +131,7 @@ list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",Cou
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
 
-# Normal take this one
+# Normal take this one -->  Must be CSV!!
 data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
 ```
 
