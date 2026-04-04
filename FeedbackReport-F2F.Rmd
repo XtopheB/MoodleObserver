@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 21
+i.course <- 22
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -142,34 +142,7 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 
 ```
 
-```{r RenameVars}
-# For F2F courses (MS FORMS)
-
-# data.feedback <- data.feedback %>%
-#   rename(
-#     ResponseNumber = ID,
-#     Relevance1 = The.information.from.this.training.is.relevant.to.my.present.work.assignment.,
-#     Relevance2 = The.level.of.the.training.content.was.appropriate.for.my.professional.background..it.was.not.too.advanced.or.too.elementary..,
-#     Relevance3 = The.scope.of.the.training.was.appropriate..it.covered.the.information.provided.adequately..,
-#     Relevance_comments = Please.share.comments.and.suggestions.on.how.to.improve.the.relevance.of.the.training.to.your.work.,
-# 
-#     Effectiveness1 = The.training.effectively.enhanced.my.knowledge.and.skills,
-#     Effectiveness2 = The.content.covered.in.the.training.was.arranged.in.a.clear.and.logical.manner..,
-#     Effectiveness3 = The.facilitation.method.was.appropriate.and.effective.,
-#     Effectiveness4 = My.confidence.has.improved.in.applying.the.knowledge.received.in.my.work.,
-#     Effectiveness_comments = X.Please.share.comments.and.suggestions.on.how.to.improve.the.effectiveness.of.the.course.in.enhancing.your.skills.and.knowledge.,
-# 
-#     Logistics_open = Would.you.like.to.share.some.feedback.on.travel.arrangements.,
-#     Other_comments = Other.feedback.you.would.like.to.share.,
-# 
-#     Improve_Comments = Please.share.any.additional.comments...recommendations.on.how.to.improve.this.training.,
-#     Topics_Comments = Which.topics.were.not.covered.to.the.extent.that.you.would.have.expected..
-#   )
-
-```
-
-
-```{r}
+```{r Renaming}
 # robust renaming approach
 
 data.feedback <- data.feedback %>%
@@ -191,14 +164,20 @@ data.feedback <- data.feedback %>%
               .cols = matches(".confidence", ignore.case = TRUE)) %>%
   rename_with(~ "Effectiveness_comments",
               .cols = matches(".comments.*.effectiveness.*", ignore.case = TRUE)) %>%
-  rename_with(~ "Logistics_open",
-              .cols = matches(".feedback.*.travel|logistic", ignore.case = TRUE)) %>%
+  # rename_with(~ "Improve_Comments",
+  #             .cols = matches("*share*.improve*", ignore.case = TRUE)) %>%
+  # rename_with(~ "Logistics_open",
+  #             .cols = matches(".feedback.*.travel|logistic", ignore.case = TRUE)) %>%
+  rename_with(~ "Topics_Most",
+              .cols = matches(".topics.were.most*", ignore.case = TRUE)) %>%
+  rename_with(~ "Topics_Not",
+              .cols = matches(".topics.were.not*", ignore.case = TRUE)) %>%
+  rename_with(~ "Knowledge",
+              .cols = matches("knowledge*", ignore.case = TRUE)) %>%
   rename_with(~ "Other_comments",
              .cols = matches(".additional|.other.*comment*", ignore.case = TRUE))%>%
-  # rename_with(~ "Improve_Comments",
-  #             .cols = matches(".improve*", ignore.case = TRUE)) %>%
-  rename_with(~ "Topics_Comments",
-              .cols = matches(".topics.were.not*", ignore.case = TRUE))
+  rename_with(~ "Other_feedback",
+             .cols = matches("other.feedback*", ignore.case = TRUE))
 
 ```
 
@@ -302,15 +281,9 @@ G_E3 <- Response_plot(data.feedback, "Effectiveness3", "The training method was 
 G_E4 <- Response_plot(data.feedback, "Effectiveness4", "My confidence has improved in applying \n the training  received in my work.")
 
 ```
-
-
-
-
-
 #  Evaluation of the different dimensions of the course
 
 We asked the participants to value their experience on the course using a 5-level scale, on  different dimensions (*Knowledge, Usefulness, Quality*,...) 
-
 
 - **Relevance**: (3 questions)
 - **Effectiveness**: (4 questions)
@@ -341,25 +314,24 @@ all.E +
 ```
 
 
-
-
-
-<!-- # Consistency of the responses -->
-
-```{r textdata}
-
+```{r textcleaning}
 # More radical:Remove rows where any string column contains Chinese characters
 data.feedback.cleanned <- data.feedback %>%
   filter(!if_any(where(is.character), ~ str_detect(., "[\\p{Han}]"))) %>%
-  filter(!if_any(where(is.character), ~ str_detect(., "弄"))) 
+  filter(!if_any(where(is.character), ~ str_detect(., "弄")))
+```
 
 
-data.text <- data.feedback.cleanned %>%
-  select(matches("open|comment", ignore.case = TRUE))
-
-
+```{r textVSsurvey}
 data.survey <- data.feedback.cleanned %>%
   select(matches("Relevance|Effectiveness|Efficiency"))
+
+data.text <- data.feedback.cleanned %>%
+  select(matches("open|comment|feedback", ignore.case = TRUE))
+
+
+data.topic <- data.feedback.cleanned %>%
+  select(matches("topic", ignore.case = TRUE))
 
 ```
 
@@ -416,9 +388,6 @@ Dt2 <- data.feedback %>%
 
 ```
 
-
-
-
 ```{r ExportSIAP}
 # Combining all information 
 toexport <- cbind(CourseNameLong, CourseYear, CourseStartDate, CourseEndDate,
@@ -430,7 +399,6 @@ write.xlsx(toexport,
            file=paste("Output/",CourseName,"-SIAPlist-",ymd(Sys.Date()),".xlsx", sep=""))
 
 ```
-
 
 
 ```{r}
@@ -452,7 +420,7 @@ These numbers will be reported in SIAP's global courses data base.
 
 
 ```{r}
- knitr::knit_exit()
+ #knitr::knit_exit()
 ```
 
 
@@ -666,40 +634,13 @@ NbAnswers <-30
 ```
 
 
-We present here the  *comments* for `r  nrow(data.feedback)` responses in 2 Tables.  
+We present here the  *comments* for `r  nrow(data.feedback)` responses in 3 Tables.  
 
+## Comments on Topics (*most liked* and *not covered*)
 
-```{r ResultTable1}
-# First table 
-
-data.text %>%
-  select( Relevance_comments, Effectiveness_comments , Logistics_open) %>%
-  kable(
-    caption = paste(" Comments on Relevance, efficiency, Logisitcs from", NbTotal, "learners"),
-    booktabs = TRUE,
-    longtable = TRUE,
-    escape = FALSE
-  ) %>%
-  kable_styling(
-    full_width = FALSE,
-    font_size = 9  # smaller font to fit wide tables
-  ) %>%
-  # Set all 6 columns to a fixed width and allow wrapping
-  column_spec(1, width = "5cm") %>%
-  column_spec(2, width = "5cm") %>%
-  column_spec(3, width = "5cm") %>%
-  row_spec(0, bold = TRUE)  # optional: make header bold
-
-
-```
-
-\newpage
-
-```{r ResultTable2}
+```{r ResultTopics}
 # second  table 
-
-data.text %>%
-  select(Improve_Comments, Topics_Comments, Other_comments ) %>%
+data.topic %>%
   kable(
     caption = paste("Comments on Topics and Improvements from", NbTotal, "learners"),
     booktabs = TRUE,
@@ -711,9 +652,8 @@ data.text %>%
     font_size = 9  # smaller font to fit wide tables
   ) %>%
   # Set all 6 columns to a fixed width and allow wrapping
-  column_spec(1, width = "5cm") %>%
-  column_spec(2, width = "5cm") %>%
-  column_spec(3, width = "5cm") %>%
+  column_spec(1, width = "8cm") %>%
+  column_spec(2, width = "8cm") %>%
   row_spec(0, bold = TRUE)  # optional: make header bold
 
 
@@ -722,6 +662,56 @@ data.text %>%
 \newpage
 
 
+```{r ResultTable1}
+# First table 
+
+name_column_open <- names(data.text)
+
+data.text %>%
+  select( name_column_open[1:2]) %>%
+  kable(
+    caption = paste(" Comments on Relevance and efficiency from", NbTotal, "learners"),
+    booktabs = TRUE,
+    longtable = TRUE,
+    escape = FALSE
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    font_size = 9  # smaller font to fit wide tables
+  ) %>%
+  # Set all 6 columns to a fixed width and allow wrapping
+  column_spec(1, width = "8cm") %>%
+  column_spec(2, width = "8cm") %>%
+  row_spec(0, bold = TRUE)  # optional: make header bold
+
+
+```
+
+\newpage
+
+```{r ResultTable2}
+# First table 
+data.text %>%
+  select( name_column_open[3:4]) %>%
+  kable(
+    caption = paste(" Other comments from", NbTotal, "learners"),
+    booktabs = TRUE,
+    longtable = TRUE,
+    escape = FALSE
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    font_size = 9  # smaller font to fit wide tables
+  ) %>%
+  # Set all 6 columns to a fixed width and allow wrapping
+  column_spec(1, width = "8cm") %>%
+  column_spec(2, width = "8cm") %>%
+  row_spec(0, bold = TRUE)  # optional: make header bold
+
+
+```
+
+\newpage
 
 
 # Conclusion 
@@ -747,7 +737,7 @@ file.copy(from = here("FeedbackReport-F2F.pdf"),
 ```
 
 ```{r}
- # knitr::knit_exit()
+ knitr::knit_exit()
 ```
 
 
