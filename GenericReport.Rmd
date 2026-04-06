@@ -1571,7 +1571,7 @@ p <-Grades %>%
   ylim( c(0,GradeMax))+
   annotate("rect",
            xmin= NbActivities *0.8,  # Assuming participants should do  80% of activities
-           xmax = NbActivities-1,    
+           xmax = max(Grades$NbAct),    
            ymin = GradeThreshold,
            ymax = GradeMax,
            fill = "grey",  alpha = 0.1,
