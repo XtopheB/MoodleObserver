@@ -196,7 +196,9 @@ StringIdentiyingGrades <- "Total"  # Can be "total"
 
 ```{r listcountries}
 # Data used https://unstats.un.org/unsd/methodology/m49/overview/
-country_df <- read.csv("SourceData/UNSD-CountryCodes.csv", sep = ";")
+country_df <- read.csv("SourceData/UNSD-CountryCodes.csv",
+                       sep = ";" ,
+                       fileEncoding = "UTF-8")
 
 # Select relevant columns 
 country_df <- country_df %>% 
@@ -215,7 +217,9 @@ select(ISO.alpha2.Code, Country.or.Area, Region.Name)%>%
 list.logs<- list.files(path="Data/",pattern = glob2rx(paste0("logs*",CourseName,"*.csv")),
                        full.names = TRUE,recursive = TRUE)
 name_last_logs <- list.logs[which.max(file.mtime(list.logs))]
-data.logs <- read.csv(name_last_logs)
+# Loading log file
+data.logs <- read.csv(name_last_logs,
+                      fileEncoding = "UTF-8")
 
 
 # I have a strange pb with the name of the Time variable. fixing it quick and dirty mode !
