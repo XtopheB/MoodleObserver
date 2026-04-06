@@ -4,15 +4,6 @@ subtitle: "A generic report"
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
-  word_document:
-    toc: yes
   html_document:
     df_print: paged
     toc: yes
@@ -21,6 +12,15 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
+  word_document:
+    toc: yes
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -83,7 +83,7 @@ library(wesanderson)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 18
+i.course <- 23
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -93,10 +93,17 @@ GradeMax <- as.numeric(AllCourses[i.course, "GradeMax"])
 PercentThreshold <- as.numeric(AllCourses[i.course, "Threshold"])
 WebinarDay <- as.numeric(AllCourses[i.course, "Webinar"])
 
+
 # A bit tricky for the date...
 CourseStartDate <- AllCourses %>% 
   slice(i.course) %>% 
   pull(Starts)
+
+CourseDuration <- AllCourses %>%
+  filter(Id == i.course) %>%
+  mutate(DurationDays = dmy(Ends) - dmy(Starts),
+        DurationWeeks = interval(dmy(Starts), dmy(Ends)) / dweeks(1) )%>%
+  pull(DurationDays)
 
 # Additional parameters 
 GradeThreshold <-GradeMax * (PercentThreshold/100)
@@ -110,7 +117,7 @@ ModStartIdx <- c(1,10,27,36, 45, 57,67)  # Parameters
 
 
 ##  Define the string that identify the "Final" grade used for certification 
-StringIdentiyingGrades <- "Final"  # Can be "total"
+StringIdentiyingGrades <- "Total"  # Can be "total"
 
 ```
 
@@ -745,10 +752,11 @@ MinNbLearners <- 3
 
 # Automatic messages
 # Few learners by countries
-Message1  <- paste("For better readability, countries with less than",MinNbLearners+1,"participants have been removed\n")
+Message1  <- paste("For better readability, data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
+                   
 
 # Countries with too many participants 
-Message2 <- paste("data from", temp_country$Country[1], "(",temp_country$Learners[1], "obs) has been removed\n")
+Message2 <- paste("Countries with less than",MinNbLearners+1,"participants have been removed\n")
 
 # Full message
 message <- ifelse(cond,paste(Message1, Message2), Message1 )
@@ -1017,7 +1025,7 @@ The success rate can be analysed by country and gender.
 
 
 ```{r GraphSuccessByCountry}
-MinLearners <- 2
+MinLearners <- 3
 Learners %>%
  filter(Country != "" | Country != "NA") %>%
  filter(TotalReal > 0 | !is.na(TotalReal)) %>%
@@ -1197,7 +1205,7 @@ GradesPositive %>%
       caption = paste("(Excluding",NbStudentsNoShow, "participants with grade = 0) \n
                      (date:", format(FileDate, "%A %d %B") ,")"),
       subtitle = paste0(NbStudentsAboveThreshold," learners reached the threshold") )+
- annotate("rect", xmin = GradeThreshold, xmax = GradeMax,
+ annotate("rect", xmin = GradeThreshold, xmax = GradeMax+1,
                   ymin = 0, ymax = Ymax,
                   fill = SIAP.color , alpha = .2)+
  annotate("text", x = 1.2 * GradeThreshold, y = Ymax*0.75,
@@ -1396,9 +1404,9 @@ course.log %>%
 LearnersByActivity <- course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
-  mutate(ActID.lab = paste(ActNb,"-",Event.context), 
-         Actname = paste(ActNb, "-", Actname))%>%
-  #filter(ActNb <= NbModules )%>%
+  mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>% 
+  # mutate(Actname = paste(ActNb, "-", Actname)) %>%
+  # filter(ActNb <= NbModules )%>%
   group_by(ActID.lab) %>%
   summarise(Learners = n_distinct(User.full.name),
             ActivityName = as.factor(unique(Actname))) 
@@ -1721,17 +1729,20 @@ With **`r NbCertificates` certified learners**  out of  **`r paste0(NbLearners)`
 
 ```{r}
 # counting the number of optional reports completed
-
-
-NbProjects <- data.act  %>%
-  filter(Your.turn...Work.with.a.data.set.and.use..Machine.Learning =="Completed") %>%
+NbProjects <- data.act %>%
+  filter(if_all(contains("Assessment"), ~ . == "Completed")) %>%
   nrow()
+
+  
+# NbProjects <- data.act  %>%
+#   filter(Your.turn...Work.with.a.data.set.and.use..Machine.Learning =="Completed") %>%
+#   nrow()
 ```
 
 
-The optional data-based exercise has been completed by  **`r NbProjects`** participants and manually reviewed (*by your devoted lecturer* ;-) ), among which many files were not satisfactory or just random files uploaded in an attempt to gain some bonus points without producing anything. We also received very good and personalized reports, some using Python instead of the R template. 
+The **mandatory** data-based exercise has been completed by  **`r NbProjects`** participants and peer-reviewed, 
 
-The course was quite long (8 weeks), but we have not experienced too much attrition, and a good engagement in forums. Many participants shared their resources (ML case-studies), providing us with some new materials to examine. Finally, the  success rate is  **`r RealSuccessRate`** %  and similar to previous editions.
+The course was quite long ( `r as.numeric(CourseDuration)` days), but we have not experienced too much attrition, and a good engagement in forums. Many participants shared their resources (ML case-studies), providing us with some new materials to examine. Finally, the  success rate is  **`r RealSuccessRate`** %  and similar to previous editions.
 
 
 
