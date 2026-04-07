@@ -4,6 +4,15 @@ subtitle: ""
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
+  word_document:
+    toc: no
   html_document:
     df_print: paged
     toc: yes
@@ -12,15 +21,6 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
-  word_document:
-    toc: no
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 20
+i.course <- 23
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -486,7 +486,7 @@ data.survey <- data.feedback.cleanned %>%
 #   select(Gender,Knowledge:Usefulness) %>%
 #   mutate_if(is.numeric, as.factor) %>%
 # ggparcoord(
-#    columns = c(2:7), 
+#    columns = c(2:7),
 #    groupColumn = "Gender",
 #    scale = "globalminmax",
 #    order = "anyClass",
@@ -495,53 +495,15 @@ data.survey <- data.feedback.cleanned %>%
 #     ) +
 #  theme_minimal() +
 #   theme(
-#     plot.title = element_text(size=10), 
-#     axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
+#     plot.title = element_text(size=10),
+#     axis.text.x =  element_text(size=9, angle = 60, hjust = 1),
 #     #axis.text.x =  element_blank(),
 #     legend.position = "bottom"
 #   )
 ```
 
-```{r}
-# https://github.com/heike/ggpcp
-# install.packages("devtools")
-# remotes::install_github("heike/ggpcp")
-```
-
-<!--  We represent each evaluation by a line joining the score for each question. The line for a participant with always the same answer (e.g. "Strongly agree") should be horizontal. The  colors her reflect the gender. -->
-
-```{r}
-# library(ggpcp)
-# data.num %>%
-# mutate_if(is.numeric, as.factor) %>%
-# arrange(Knowledge, Content, Total)%>%
-# pcp_select(5:10) %>%
-#   pcp_scale(method = "uniminmax") %>%
-#   pcp_arrange(method="from-right") %>%
-#   ggplot(aes_pcp()) + 
-#     geom_pcp(aes(colour = Gender ),
-#              alpha = 0.6, axiswidth = c(0,0))+
-#     scale_colour_manual(values=c("darkorange", "steelblue", "grey")) +
-#     guides(colour=guide_legend(override.aes = list(alpha=1)))+
-#   # geom_pcp_labels() +
-#   labs(title = "Consistency of responses",
-#        caption = paste(" Each line is one response, ",
-#                        "based on", nrow(data.feedback), "responses"), 
-#        y = " Responses",
-#        x = "Topics in the form")+
-#   
-#  theme_minimal() +
-#   theme(
-#     plot.title = element_text(size=10), 
-#     axis.text.x =  element_text(size=9, angle = 60, hjust = 1), 
-#     #axis.text.x =  element_blank(),
-#     legend.position = "right"
-#   ) 
-  
 
 
-
-```
 
 # Text analysis from the open fields
 
