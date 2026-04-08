@@ -279,7 +279,9 @@ data.logs <- data.logs[!( data.logs$User.full.name=="Christophe Bontemps" |
                           data.logs$User.full.name=="Ni Ni Thein" |
                           data.logs$User.full.name=="LMS SIAP" |
                           data.logs$User.full.name=="Sinovia Moonie" |
+                          data.logs$User.full.name=="Jane Doe" |  # <- Sinovia's fake student
                           data.logs$User.full.name=="Sokol Vako" |
+                          data.logs$User.full.name=="Chesca Rosales" |
                           data.logs$User.full.name=="Pinar Ucar" |
                           data.logs$User.full.name=="Shuji Fukuyama"|
                           data.logs$User.full.name=="ian banda" |
