@@ -108,8 +108,8 @@ GradeThreshold <-GradeMax * (PercentThreshold/100)
 ```{r ManualParameters}
 # TODO for each course! 
 ## Manual Modules definition  $
-# -->   use DF: actname created later
-ModStartIdx <- c(1,10,27,36, 45, 57,67)  # Parameters
+# -->   use DF: actname created later --> Chunk activity 
+ModStartIdx <- c(-1, 3, 5, 7, 9, 11, 13)  # Parameters
 
 
 ##  Define the string that identify the "Final" grade used for certification 
@@ -429,6 +429,13 @@ actname <- actname %>%
           mutate(ModuleID = ifelse(grepl("feedback|certificate", Activity, ignore.case = TRUE), NA,
                                    ModuleID))%>%
     filter(!is.na(ModuleID))
+
+
+## For Amin data course we need +1
+actname <- actname %>%
+            mutate(ModuleID = ModuleID +1)
+
+
 
 # For user engagement (since the activity list is not complete)
 # actname <- course.log  %>%
