@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 22
+i.course <- 25
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
