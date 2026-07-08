@@ -31,7 +31,6 @@
 # directories (specific)
 Output/
 Data/
-SourceData/
 DataCEBD/
 
 # R specific
