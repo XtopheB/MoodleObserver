@@ -1042,7 +1042,7 @@ SuccessRates <- LearnersWithoutNoShows %>%
 
 ```
 
-With that definition, excluding the "*no-shows*", the success rate for women is `r  SuccessRates$Rate[SuccessRates$Sex == "Female"]` \% (`r SuccessRates$Rate[SuccessRates$Sex == "Male"]` \%for men)
+With that definition, excluding the "*no-shows*", the success rate for women is `r  SuccessRates$Rate[SuccessRates$Sex == "Female"]` \% (`r SuccessRates$Rate[SuccessRates$Sex == "Male"]` \% for men)
 
 ## Focus on Asia-Pacific
 
@@ -1348,6 +1348,7 @@ course.log %>%
 LearnersByActivity <- course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
+  filter(ModuleID != "NA") %>%       # there may be still some issues with the module
   mutate(ActID.lab = paste(ActNb,"-",Event.context)) %>% 
   # mutate(Actname = paste(ActNb, "-", Actname)) %>%
   # filter(ActNb <= NbModules )%>%
@@ -1362,18 +1363,19 @@ MedianLearnersActivity <- round(median(LearnersByActivity$Learners), -1)
 ```{r GraphBarActivities, fig.height=10, fig.width=10, out.width = "80%"}
 
  myPaletteModules7 <- c('#fdbf6f', '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c')
-# myPaletteModules6 <- c( '#fdbf6f',  '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99')
+ myPaletteModules6 <- c( '#fdbf6f',  '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99')
 # myPaletteModulesDark <- c("grey", '#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#fdbf6f')
 
 # myPaletteModules <- c("lightgrey",'#a6cee3',  '#b2df8a','#fb9a99', "purple")
 # myPaletteModulesDark <- c("grey",'#1f78b4','#33a02c','#e31a1c', "purple")
 
-myPalette <-  myPaletteModules7
+myPalette <-  myPaletteModules6
 
 course.log %>%
   filter(!is.na(Event.context)) %>%
   filter(Actname != CourseNameLong) %>%
-  #filter(ModuleID >= 0 & ModuleID <7 & !is.na(ModuleID) )%>% 
+  #filter(ModuleID != "NA") %>%       # there may be still some issues with the module
+  filter(ModuleID >= 0 & ModuleID <= NbModules & !is.na(ModuleID) )%>% 
   filter(str_detect(Event.name, "viewed")) %>%  # Removing Completion without views!!
   mutate(
     # removing right then left parts of full activities name
@@ -1452,7 +1454,7 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 -  Cells (color):  Nb of views (Nb of Learners) for each activity each day
 
 
-```{r HeatMap}
+```{r HeatMap, fig.width= 12}
 library(colorspace)
 course.log %>%
  filter(!is.na(ActNb))  %>%
@@ -1471,7 +1473,7 @@ course.log %>%
   labs(x="Date", y="Activities", 
        fill = "Nb of learners", 
        subtitle = paste("Final date ", FileDate), 
-       caption = " Vertical lines indicate module opening")+
+       caption = " Dark red vertical lines indicate day of intense activity over all avaialble activities")+
   ggtitle("Heatmap of the activities")+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
@@ -1482,7 +1484,7 @@ course.log %>%
         plot.subtitle = element_text(hjust = 0.5, size=8),
         legend.position = "bottom",
         axis.title.y = element_text(size = 8))+
-  coord_fixed(ratio = 1.5)  # can be  0.5
+  coord_fixed(ratio = 0.6)  # Width/height ratio: can be  0.2 -  1.5
 ```
 
 
@@ -1514,7 +1516,7 @@ p <-Grades %>%
  ggtitle("Test Scores vs Number of Activities Viewed") +
  labs(x="Nb of activities viewed", y=" Total Grade ", 
       subtitle = paste0("Each dot is a participant, coloured by country" ),
-      caption=  paste("All succeful learners should be in the box\n","Date", FileDate) )+
+      caption=  paste("Successful learners are in the box\n","Date", FileDate) )+
  geom_jitter( width = 0.5, height = 0.5, alpha = 0.6) +
  # facet_wrap(vars(Country)) +
  scale_color_hue() +
@@ -1630,7 +1632,7 @@ learners_Time %>%
 
 The vertical axis on the graphic below reports the number of activities visited by learners, colored depending on success. Horizontally is the number of visits on the LMS(unique days). One expect to see very few reds in the upper and right sides of the graphic. 
 
-Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding" `r NbStudentsNoShow` "participants with grade = 0 who never really *engaged* with the course] 
+Interestingly, 50% of the participants visited the LMS only **`r median(GradesPositive$NbDays)` times** (nb of days of visit), 50% visited more than `r median(GradesPositive$NbAct)` activities  (out of `r NbActivities` proposed).^[Excluding `r NbStudentsNoShow` "participants with grade = 0 who never really *engaged* with the course] 
 
 ```{r VisitsVsActivities}
 
@@ -1665,7 +1667,9 @@ Grades %>%
 # Conclusion
 
 
-With **`r NbCertificates` certified learners**  out of  **`r paste0(NbLearners)`** registered participants from **`r NbCountries` different countries**, the course has certainly been useful for many, even if  **`r BestCountry`** with  **`r NbBestCountry`** certified participants represented the vast majority of our learners ( `r  round((100* as.numeric(NbBestCountry)/NbCertificates), 2)` %).  
+With **`r NbCertificates` certified learners** from **`r NbCountries` different countries**, out of  `r paste0(NbLearners)` registered participants and  **`r paste0(NbLearners -NbStudentsNoShow)`** active participants -- excluding  `r NbStudentsNoShow` participants with no activity the course --   the course has certainly been useful for many.
+
+**`r BestCountry`** with  **`r NbBestCountry`** certified participants represented the vast majority of our learners (`r  round((100* as.numeric(NbBestCountry)/NbCertificates), 2)` %).  
 
 ```{r}
 # counting the number of optional reports completed
@@ -1684,7 +1688,7 @@ NbProjects <- data.act %>%
 
 <!-- The **mandatory** data-based exercise has been completed by  **`r NbProjects`** participants and peer-reviewed. -->
 
-The course was quite long ( `r as.numeric(CourseDuration)` days), but we have not experienced too much attrition, and a good engagement in forums. 
+The course was quite long (`r as.numeric(CourseDuration)` days), and we have  experienced some attrition, but a good engagement in forums. 
 <!-- Many participants shared their resources (ML case-studies), providing us with some new materials to examine. Finally, the  success rate is  **`r RealSuccessRate`** %  and similar to previous editions. -->
 
 
