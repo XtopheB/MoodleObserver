@@ -4,6 +4,15 @@ subtitle: ""
 author: "Christophe Bontemps"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  pdf_document:
+    df_print: kable
+    toc: yes
+    keep_tex: yes
+    fig_width: 6.5
+    fig_height: 4
+    extra_dependencies: float
+  word_document:
+    toc: no
   html_document:
     df_print: paged
     toc: yes
@@ -12,15 +21,6 @@ output:
     code_folding: show
     fig_width: 6.5
     fig_height: 4
-  word_document:
-    toc: no
-  pdf_document:
-    df_print: kable
-    toc: yes
-    keep_tex: yes
-    fig_width: 6.5
-    fig_height: 4
-    extra_dependencies: float
 always_allow_html: true
 ---
 
@@ -131,8 +131,11 @@ list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",Cou
                        full.names = TRUE,recursive = TRUE)
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
 
-# Normal take this one
-data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+# Removing all non UT-8 characters for LaTeX compilation 
+data.feedback <- read.csv(name_last_feedback, encoding = "utf-8") %>%
+  mutate(across(where(is.character), 
+                ~ str_remove_all(., "[\u200B\u200C\u200D\uFEFF]")))
+
 ```
 
 
@@ -777,7 +780,7 @@ NbAnswers <-30
 ```
 
 
-Since the number of comments can be important (we have `r  nrow(data.feedback)` responses), we  computed a score of satisfaction based on the 5-level scale used for each closed-form question.^[ For each question, a score from 0 ("*Strongly disagree*") to 5 ("*Strongly agree*") was attributed. The total score is the sum for the all questions.]
+Since the number of comments can be important (we have `r  nrow(data.feedback)` responses), we  computed a ***score*** of satisfaction based on the 6-level scale used for each closed-form question.^[ For each question, a score from 0 ("*Strongly disagree*") to 6 ("*Strongly agree*") was attributed. The total score is the sum for the all questions.]
 
 Based on this satisfaction score, we present here the  *comments* and *final comments*  for the  `r NbAnswers` less and  `r NbAnswers` most satisfied participants.  
 
@@ -813,6 +816,8 @@ data.feedback.cleanned <- cbind(data.feedback.cleanned, data.num$Total)%>%
 ```
 
 
+Based on the Likert scale, 30 **most negative** comments. 
+
 ```{r ResultTableN}
 data.feedback.cleanned %>%
   filter(str_count(Total) < 10) %>%
@@ -834,6 +839,7 @@ kable( ,
 
 ```
 \newpage
+Based on the Likert scale, 30 **most positive** comments. 
 
 ```{r ResultTableP}
 
@@ -877,25 +883,19 @@ likert_levels <- c(
 
 # For relevance: Relevance1
 Dt1 <- data.feedback %>%
-  select(Relevance1)%>%
-  group_by(Relevance1)%>%
-  count() %>% 
-  rename(C1 = n) %>%
-  # Now reordering according to likert
-  mutate(Relevance1 = factor(Relevance1, levels = likert_levels, ordered = TRUE)) %>%
-  arrange(Relevance1) %>%
-  pull(C1)  # To extract only the values 
+  pull(Relevance1)%>%
+  factor(levels = likert_levels, ordered = TRUE) %>%
+  table() %>%
+  as.numeric()
+ 
 
 # For confidence =  Effectiveness2
-Dt2 <- data.feedback %>%
-  select(Effectiveness2)%>%
-  group_by(Effectiveness2)%>%
-  count() %>% 
-  rename(C1 = n) %>%
-  # Now reordering according to likert
-  mutate(Effectiveness2 = factor(Effectiveness2, levels = likert_levels, ordered = TRUE)) %>%
-  arrange(Effectiveness2) %>%
-  pull(C1)  # To extract only the values 
+  Dt2 <- data.feedback %>%
+  pull(Effectiveness2) %>%
+  factor(levels = likert_levels, ordered = TRUE) %>%
+  table() %>%
+  as.numeric()
+  
 
 # Combining all information 
 toexport <- cbind(CourseNameLong, CourseYear, CourseStartDate, CourseEndDate,
