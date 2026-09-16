@@ -1454,7 +1454,7 @@ This *heatmap* is an attempt to visualize the activities on the platform over ti
 -  Cells (color):  Nb of views (Nb of Learners) for each activity each day
 
 
-```{r HeatMap, fig.width= 12}
+```{r HeatMap}
 library(colorspace)
 course.log %>%
  filter(!is.na(ActNb))  %>%

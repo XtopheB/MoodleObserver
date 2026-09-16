@@ -815,8 +815,7 @@ data.feedback.cleanned <- cbind(data.feedback.cleanned, data.num$Total)%>%
 
 ```
 
-
-Based on the Likert scale, 30 **most negative** comments. 
+ Based on the Likert scale, 30 **most negative** comments. 
 
 ```{r ResultTableN}
 data.feedback.cleanned %>%
@@ -839,6 +838,7 @@ kable( ,
 
 ```
 \newpage
+
 Based on the Likert scale, 30 **most positive** comments. 
 
 ```{r ResultTableP}
