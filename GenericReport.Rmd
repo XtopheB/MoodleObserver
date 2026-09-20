@@ -836,10 +836,9 @@ Learners <- Learners %>%
 
 ```{r ExportParticipants}
 library(openxlsx)
-# For Shuji
+# All participants
 CourseListParticipants <- Learners %>% 
-  filter( Certified =="TRUE") %>%
-  select (User.full.name, First.name, Last.name,  Sex, Country)
+  select (User.full.name, First.name, Last.name,Email.address, Sex, Country, Certified )
  
 
 # save the file 
