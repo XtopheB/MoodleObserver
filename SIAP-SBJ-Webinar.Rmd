@@ -22,6 +22,7 @@ library(ggplot2)
 library(janitor)
 library(knitr)
 library(scales)
+library(forcats)
 ```
 
 # Data
@@ -98,13 +99,6 @@ kable(
 
 # Details on Participants 
 
-```{r}
-country_table <- country_summary %>%
-  count(country_std, sort = TRUE)
-
-kable(country_table)
-```
-
 ```{r fig.height=6}
 ggplot(country_table,
        aes(x = reorder(country_std, n), y = n)) +
@@ -117,6 +111,14 @@ ggplot(country_table,
   ) +
   theme_minimal()
 ```
+
+```{r}
+country_table <- country_summary %>%
+  count(country_std, sort = TRUE)
+
+kable(country_table)
+```
+
 
 ##  Gender Disaggregation
 
@@ -156,8 +158,6 @@ The organization field is classified into:
 
 
 ```{r}
-library(dplyr)
-library(stringr)
 
 participants_classified <- participants %>%
   mutate(
@@ -194,7 +194,7 @@ kable(org_summary)
 ```
 
 ```{r}
-library(forcats)
+# Institutions plot
 
 ggplot(org_summary,
        aes(x = fct_reorder(org_type, n, .desc = FALSE), y = n, fill = org_type)) +
@@ -209,6 +209,16 @@ ggplot(org_summary,
   coord_flip()+
   theme(legend.position = "none")
 ```
+### Organizations Classified as "Ministries" (check)
+
+```{r}
+participants_classified %>%
+  filter(org_type == "Ministry/Government") %>%
+  count(organization, sort = TRUE) %>%
+  kable()
+```
+
+
 
 ### Organizations Classified as "Other Institutions" (check)
 
