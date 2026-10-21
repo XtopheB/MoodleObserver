@@ -3,14 +3,18 @@ title: "SBJ Webinar Analysis"
 author: "Christophe Bontemps"
 date: "`r Sys.Date()`"
 output:
- html_document:
+  html_document:
     df_print: paged
-    toc: yes
+    toc: true
     toc_float: true
-    keep_md: yes
+    keep_md: true
     code_folding: hide
     fig_width: 6.5
     fig_height: 4
+  word_document:
+    toc: true
+  pdf_document:
+    toc: true
 always_allow_html: true
 ---
 
@@ -59,12 +63,14 @@ participants <- df %>%
 ##  Total Number of Participants
 
 ```{r}
-total_participants <- nrow(participants)
+n_participants <- nrow(participants)
+n_japan <- nrow(subset( participants, participants$country == "Japan"))
+
 
 kable(
   data.frame(
     Indicator = "Total Participants",
-    Value = total_participants
+    Value = n_participants
   )
 )
 ```
@@ -98,6 +104,13 @@ kable(
 ```
 
 # Details on Participants 
+
+```{r}
+country_table <- country_summary %>%
+  count(country_std, sort = TRUE)
+
+# kable(country_table)
+```
 
 ```{r fig.height=6}
 ggplot(country_table,
@@ -184,19 +197,19 @@ participants_classified <- participants %>%
 
 
 ```{r}
-org_summary <- participants_classified %>%
+org_table <- participants_classified %>%
   count(org_type) %>%
   mutate(
     percent = round(100 * n / sum(n), 1)
   )
 
-kable(org_summary)
+kable(org_table)
 ```
 
 ```{r}
 # Institutions plot
 
-ggplot(org_summary,
+ggplot(org_table,
        aes(x = fct_reorder(org_type, n, .desc = FALSE), y = n, fill = org_type)) +
   geom_col() +
   labs(
@@ -209,6 +222,8 @@ ggplot(org_summary,
   coord_flip()+
   theme(legend.position = "none")
 ```
+
+
 ### Organizations Classified as "Ministries" (check)
 
 ```{r}
@@ -227,5 +242,20 @@ participants_classified %>%
   filter(org_type == "Other Institution") %>%
   count(organization, sort = TRUE) %>%
   kable()
+
+n_NSO <-  org_table %>% 
+   filter(org_type == "National Statistical Office") %>% 
+   pull(n)
+
+n_Min <- org_table <-  org_table %>% 
+   filter(org_type == "Ministry/Government") %>% 
+   pull(n)
 ```
+
+
+This webinar gathered **`r n_participants`** participants over the last two days, from Japan of course (**`r n_japan`** participants) , but also from  **`r n_countries`** different countries.
+
+Participants were from both government/statistical offices ( **`r n_NSO`** participants ) and other ministries ( **`r n_Min`** , *estimated*).
+
+
 
