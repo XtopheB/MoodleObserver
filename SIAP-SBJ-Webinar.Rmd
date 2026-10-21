@@ -1,0 +1,221 @@
+---
+title: "SBJ Webinar Analysis"
+author: "Christophe Bontemps"
+date: "`r Sys.Date()`"
+output:
+ html_document:
+    df_print: paged
+    toc: yes
+    toc_float: true
+    keep_md: yes
+    code_folding: hide
+    fig_width: 6.5
+    fig_height: 4
+always_allow_html: true
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(janitor)
+library(knitr)
+library(scales)
+```
+
+# Data
+
+```{r include=FALSE}
+file <- "Data/SBJ-SIAP-WebinarParticpants-2026-10-21.xlsx"
+
+df <- read_excel(file) %>%
+  clean_names()
+
+names(df)
+```
+
+```{r}
+# Names
+participants <- df %>%
+  select(
+    country = country_or_area,
+    first_name,
+    family_name,
+    organization,
+    sex,
+    email = e_mail
+  ) %>%
+  mutate(
+    country = str_trim(country),
+    country = str_to_title(country),
+    sex = str_to_title(sex),
+    organization = str_squish(organization), 
+    sex = ifelse(sex =="Male", "Men", "Women")
+  )
+```
+
+##  Total Number of Participants
+
+```{r}
+total_participants <- nrow(participants)
+
+kable(
+  data.frame(
+    Indicator = "Total Participants",
+    Value = total_participants
+  )
+)
+```
+
+##  Number of Countries Represented
+
+```{r}
+country_summary <- participants %>%
+  mutate(country_std = case_when(
+    str_detect(country, "Japan|日本") ~ "Japan",
+    str_detect(country, "Kyrgyz") ~ "Kyrgyzstan",
+    str_detect(country, "Armenia") ~ "Armenia",
+    str_detect(country, "Iran") ~ "Iran",
+    str_detect(country, "Viet") ~ "Viet Nam",
+    str_detect(country, "Hong Kong") ~ "Hong Kong, China",
+    str_detect(country, "Brunei") ~ "Brunei Darussalam",
+    str_detect(country, "Thailand|Bankok") ~ "Thailand",
+    str_detect(country, "Fiji") ~ "Fiji",
+    str_detect(country, "Georgia") ~ "Georgia",
+    TRUE ~ country
+  ))
+
+n_countries <- n_distinct(country_summary$country_std)
+
+kable(
+  data.frame(
+    Indicator = "Countries Represented",
+    Value = n_countries
+  )
+)
+```
+
+# Details on Participants 
+
+```{r}
+country_table <- country_summary %>%
+  count(country_std, sort = TRUE)
+
+kable(country_table)
+```
+
+```{r fig.height=6}
+ggplot(country_table,
+       aes(x = reorder(country_std, n), y = n)) +
+  geom_col(fill = "#2C7FB8") +
+  coord_flip() +
+  labs(
+    title = "Participants by Country",
+    x = "",
+    y = "Number of Participants"
+  ) +
+  theme_minimal()
+```
+
+##  Gender Disaggregation
+
+```{r}
+gender_table <- participants %>%
+  count(sex) %>%
+  mutate(
+    percent = percent(n / sum(n))
+  )
+
+kable(gender_table)
+```
+
+```{r}
+ggplot(gender_table,
+       aes(x = sex, y = percent, fill = sex)) +
+  geom_col() +
+  labs(
+    title = "Gender Distribution",
+    x = "",
+    y = "Participants"
+  ) +
+   scale_fill_manual(values = c( "Men"  = "darkgreen", 
+                                 "Women" = "purple"))+
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+# Institutional Classification
+
+The organization field is classified into:
+
+1. National Statistical Office (NSO)
+2. Ministry / Government Agency
+3. Other Institution
+
+
+```{r}
+library(dplyr)
+library(stringr)
+
+participants_classified <- participants %>%
+  mutate(
+    org_lower = str_to_lower(organization),
+    org_type = case_when(
+      str_detect(
+        org_lower,
+        paste0(
+          "statistic|census and statistics|agency on statistics|",
+          "\\b(geostat|armstat|turkstat|rosstat|capmas|dosm|nso|bps)\\b"
+        )
+      ) ~ "National Statistical Office",
+
+      str_detect(
+        org_lower,
+        "ministry|cabinet office|government|office of the prime minister|\\b(mospi|miti)\\b"
+      ) ~ "Ministry/Government",
+
+      TRUE ~ "Other Institution"
+    )
+  ) %>%
+  select(-org_lower)
+```
+
+
+```{r}
+org_summary <- participants_classified %>%
+  count(org_type) %>%
+  mutate(
+    percent = round(100 * n / sum(n), 1)
+  )
+
+kable(org_summary)
+```
+
+```{r}
+library(forcats)
+
+ggplot(org_summary,
+       aes(x = fct_reorder(org_type, n, .desc = FALSE), y = n, fill = org_type)) +
+  geom_col() +
+  labs(
+    title = "Participants by Institution Type",
+    x = "",
+    y = "Participants"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+### Organizations Classified as "Other Institutions" (check)
+
+```{r}
+participants_classified %>%
+  filter(org_type == "Other Institution") %>%
+  count(organization, sort = TRUE) %>%
+  kable()
+```
+
