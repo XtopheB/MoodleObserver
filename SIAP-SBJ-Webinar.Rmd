@@ -32,7 +32,7 @@ library(forcats)
 # Data
 
 ```{r include=FALSE}
-file <- "Data/SBJ-SIAP-WebinarParticpants-2026-10-21.xlsx"
+file <- "Data/SBJ-SIAP-WebinarParticpants-2026-10-26.xlsx"
 
 df <- read_excel(file) %>%
   clean_names()
@@ -113,8 +113,10 @@ country_table <- country_summary %>%
 ```
 
 ```{r fig.height=6}
-ggplot(country_table,
-       aes(x = reorder(country_std, n), y = n)) +
+country_table %>%
+  filter(!is.na(country_std)) %>%
+ggplot() +
+       aes(x = reorder(country_std, n), y = n) +
   geom_col(fill = "#2C7FB8") +
   coord_flip() +
   labs(
@@ -127,6 +129,7 @@ ggplot(country_table,
 
 ```{r}
 country_table <- country_summary %>%
+  filter(!is.na(country_std)) %>%
   count(country_std, sort = TRUE)
 
 kable(country_table)
@@ -137,6 +140,7 @@ kable(country_table)
 
 ```{r}
 gender_table <- participants %>%
+  filter(!is.na(sex)) %>%
   count(sex) %>%
   mutate(
     percent = percent(n / sum(n))
@@ -146,8 +150,10 @@ kable(gender_table)
 ```
 
 ```{r}
-ggplot(gender_table,
-       aes(x = sex, y = percent, fill = sex)) +
+gender_table %>%
+ filter(!is.na(sex)) %>%
+ ggplot()+
+       aes(x = sex, y = percent, fill = sex) +
   geom_col() +
   labs(
     title = "Gender Distribution",
@@ -179,8 +185,8 @@ participants_classified <- participants %>%
       str_detect(
         org_lower,
         paste0(
-          "statistic|census and statistics|agency on statistics|",
-          "\\b(geostat|armstat|turkstat|rosstat|capmas|dosm|nso|bps)\\b"
+          "statistic|census and statistics|agency on statistics|psa|",
+          "\\b(geostat|armstat|turkstat|rosstat|capmas|dosm|nso|bps|sbj|vbos|statistik)\\b"
         )
       ) ~ "National Statistical Office",
 
