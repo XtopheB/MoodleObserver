@@ -64,7 +64,6 @@ participants <- df %>%
 
 ```{r}
 n_participants <- nrow(participants)
-n_japan <- nrow(subset( participants, participants$country == "Japan"))
 
 
 kable(
@@ -101,6 +100,9 @@ kable(
     Value = n_countries
   )
 )
+
+
+
 ```
 
 # Details on Participants 
@@ -108,6 +110,11 @@ kable(
 ```{r}
 country_table <- country_summary %>%
   count(country_std, sort = TRUE)
+
+n_japan <-  country_table %>%
+  filter(country_std == "Japan") %>%
+  select(n) %>%
+  pull()
 
 # kable(country_table)
 ```
@@ -259,9 +266,10 @@ n_Min <- org_table <-  org_table %>%
 ```
 
 
-This webinar gathered **`r n_participants`** participants over the last two days, from Japan of course (**`r n_japan`** participants) , but also from  **`r n_countries`** different countries.
+As of 26 October, there are **`r n_participants`** participants who **registered** to this webinar, from Japan of course (**`r n_japan`** participants), but also from **`r n_countries`**  different countries. 
 
-Participants were from both government/statistical offices ( **`r n_NSO`** participants ) and other ministries ( **`r n_Min`** , *estimated*).
+
+**Registered** participants were from both government/statistical offices ( **`r n_NSO`** participants ) and other ministries ( **`r n_Min`** , *estimated*).
 
 
 
