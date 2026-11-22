@@ -92,7 +92,7 @@ library(openxlsx)
 
 ```{r LoadedParameters}
 # Loading course parameters. 
-i.course <- 26
+i.course <- 28
 
 # Specific parameters
 CourseName <- as.character(AllCourses[i.course, "Ref"])
@@ -132,7 +132,10 @@ list.feedback<- list.files(path="Data/",pattern = glob2rx(paste0("Feedback*",Cou
 name_last_feedback <- list.feedback[which.max(file.mtime(list.feedback))]
 
 # Normal take this one
-data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+# data.feedback <- read.csv(name_last_feedback, encoding = "utf-8")
+
+data.feedback <- read.csv(name_last_feedback,  fileEncoding = "Windows-1252")
+
 ```
 
 
@@ -142,44 +145,53 @@ FileDate <-as_date(file.mtime(name_last_feedback))
 
 ```
 
-```{r Renaming}
-# robust renaming approach
+```{r}
 
 data.feedback <- data.feedback %>%
-  rename_with(~ "Relevance1",
-              .cols = matches("*relevant.*", ignore.case = TRUE))%>%
-  rename_with(~ "Relevance2",
-              .cols = matches("*professional.*background", ignore.case = TRUE))%>%
-  rename_with(~ "Relevance3",
-              .cols = matches("scope.*training", ignore.case = TRUE)) %>%
-  rename_with(~ "Relevance_comments",
-              .cols = matches("comments.*relevance.*training", ignore.case = TRUE))%>%
-  rename_with(~ "Effectiveness1",
-              .cols = matches(".effectively.enhanced.*knowledge", ignore.case = TRUE))%>%
-  rename_with(~ "Effectiveness2",
-              .cols = matches(".content.*.clear.*logical", ignore.case = TRUE))%>%
-  rename_with(~ "Effectiveness3",
-              .cols = matches(".method", ignore.case = TRUE))%>%
-  rename_with(~ "Effectiveness4",
-              .cols = matches(".confidence", ignore.case = TRUE)) %>%
-  rename_with(~ "Effectiveness_comments",
-              .cols = matches(".comments.*.effectiveness.*", ignore.case = TRUE)) %>%
-  # rename_with(~ "Improve_Comments",
-  #             .cols = matches("*share*.improve*", ignore.case = TRUE)) %>%
-  # rename_with(~ "Logistics_open",
-  #             .cols = matches(".feedback.*.travel|logistic", ignore.case = TRUE)) %>%
-  rename_with(~ "Topics_Most",
-              .cols = matches(".topics.were.most*", ignore.case = TRUE)) %>%
-  rename_with(~ "Topics_Not",
-              .cols = matches(".topics.were.not*", ignore.case = TRUE)) %>%
-  rename_with(~ "Knowledge",
-              .cols = matches("knowledge*", ignore.case = TRUE)) %>%
-  rename_with(~ "Other_comments",
-             .cols = matches(".additional|.other.*comment*", ignore.case = TRUE))%>%
-  rename_with(~ "Other_feedback",
-             .cols = matches("other.feedback*", ignore.case = TRUE))
 
+  rename_with(~ "Relevance1",
+              .cols = matches("relevant.to.my.present.work")) %>%
+
+  rename_with(~ "Relevance2",
+              .cols = matches("professional.background")) %>%
+
+  rename_with(~ "Relevance3",
+              .cols = matches("scope.of.the.training")) %>%
+
+  rename_with(~ "Relevancecomments",
+              .cols = matches("improve.the.relevance")) %>%
+
+  rename_with(~ "Effectiveness1",
+              .cols = matches("effectively.enhanced")) %>%
+
+  rename_with(~ "Effectiveness2",
+              .cols = matches("clear.and.logical")) %>%
+
+  rename_with(~ "Effectiveness3",
+              .cols = matches("facilitation.method")) %>%
+
+  rename_with(~ "Effectiveness4",
+              .cols = matches("confidence.has.improved")) %>%
+
+  rename_with(~ "Effectivenesscomments",
+              .cols = matches("improve.the.effectiveness")) %>%
+
+  rename_with(~ "TopicsMost",
+              .cols = matches("topics.were.most")) %>%
+
+  rename_with(~ "TopicsNot",
+              .cols = matches("topics.were.not")) %>%
+
+  rename_with(~ "Knowledge",
+              .cols = matches("rate.the.new.knowledge")) %>%
+
+  rename_with(~ "Application",
+              .cols = matches("apply.the.knowledge")) %>%
+
+  rename_with(~ "Othercomments",
+              .cols = matches("additional.comments"))
 ```
+
 
 
 ```{r}
@@ -327,7 +339,7 @@ data.survey <- data.feedback.cleanned %>%
   select(matches("Relevance|Effectiveness|Efficiency"))
 
 data.text <- data.feedback.cleanned %>%
-  select(matches("open|comment|feedback", ignore.case = TRUE))
+  select(matches("open|comment|feedback|Application", ignore.case = TRUE))
 
 
 data.topic <- data.feedback.cleanned %>%
@@ -461,7 +473,7 @@ words_to_remove <- c("use", "can", "training","work", "help", "however",
                      "thank", "content", "platform", "maybe", "day",
                      "online","course", "will", "learned", "knowledge",
                      "machine", "learning", "statistics",
-                     "data",   "Visualization","Visualizations", "rap")
+                     "data",   "Visualization","Visualizations", "rap", "also")
 
 # Function to remove words from a single variable (from OpenAI)
 remove_words <- function(text, words) {
