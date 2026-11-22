@@ -6,8 +6,9 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document:
     df_print: kable
+    number_sections: true
     toc: yes
-    keep_tex: yes
+    keep_tex: no
     fig_width: 6.5
     fig_height: 4
     extra_dependencies: float
@@ -317,7 +318,7 @@ all.R +
 
 
 ```{r GraphicsEff, fig.height=6}
-all.E <- (G_E1 | G_E2) /(G_E3 | G_E4) 
+all.E <- G_E1 / G_E2 /G_E3 / G_E4 
 all.E + 
   plot_annotation(title = 'Effectiveness of the course',
                   caption = paste("Based on" , nrow(data.feedback)," responses (File date", FileDate,")"),
@@ -483,7 +484,7 @@ remove_words <- function(text, words) {
 }
 
 # Apply the function to each variable in the data frame using mutate_all
-data.text <- data.text %>%
+data.text.C <- data.text %>%
   mutate_all(~ remove_words(., words_to_remove))
 
 
@@ -495,9 +496,9 @@ data.text <- data.text %>%
 ```{r TextRelevance}
 # Create corpus
 
-#All.Comments.R <- rbind(data.text$Relevance_comments, data.text$FinalComments)
+#All.Comments.R <- rbind(data.text.C$Relevance_comments, data.text.C$FinalComments)
 
-All.Comments.R <- unlist(data.text, use.names = FALSE)
+All.Comments.R <- unlist(data.text.C, use.names = FALSE)
 
 corpus.R <- iconv(All.Comments.R)
 corpus.R <- Corpus(VectorSource(corpus.R))
@@ -563,7 +564,7 @@ wordcloud(words = names(Words.R),
 remove_words <- c("no", "none", "nothing")
 
 # Triming
-text.export <- data.text %>%
+text.export <- data.text.C %>%
   filter(!if_all(everything(), ~ is.na(.) | str_trim(.) == "" | 
                    str_to_lower(.) %in% remove_words))
 
@@ -652,21 +653,26 @@ We present here the  *comments* for `r  nrow(data.feedback)` responses in 3 Tabl
 
 ```{r ResultTopics}
 # second  table 
+# names(data.topics <- c("Topic Most Adequate", "Topic not covered" ))
+
 data.topic %>%
   kable(
-    caption = paste("Comments on Topics and Improvements from", NbTotal, "learners"),
+    format = "latex",
+    caption = paste("Comments on Topics most adequate and Not covered (from", NbTotal, "learners)"),
     booktabs = TRUE,
     longtable = TRUE,
-    escape = FALSE
+    escape = FALSE,
+    linesep = "\\addlinespace[0.4em]\\hline\\addlinespace[0.4em]"
   ) %>%
   kable_styling(
     full_width = FALSE,
-    font_size = 9  # smaller font to fit wide tables
+    font_size = 9,  # smaller font to fit wide tables
+    latex_options = c("repeat_header")
   ) %>%
-  # Set all 6 columns to a fixed width and allow wrapping
-  column_spec(1, width = "8cm") %>%
-  column_spec(2, width = "8cm") %>%
-  row_spec(0, bold = TRUE)  # optional: make header bold
+  column_spec(1, width = "8cm", extra_css = "padding-right: 15pt;") %>%
+  column_spec(2, width = "8cm", extra_css = "padding-left: 15pt;")
+  
+  
 
 
 ```
@@ -682,20 +688,21 @@ name_column_open <- names(data.text)
 data.text %>%
   select( name_column_open[1:2]) %>%
   kable(
+    format = "latex",
     caption = paste(" Comments on Relevance and efficiency from", NbTotal, "learners"),
     booktabs = TRUE,
     longtable = TRUE,
-    escape = FALSE
+    escape = FALSE,
+    linesep = "\\addlinespace[0.4em]\\hline\\addlinespace[0.4em]"
   ) %>%
   kable_styling(
     full_width = FALSE,
-    font_size = 9  # smaller font to fit wide tables
+    font_size = 9,  # smaller font to fit wide tables
+    latex_options = c("repeat_header")
   ) %>%
-  # Set all 6 columns to a fixed width and allow wrapping
-  column_spec(1, width = "8cm") %>%
-  column_spec(2, width = "8cm") %>%
+  column_spec(1, width = "8cm", extra_css = "padding-right: 15pt;") %>%
+  column_spec(2, width = "8cm", extra_css = "padding-left: 15pt;") %>%
   row_spec(0, bold = TRUE)  # optional: make header bold
-
 
 ```
 
@@ -706,20 +713,22 @@ data.text %>%
 data.text %>%
   select( name_column_open[3:4]) %>%
   kable(
-    caption = paste(" Other comments from", NbTotal, "learners"),
+    format = "latex",
+    caption = paste(" Other comments (from", NbTotal, "learners)"),
     booktabs = TRUE,
     longtable = TRUE,
-    escape = FALSE
+    escape = FALSE, 
+    linesep = "\\addlinespace[0.4em]\\hline\\addlinespace[0.4em]"
   ) %>%
   kable_styling(
     full_width = FALSE,
-    font_size = 9  # smaller font to fit wide tables
+    font_size = 9,  # smaller font to fit wide tables
+    latex_options = c("repeat_header")
   ) %>%
-  # Set all 6 columns to a fixed width and allow wrapping
+  # Set all  columns to a fixed width and allow wrapping
   column_spec(1, width = "8cm") %>%
   column_spec(2, width = "8cm") %>%
   row_spec(0, bold = TRUE)  # optional: make header bold
-
 
 ```
 
