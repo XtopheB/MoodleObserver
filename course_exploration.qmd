@@ -344,9 +344,8 @@ ggplot(by_form, aes(Year, NbPart, fill = Form, alpha = partial)) +
   scale_y_continuous(labels = comma) +
   labs(title = "Participants per year by format",
        x = NULL, y = "Nb Participants",
-       caption = paste0("Data for ", partial_year, " (lighter bars) are partial."))+
-       theme( # legend.position = "bottom")  
-       legend.position = "inside",
+       caption = paste0("Data for ", partial_year, " (lighter bars) are partial.")) +
+       theme(legend.position = "inside",
     legend.position.inside = c(0.01, 0.9))    
 
 ```
@@ -612,7 +611,7 @@ The arrow goes to the city with most courses in that country.
 ggplot() +
   geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
   geom_path(data = curves_country,
-            aes(x, y, group = curve_id, linewidth = 2*n_courses),
+            aes(x, y, group = curve_id, linewidth = n_courses),
             colour = SIAP_col, alpha = 0.7, arrow = arrow_head,
             lineend = "round", linejoin = "round") +
   geom_point(data = dest_country, aes(px, py), colour = SIAP_col, size = 1.6) +
@@ -623,10 +622,14 @@ ggplot() +
   map_decor +
   labs(title = "SIAP Face-to-Face courses",
        subtitle = "Period 2015-2026 (2026 partial data)",
-       caption = map_caption)
+       caption = map_caption)+ 
+       theme(legend.position = "inside",
+    legend.position.inside = c(0.95, 0.8))    
 ```
 
-# 6. Country shapes with other shadings
++
+       theme(legend.position = "inside",
+    legend.position.inside = c(0.01, 0.9))    # 6. Country shapes with other shadings
 
 Same curved flows, with countries shaded by different statistics.
 
