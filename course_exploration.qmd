@@ -23,6 +23,8 @@ library(scales)
 theme_set(theme_minimal(base_size = 12))
 
 partial_year <- 2026   # year with incomplete data
+SIAP_col <- "#1b6ca8"
+
 ```
 
 # 1. Import and cleaning
@@ -204,12 +206,12 @@ yearly |>
 #| fig-height: 4.5
 ggplot(yearly, aes(Year, NbPart)) +
   geom_line(data = ~ filter(.x, Year < partial_year), linewidth = 1,
-            colour = "#1b6ca8") +
+            colour = SIAP_col) +
   geom_line(data = ~ filter(.x, Year >= partial_year - 1), linewidth = 1,
-            colour = "#1b6ca8", linetype = "dashed") +
-  geom_point(aes(shape = partial), size = 3.5, colour = "#1b6ca8", stroke = 1.2) +
+            colour = SIAP_col, linetype = "dashed") +
+  geom_point(aes(shape = partial), size = 3.5, colour = SIAP_col, stroke = 1.2) +
   geom_text(aes(label = comma(NbPart)), vjust = -1.2, size = 3.3) +
-  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 1),
+  scale_shape_manual(values = c(`FALSE` = 1, `TRUE` = 18),
                      labels = c("Full year", "Partial year"), name = NULL) +
   scale_x_continuous(breaks = unique(yearly$Year)) +
   scale_y_continuous(labels = comma, expand = expansion(mult = c(0.02, 0.15))) +
@@ -246,40 +248,39 @@ curve <- tibble(Year = seq(min(full$Year), partial_year, length.out = 200)) |>
 
 pred_2026 <- slice_tail(curve, n = 1)   # predicted full-year value for 2026
 
-col <- "#1b6ca8"
+
 
 ggplot() +
   # solid smooth curve up to 2025, dashed from 2025 to the 2026 prediction
   geom_line(data = filter(curve, Year <= partial_year - 1),
-            aes(Year, fit), colour = col, linewidth = 1.2) +
+            aes(Year, fit), colour = SIAP_col, linewidth = 1.2) +
   geom_line(data = filter(curve, Year >= partial_year - 1),
-            aes(Year, fit), colour = col, linewidth = 1.2, linetype = "dashed") +
+            aes(Year, fit), colour = SIAP_col, linewidth = 1.2, linetype = "dashed") +
   # observed points, as before (hollow = partial year)
   geom_point(data = yearly, aes(Year, NbPart, shape = partial),
-             size = 3.5, colour = col, stroke = 1.2) +
+             size = 3, colour = SIAP_col, stroke = 1.2) +
   geom_text(data = yearly, aes(Year, NbPart, label = comma(NbPart)),
-            vjust = -1.2, size = 3.3) +
+            vjust = -1.2, size = 3.3, colour = SIAP_col) +
   # predicted 2026 (full-year trend value)
-  geom_point(data = pred_2026, aes(Year, fit), shape = 18, size = 5,
-             colour = "#c0392b") +
-  geom_text(data = pred_2026,
-            aes(Year, fit, label = paste0("Predicted ", partial_year, ": ",
-                                          comma(round(fit)))),
-            colour = "#c0392b", hjust = 1, vjust = 2, size = 3.3,
-            fontface = "bold") +
-  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 1),
-                     labels = c("Full year", "Partial year (observed)"),
+  geom_point(data = pred_2026, aes(Year, fit), shape = 3, size = 4,
+             colour = SIAP_col) +
+  # geom_text(data = pred_2026,
+  #           aes(Year, fit, label = paste0("Predicted ", partial_year, ": ",
+  #                                         comma(round(fit)))),
+  #           colour = "#c0392b", hjust = 1, vjust = 2, size = 3.3,
+  #           fontface = "bold") +
+  scale_shape_manual(values = c(`FALSE` = 1, `TRUE` = 18), 
+                     labels = c("Full year", "Partial data (observed)"),
                      name = NULL) +
   scale_x_continuous(breaks = unique(yearly$Year)) +
-  scale_y_continuous(labels = comma, expand = expansion(mult = c(0.02, 0.15))) +
-  labs(title = "Number of participants per year, smoothed trend",
-       subtitle = paste0("loess smoothing, span = ", smooth_span,
-                         " (degree 1), fitted on ", min(full$Year), "-",
-                         max(full$Year)),
-       x = NULL, y = "NbPart",
-       caption = paste0("Dashed curve (2025 to ", partial_year, ") and red diamond: ",
-                        "extrapolated prediction for ", partial_year, ".\n",
-                        "The hollow point is the partial-year count observed so far."))
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0.1, 0.15))) +
+  labs(title = "Number of participants per year",
+       subtitle = paste0("Smoothed trend (", min(full$Year), "-",
+                         max(full$Year), "). 2026 partial"),
+       x = NULL, y = "Nb Participants",
+       caption = paste0("Dashed curve (2025 to ", partial_year,
+                        ") is extrapolated prediction.\n"))+
+       theme(legend.position = "bottom")
 ```
 
 
@@ -303,7 +304,7 @@ by_form_total <- bind_rows(
     mutate(Form = "Total")
 )
 
-form_cols <- c(F2F = "#1b6ca8", EL = "#e08a1e", Total = "grey30")
+form_cols <- c(F2F = SIAP_col, EL = "#e08a1e", Total = "grey30")
 ```
 
 **Lines** (with total):
@@ -335,13 +336,19 @@ ggplot(by_form_total, aes(Year, NbPart, colour = Form, group = Form)) +
 #| fig-height: 4.5
 ggplot(by_form, aes(Year, NbPart, fill = Form, alpha = partial)) +
   geom_col(width = 0.75) +
-  scale_fill_manual(values = form_cols[c("F2F", "EL")], name = NULL) +
+  scale_fill_manual(values = form_cols[c("F2F", "EL")],
+                    labels = c("F2F" = "Face-to-Face", "EL" = "E-Learning"),
+                    name = NULL) +
   scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5), guide = "none") +
   scale_x_continuous(breaks = unique(by_form$Year)) +
   scale_y_continuous(labels = comma) +
-  labs(title = "Participants per year by format (stacked)",
-       x = NULL, y = "NbPart",
-       caption = paste0(partial_year, " (lighter bars) is a partial year."))
+  labs(title = "Participants per year by format",
+       x = NULL, y = "Nb Participants",
+       caption = paste0("Data for ", partial_year, " (lighter bars) are partial."))+
+       theme( # legend.position = "bottom")  
+       legend.position = "inside",
+    legend.position.inside = c(0.01, 0.9))    
+
 ```
 
 # 4. Countries
@@ -367,7 +374,7 @@ countries_year <- f2f |>
   mutate(partial = Year >= partial_year)
 
 ggplot(countries_year, aes(Year, n_countries, alpha = partial)) +
-  geom_col(fill = "#1b6ca8", width = 0.75) +
+  geom_col(fill = SIAP_col, width = 0.75) +
   geom_text(aes(label = n_countries), vjust = -0.4, size = 3.3, alpha = 1) +
   scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5), guide = "none") +
   scale_x_continuous(breaks = unique(countries_year$Year)) +
@@ -593,7 +600,7 @@ ggplot() +
        caption = paste(map_caption, "Japan in dark grey."))
 ```
 
-## Option D: one arrow per country, labelled with the number of courses
+##  Preferred Map (Option D)  one arrow per country
 
 The arrow goes to the city with most courses in that country.
 
@@ -606,10 +613,11 @@ ggplot() +
   geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
   geom_path(data = curves_country,
             aes(x, y, group = curve_id, linewidth = 2*n_courses),
-            colour = "#1b6ca8", alpha = 0.7, arrow = arrow_head,
+            colour = SIAP_col, alpha = 0.7, arrow = arrow_head,
             lineend = "round", linejoin = "round") +
-  geom_point(data = dest_country, aes(px, py), colour = "#1b6ca8", size = 1.6) +
-  geom_text_repel(data = dest_country, aes(px, py, label = Country), size = 3,
+  geom_point(data = dest_country, aes(px, py), colour = SIAP_col, size = 1.6) +
+  # Below: label = label if one want nb of courses)
+  geom_text_repel(data = dest_country, aes(px, py, label = Country), size = 3,  
                   max.overlaps = Inf, min.segment.length = Inf) +
   scale_linewidth(range = c(0.3, 2.8), name = "Nb of F2F\ncourses") +
   map_decor +
