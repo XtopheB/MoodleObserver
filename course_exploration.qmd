@@ -92,7 +92,10 @@ spelling, a standardised city, the country and approximate coordinates
 
 ```{r}
 #| label: lookup
-lookup <- tribble(
+
+# Initial lookup
+
+lookup_ini <- tribble(
   ~loc_key,                      ~City,           ~Country,                 ~iso3, ~lon,      ~lat,
   "chiba",                       "Chiba",         "Japan",                  "JPN",  140.1233,  35.6073,
   "chiba, japan",                "Chiba",         "Japan",                  "JPN",  140.1233,  35.6073,
@@ -141,6 +144,58 @@ lookup <- tribble(
   "singapore",                   "Singapore",     "Singapore",              "SGP",  103.8198,   1.3521,
   "port moresby, png",           "Port Moresby",  "Papua New Guinea",       "PNG",  147.1803,  -9.4438
 )
+
+# Modified version with BeiHai and Xian pointing to center of China
+lookup <- tribble(
+  ~loc_key,                      ~City,           ~Country,                 ~iso3, ~lon,      ~lat,
+  "chiba",                       "Chiba",         "Japan",                  "JPN",  140.1233,  35.6073,
+  "chiba, japan",                "Chiba",         "Japan",                  "JPN",  140.1233,  35.6073,
+  "tokyo",                       "Tokyo",         "Japan",                  "JPN",  139.6917,  35.6895,
+  "daejeon",                     "Daejeon",       "South Korea",            "KOR",  127.3845,  36.3504,
+  "daejeon, republic of korea",  "Daejeon",       "South Korea",            "KOR",  127.3845,  36.3504,
+  "seoul",                       "Seoul",         "South Korea",            "KOR",  126.9780,  37.5665,
+  "nadi",                        "Nadi",          "Fiji",                   "FJI",  177.4150, -17.8030,
+  "suva",                        "Suva",          "Fiji",                   "FJI",  178.4419, -18.1416,
+  "fiji",                        "Suva",          "Fiji",                   "FJI",  178.4419, -18.1416,
+  "bangkok",                     "Bangkok",       "Thailand",               "THA",  100.5018,  13.7563,
+  "bangkok, thailand",           "Bangkok",       "Thailand",               "THA",  100.5018,  13.7563,
+  "jakarta",                     "Jakarta",       "Indonesia",              "IDN",  106.8456,  -6.2088,
+  "bogor",                       "Bogor",         "Indonesia",              "IDN",  106.7890,  -6.5950,
+  "port vila",                   "Port Vila",     "Vanuatu",                "VUT",  168.3273, -17.7334,
+  "maldives",                    "Male",          "Maldives",               "MDV",   73.5093,   4.1755,
+  "tehran",                      "Tehran",        "Iran",                   "IRN",   51.3890,  35.6892,
+  "new delhi",                   "New Delhi",     "India",                  "IND",   77.2090,  28.6139,
+  "india",                       "New Delhi",     "India",                  "IND",   77.2090,  28.6139,
+  "greater noida",               "Greater Noida", "India",                  "IND",   77.5040,  28.4744,
+  "greater noida/india",         "Greater Noida", "India",                  "IND",   77.5040,  28.4744,
+  "ulaanbaatar",                 "Ulaanbaatar",   "Mongolia",               "MNG",  106.9057,  47.8864,
+  "perak",                       "Ipoh (Perak)",  "Malaysia",               "MYS",  101.0901,   4.5975,
+  "perak, malaysia",             "Ipoh (Perak)",  "Malaysia",               "MYS",  101.0901,   4.5975,
+  "kuala lumpur",                "Kuala Lumpur",  "Malaysia",               "MYS",  101.6869,   3.1390,
+  "kiribati",                    "Tarawa",        "Kiribati",               "KIR",  173.0176,   1.4518,
+  "manila",                      "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
+  "philippines",                 "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
+  "ankara",                      "Ankara",        "Turkey",                 "TUR",   32.8597,  39.9334,
+  "guam",                        "Hagatna",       "Guam",                   "GUM",  144.7937,  13.4443,
+  "dhaka",                       "Dhaka",         "Bangladesh",             "BGD",   90.4125,  23.8103,
+  "kathmandu",                   "Kathmandu",     "Nepal",                  "NPL",   85.3240,  27.7172,
+  "bejing",                      "Beijing",       "China",                  "CHN",  116.4074,  39.9042,
+  "bei hai",                     "Beihai",        "China",                  "CHN",  105.0,     35.0,
+  "xian",                        "Xi'an",         "China",                  "CHN",  105.0,     35.0,
+  "new caledonia",               "Noumea",        "New Caledonia",          "NCL",  166.4572, -22.2711,
+  "almaty",                      "Almaty",        "Kazakhstan",             "KAZ",   76.8512,  43.2220,
+  "astana",                      "Astana",        "Kazakhstan",             "KAZ",   71.4491,  51.1694,
+  "baku",                        "Baku",          "Azerbaijan",             "AZE",   49.8671,  40.4093,
+  "solomon islands",             "Honiara",       "Solomon Islands",        "SLB",  159.9729,  -9.4456,
+  "tonga",                       "Nuku'alofa",    "Tonga",                  "TON", -175.2026, -21.1393,
+  "bhutan",                      "Thimphu",       "Bhutan",                 "BTN",   89.6386,  27.4728,
+  "paro",                        "Paro",          "Bhutan",                 "BTN",   89.4130,  27.4305,
+  "kyrgyz",                      "Bishkek",       "Kyrgyzstan",             "KGZ",   74.5698,  42.8746,
+  "brunei",                      "Bandar Seri Begawan", "Brunei",           "BRN",  114.9398,   4.9031,
+  "singapore",                   "Singapore",     "Singapore",              "SGP",  103.8198,   1.3521,
+  "port moresby, png",           "Port Moresby",  "Papua New Guinea",       "PNG",  147.1803,  -9.4438
+)
+
 
 df <- df |>
   mutate(loc_key = Location |>
