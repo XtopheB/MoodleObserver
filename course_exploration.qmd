@@ -12,8 +12,7 @@ execute:
 
 ```{r}
 #| label: setup
-# install.packages(c("tidyverse", "sf", "rnaturalearth", "rnaturalearthdata",
-#                    "ggrepel", "scales", "knitr"))
+
 library(tidyverse)   # dplyr, ggplot2, readr, lubridate, ...
 library(sf)
 library(rnaturalearth)
@@ -124,7 +123,7 @@ lookup_ini <- tribble(
   "kiribati",                    "Tarawa",        "Kiribati",               "KIR",  173.0176,   1.4518,
   "manila",                      "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
   "philippines",                 "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
-  "ankara",                      "Ankara",        "Turkey",                 "TUR",   32.8597,  39.9334,
+  "ankara",                      "Ankara",        "Türkiye",                 "TUR",   32.8597,  39.9334,
   "guam",                        "Hagatna",       "Guam",                   "GUM",  144.7937,  13.4443,
   "dhaka",                       "Dhaka",         "Bangladesh",             "BGD",   90.4125,  23.8103,
   "kathmandu",                   "Kathmandu",     "Nepal",                  "NPL",   85.3240,  27.7172,
@@ -175,7 +174,7 @@ lookup <- tribble(
   "kiribati",                    "Tarawa",        "Kiribati",               "KIR",  173.0176,   1.4518,
   "manila",                      "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
   "philippines",                 "Manila",        "Philippines",            "PHL",  120.9842,  14.5995,
-  "ankara",                      "Ankara",        "Turkey",                 "TUR",   32.8597,  39.9334,
+  "ankara",                      "Ankara",        "Türkiye",                 "TUR",   32.8597,  39.9334,
   "guam",                        "Hagatna",       "Guam",                   "GUM",  144.7937,  13.4443,
   "dhaka",                       "Dhaka",         "Bangladesh",             "BGD",   90.4125,  23.8103,
   "kathmandu",                   "Kathmandu",     "Nepal",                  "NPL",   85.3240,  27.7172,
@@ -664,7 +663,8 @@ The arrow goes to the city with most courses in that country.
 #| fig-height: 7
 
 ggplot() +
-  geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
+   # Border with  colour  = "white"
+  geom_sf(data = world_p, fill = "grey88", colour = "grey88", linewidth = 0.2) +
   geom_path(data = curves_country,
             aes(x, y, group = curve_id, linewidth = n_courses),
             colour = SIAP_col, alpha = 0.7, arrow = arrow_head,
@@ -682,9 +682,7 @@ ggplot() +
     legend.position.inside = c(0.95, 0.8))    
 ```
 
-+
-       theme(legend.position = "inside",
-    legend.position.inside = c(0.01, 0.9))    # 6. Country shapes with other shadings
+
 
 Same curved flows, with countries shaded by different statistics.
 
