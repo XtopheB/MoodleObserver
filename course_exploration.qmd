@@ -219,6 +219,72 @@ ggplot(yearly, aes(Year, NbPart)) +
                         format(last_start, "%d %b %Y"), ")."))
 ```
 
+
+```{r}
+#| label: plot-total-smooth
+#| fig-width: 8
+#| fig-height: 4.5
+
+# =====================================================================
+#  >>>  SMOOTHING PARAMETER (edit me)  <<<
+#  loess span: share of points used for each local fit.
+#    small (0.5)  -> curve follows the points closely (wiggly)
+#    large (1.0+) -> very smooth, close to a straight trend
+#  With about 11 yearly points, stay roughly between 0.5 and 1.2.
+smooth_span <- 0.6
+# =====================================================================
+
+# Fit on complete years only; 2026 is partial, so it is predicted, not fitted
+full <- filter(yearly, Year < partial_year)
+
+# degree = 1 and surface = "direct" make extrapolation to 2026 possible and stable
+fit <- loess(NbPart ~ Year, data = full, span = smooth_span, degree = 1,
+             control = loess.control(surface = "direct"))
+
+curve <- tibble(Year = seq(min(full$Year), partial_year, length.out = 200)) |>
+  mutate(fit = predict(fit, newdata = pick(Year)))
+
+pred_2026 <- slice_tail(curve, n = 1)   # predicted full-year value for 2026
+
+col <- "#1b6ca8"
+
+ggplot() +
+  # solid smooth curve up to 2025, dashed from 2025 to the 2026 prediction
+  geom_line(data = filter(curve, Year <= partial_year - 1),
+            aes(Year, fit), colour = col, linewidth = 1.2) +
+  geom_line(data = filter(curve, Year >= partial_year - 1),
+            aes(Year, fit), colour = col, linewidth = 1.2, linetype = "dashed") +
+  # observed points, as before (hollow = partial year)
+  geom_point(data = yearly, aes(Year, NbPart, shape = partial),
+             size = 3.5, colour = col, stroke = 1.2) +
+  geom_text(data = yearly, aes(Year, NbPart, label = comma(NbPart)),
+            vjust = -1.2, size = 3.3) +
+  # predicted 2026 (full-year trend value)
+  geom_point(data = pred_2026, aes(Year, fit), shape = 18, size = 5,
+             colour = "#c0392b") +
+  geom_text(data = pred_2026,
+            aes(Year, fit, label = paste0("Predicted ", partial_year, ": ",
+                                          comma(round(fit)))),
+            colour = "#c0392b", hjust = 1, vjust = 2, size = 3.3,
+            fontface = "bold") +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 1),
+                     labels = c("Full year", "Partial year (observed)"),
+                     name = NULL) +
+  scale_x_continuous(breaks = unique(yearly$Year)) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0.02, 0.15))) +
+  labs(title = "Number of participants per year, smoothed trend",
+       subtitle = paste0("loess smoothing, span = ", smooth_span,
+                         " (degree 1), fitted on ", min(full$Year), "-",
+                         max(full$Year)),
+       x = NULL, y = "NbPart",
+       caption = paste0("Dashed curve (2025 to ", partial_year, ") and red diamond: ",
+                        "extrapolated prediction for ", partial_year, ".\n",
+                        "The hollow point is the partial-year count observed so far."))
+```
+
+
+
+
 ## 3.2 Decomposition: EL vs F2F
 
 ```{r}
@@ -326,27 +392,38 @@ f2f |>
 
 # 5. Maps of F2F courses
 
-Map centred on **Chiba, Japan** (azimuthal equidistant projection, so a straight
-line from the centre is the great-circle route). Only F2F courses with a known
-location are shown; **no arrow is drawn for Chiba (or Tokyo)**, i.e. for Japan.
-Arrows point to the city of the course; when only a country was recorded,
+North-up world maps (Robinson projection, centred on 140°E so that the Pacific
+is not cut), with arrows starting from **Chiba, Japan**. Only F2F courses with a
+known location are shown; **no arrow is drawn for Chiba (or Tokyo)**, i.e. for
+Japan. Arrows point to the city of the course; when only a country was recorded,
 they point to its capital.
+
+The arrows are curved flows that always bow northwards, with a bow proportional
+to the distance. Routes to the west (Turkey, Azerbaijan, Kazakhstan...) therefore
+follow different paths instead of sitting on top of each other. Change
+`curvature` in `make_curves()` to bend them more or less (0 = straight lines).
 
 ```{r}
 #| label: map-data
 chiba_lon <- 140.1233
 chiba_lat <- 35.6073
-crs_chiba <- paste0("+proj=aeqd +lat_0=", chiba_lat, " +lon_0=", chiba_lon,
-                    " +datum=WGS84 +units=m")
 
-# Project lon/lat columns to the Chiba-centred system (Chiba = 0,0)
+# Robinson projection centred on 140E: north is up, Pacific in the middle
+crs_map <- "+proj=robin +lon_0=140 +datum=WGS84 +units=m"
+
+# Project lon/lat columns to map coordinates (px, py)
 add_xy <- function(d) {
   xy <- d |>
     st_as_sf(coords = c("lon", "lat"), crs = 4326) |>
-    st_transform(crs_chiba) |>
+    st_transform(crs_map) |>
     st_coordinates()
   d |> mutate(px = xy[, 1], py = xy[, 2])
 }
+
+# Chiba = origin of all arrows
+origin <- add_xy(tibble(lon = chiba_lon, lat = chiba_lat))
+x0 <- origin$px
+y0 <- origin$py
 
 # Destinations: one row per city (excluding Japan)
 dest <- f2f |>
@@ -368,31 +445,32 @@ dest_country <- dest |>
   left_join(main_city, by = "Country") |>
   mutate(label = paste0(Country, " (", n_courses, ")"))
 
-# Basemap: clip to 12,000 km around Chiba, then project
+# Basemap. No polygon clipping (st_intersection / st_make_valid) is used, which
+# avoids s2 / GEOS topology errors on some Natural Earth polygons.
+# The Americas and Greenland are dropped: they straddle the cut meridian of this
+# projection (40W) and are far outside the map window anyway.
 world <- ne_countries(scale = "medium", returnclass = "sf") |>
-  filter(continent != "Antarctica")
+  filter(!continent %in% c("Antarctica", "North America", "South America"))
 iso_col <- intersect(c("iso_a3_eh", "iso_a3"), names(world))[1]
 world$iso3 <- world[[iso_col]]
-world <- world |> select(iso3, name) |> st_make_valid()
-
-disc <- st_buffer(st_sfc(st_point(c(chiba_lon, chiba_lat)), crs = 4326), dist = 12e6)
 
 world_p <- world |>
-  st_intersection(disc) |>
-  st_transform(crs_chiba)
+  select(iso3, name) |>
+  st_transform(crs_map)
 
-# Map window (metres from Chiba); widen if some destination is cut off
-map_xlim <- c(-9e6, 9e6)
-map_ylim <- c(-8e6, 8e6)
+# Map window: lon 10E to 165W, lat 30S to 68N (widen if a label is cut off)
+ext <- add_xy(tibble(lon = c(10, -165, 140, 140), lat = c(0, 0, -30, 68)))
+map_xlim <- range(ext$px[1:2])
+map_ylim <- range(ext$py[3:4])
 
-chiba_pt <- data.frame(x = 0, y = 0)
+chiba_pt <- data.frame(x = x0, y = y0)
 
 map_decor <- list(
   geom_point(data = chiba_pt, aes(x, y), shape = 21, size = 4,
              fill = "black", colour = "white", stroke = 1),
-  geom_text(data = chiba_pt, aes(x, y, label = "Chiba"), nudge_y = -3.5e5,
+  geom_text(data = chiba_pt, aes(x, y, label = "Chiba"), nudge_y = -4e5,
             fontface = "bold", size = 3.5),
-  coord_sf(crs = crs_chiba, xlim = map_xlim, ylim = map_ylim, expand = FALSE),
+  coord_sf(crs = crs_map, xlim = map_xlim, ylim = map_ylim, expand = FALSE),
   theme_void(),
   theme(panel.background = element_rect(fill = "white", colour = NA),   # white ocean
         plot.background  = element_rect(fill = "white", colour = NA),
@@ -400,23 +478,65 @@ map_decor <- list(
         plot.title = element_text(face = "bold"))
 )
 
+# Curved flow from Chiba to each row of d (columns px, py).
+# Quadratic Bezier; the arc always bows north, east- or west-bound.
+make_curves <- function(d, curvature = 0.2, n = 60) {
+  d <- d |> mutate(curve_id = row_number())
+  t <- seq(0, 1, length.out = n)
+  map_dfr(seq_len(nrow(d)), \(i) {
+    dx <- d$px[i] - x0
+    dy <- d$py[i] - y0
+    s  <- if (dx >= 0) 1 else -1
+    cx <- x0 + dx / 2 - s * curvature * dy
+    cy <- y0 + dy / 2 + s * curvature * dx
+    tibble(curve_id = d$curve_id[i],
+           x = (1 - t)^2 * x0 + 2 * (1 - t) * t * cx + t^2 * d$px[i],
+           y = (1 - t)^2 * y0 + 2 * (1 - t) * t * cy + t^2 * d$py[i])
+  }) |>
+    left_join(d, by = "curve_id")
+}
+
+# World polygons joined with a country-level `value` column (needs `iso3`)
+shade_world <- function(stat) {
+  world_p |> left_join(select(stat, iso3, value), by = "iso3")
+}
+
+# Japan = origin: dark grey, left out of the colour scales
+japan_layer <- geom_sf(data = filter(world_p, iso3 == "JPN"),
+                       fill = "grey55", colour = "white", linewidth = 0.2)
+
 arrow_head <- arrow(length = unit(0.22, "cm"), type = "closed")
 map_caption <- paste0("F2F courses ", min(df$Year), "-", max(df$Year),
-                      " (", partial_year, " partial). No arrow for Japan.")
+                      " (", partial_year, " partial).")
+
+# Country-level statistics (outside Japan)
+country_stats <- f2f |>
+  filter(Country != "Japan") |>
+  group_by(iso3, Country) |>
+  summarise(
+    n_courses = n(),
+    n_part    = sum(NbPart, na.rm = TRUE),
+    pct_women = 100 * sum(NWomen[!is.na(NbPart) & !is.na(NWomen)]) /
+                      sum(NbPart[!is.na(NbPart) & !is.na(NWomen)]),
+    .groups = "drop"
+  )
+
+curves_city    <- make_curves(dest)
+curves_country <- make_curves(dest_country)
 ```
 
 ## Option A: arrow width = number of courses (one arrow per city)
 
 ```{r}
 #| label: map-A
-#| fig-width: 10
+#| fig-width: 11
 #| fig-height: 7
 ggplot() +
   geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
-  geom_segment(data = dest,
-               aes(x = 0, y = 0, xend = px, yend = py, linewidth = n_courses),
-               colour = "#c0392b", alpha = 0.7, arrow = arrow_head,
-               lineend = "round") +
+  geom_path(data = curves_city,
+            aes(x, y, group = curve_id, linewidth = n_courses),
+            colour = "#c0392b", alpha = 0.7, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
   geom_point(data = dest, aes(px, py), colour = "#c0392b", size = 1.6) +
   geom_text_repel(data = dest, aes(px, py, label = City), size = 3,
                   max.overlaps = Inf, min.segment.length = Inf) +
@@ -430,13 +550,14 @@ ggplot() +
 
 ```{r}
 #| label: map-B
-#| fig-width: 10
+#| fig-width: 11
 #| fig-height: 7
 ggplot() +
   geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
-  geom_segment(data = arrange(dest, n_courses),
-               aes(x = 0, y = 0, xend = px, yend = py, colour = n_courses),
-               linewidth = 1, arrow = arrow_head, lineend = "round") +
+  geom_path(data = make_curves(arrange(dest, n_courses)),   # busiest drawn last
+            aes(x, y, group = curve_id, colour = n_courses),
+            linewidth = 1, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
   geom_text_repel(data = dest, aes(px, py, label = City), size = 3,
                   max.overlaps = Inf, min.segment.length = Inf) +
   scale_colour_viridis_c(option = "C", direction = -1, end = 0.9,
@@ -448,30 +569,28 @@ ggplot() +
 
 ## Option C: countries shaded by number of courses, arrow width = participants
 
-Countries without F2F courses stay grey.
+Countries without F2F courses stay grey; Japan (origin) is dark grey.
 
 ```{r}
 #| label: map-C
-#| fig-width: 10
+#| fig-width: 11
 #| fig-height: 7
-world_fill <- world_p |>
-  left_join(select(dest_country, iso3, n_courses_country = n_courses), by = "iso3")
-
 ggplot() +
-  geom_sf(data = world_fill, aes(fill = n_courses_country),
-          colour = "white", linewidth = 0.2) +
-  geom_segment(data = dest,
-               aes(x = 0, y = 0, xend = px, yend = py, linewidth = n_part),
-               colour = "grey15", alpha = 0.6, arrow = arrow_head,
-               lineend = "round") +
+  geom_sf(data = shade_world(mutate(country_stats, value = n_courses)),
+          aes(fill = value), colour = "white", linewidth = 0.2) +
+  japan_layer +
+  geom_path(data = curves_city,
+            aes(x, y, group = curve_id, linewidth = n_part),
+            colour = "grey15", alpha = 0.6, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
   geom_point(data = dest, aes(px, py), colour = "grey15", size = 1.4) +
   scale_fill_gradient(low = "#fcdcd3", high = "#8c1c13", na.value = "grey88",
-                      name = "Nb of F2F\ncourses\n(country)") +
+                      name = "F2F courses\n(country)") +
   scale_linewidth(range = c(0.3, 3), labels = comma,
-                  name = "Participants\n(NbPart)") +
+                  name = "Arrow width =\nparticipants") +
   map_decor +
   labs(title = "Fill = courses per country, arrow width = participants",
-       caption = map_caption)
+       caption = paste(map_caption, "Japan in dark grey."))
 ```
 
 ## Option D: one arrow per country, labelled with the number of courses
@@ -480,19 +599,148 @@ The arrow goes to the city with most courses in that country.
 
 ```{r}
 #| label: map-D
-#| fig-width: 10
+#| fig-width: 11
 #| fig-height: 7
+
 ggplot() +
   geom_sf(data = world_p, fill = "grey88", colour = "white", linewidth = 0.2) +
-  geom_segment(data = dest_country,
-               aes(x = 0, y = 0, xend = px, yend = py, linewidth = n_courses),
-               colour = "#1b6ca8", alpha = 0.7, arrow = arrow_head,
-               lineend = "round") +
+  geom_path(data = curves_country,
+            aes(x, y, group = curve_id, linewidth = 2*n_courses),
+            colour = "#1b6ca8", alpha = 0.7, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
   geom_point(data = dest_country, aes(px, py), colour = "#1b6ca8", size = 1.6) +
-  geom_text_repel(data = dest_country, aes(px, py, label = label), size = 3,
+  geom_text_repel(data = dest_country, aes(px, py, label = Country), size = 3,
                   max.overlaps = Inf, min.segment.length = Inf) +
   scale_linewidth(range = c(0.3, 2.8), name = "Nb of F2F\ncourses") +
   map_decor +
-  labs(title = "One arrow per country: Country (number of F2F courses)",
+  labs(title = "SIAP Face-to-Face courses",
+       subtitle = "Period 2015-2026 (2026 partial data)",
        caption = map_caption)
+```
+
+# 6. Country shapes with other shadings
+
+Same curved flows, with countries shaded by different statistics.
+
+## Option E: countries shaded by number of courses, one arrow per country
+
+```{r}
+#| label: map-E
+#| fig-width: 11
+#| fig-height: 7
+ggplot() +
+  geom_sf(data = shade_world(mutate(country_stats, value = n_courses)),
+          aes(fill = value), colour = "white", linewidth = 0.2) +
+  japan_layer +
+  geom_path(data = curves_country,
+            aes(x, y, group = curve_id, linewidth = n_courses),
+            colour = "grey10", alpha = 0.65, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
+  geom_text_repel(data = dest_country, aes(px, py, label = label), size = 3,
+                  max.overlaps = Inf, min.segment.length = Inf) +
+  scale_fill_gradient(low = "#fcdcd3", high = "#8c1c13", na.value = "grey88",
+                      name = "F2F courses\n(country)") +
+  scale_linewidth(range = c(0.3, 2.8), name = "Arrow width =\nF2F courses") +
+  map_decor +
+  labs(title = "Courses per country: shading and curved flows from Chiba",
+       caption = paste(map_caption, "Japan in dark grey."))
+```
+
+## Option F: countries shaded by participants (log scale), one arrow per city
+
+```{r}
+#| label: map-F
+#| fig-width: 11
+#| fig-height: 7
+ggplot() +
+  geom_sf(data = shade_world(mutate(country_stats, value = log10(pmax(n_part, 1)))),
+          aes(fill = value), colour = "white", linewidth = 0.2) +
+  japan_layer +
+  geom_path(data = curves_city,
+            aes(x, y, group = curve_id, linewidth = n_courses),
+            colour = "grey10", alpha = 0.6, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
+  geom_point(data = dest, aes(px, py), colour = "grey10", size = 1.3) +
+  scale_fill_viridis_c(option = "mako", direction = -1, na.value = "grey88",
+                       labels = \(b) comma(round(10^b)),
+                       name = "Participants\n(country, log scale)") +
+  scale_linewidth(range = c(0.3, 2.8), name = "Arrow width =\nF2F courses") +
+  map_decor +
+  labs(title = "Participants per country and curved flows to each city",
+       caption = paste(map_caption, "Japan in dark grey."))
+```
+
+## Option G: countries shaded by % of women, arrows sized by participants
+
+```{r}
+#| label: map-G
+#| fig-width: 11
+#| fig-height: 7
+ggplot() +
+  geom_sf(data = shade_world(mutate(country_stats, value = pct_women)),
+          aes(fill = value), colour = "white", linewidth = 0.2) +
+  japan_layer +
+  geom_path(data = curves_country,
+            aes(x, y, group = curve_id, linewidth = n_part),
+            colour = "grey10", alpha = 0.6, arrow = arrow_head,
+            lineend = "round", linejoin = "round") +
+  geom_text_repel(data = dest_country, aes(px, py, label = Country), size = 3,
+                  max.overlaps = Inf, min.segment.length = Inf) +
+  scale_fill_distiller(palette = "PuOr", direction = 1, limits = c(0, 100),
+                       na.value = "grey88", name = "% women\n(country)") +
+  scale_linewidth(range = c(0.3, 3), labels = comma,
+                  name = "Arrow width =\nparticipants") +
+  map_decor +
+  labs(title = "Share of women among participants, by country",
+       caption = paste(map_caption, "Japan in dark grey."))
+```
+
+## Option H: one map per period (different years)
+
+Countries are shaded by the number of F2F courses held **in that period**; the
+arrows (one per city) are sized by the number of courses in the period.
+The periods are defined in `period_levels` and can be edited.
+
+```{r}
+#| label: map-H
+#| fig-width: 13
+#| fig-height: 9.5
+period_levels <- c("2015-2018", "2019-2021", "2022-2024", "2025-2026 (partial)")
+
+f2f_p <- f2f |>
+  filter(Country != "Japan") |>
+  mutate(period = cut(Year, breaks = c(-Inf, 2018, 2021, 2024, Inf),
+                      labels = period_levels))
+
+dest_period <- f2f_p |>
+  group_by(period, Country, iso3, City, lon, lat) |>
+  summarise(n_courses = n(), .groups = "drop") |>
+  add_xy()
+
+fill_period <- f2f_p |> count(period, iso3, name = "value")
+
+world_period <- do.call(rbind, lapply(period_levels, \(p) {
+  world_p |>
+    left_join(filter(fill_period, period == p) |> select(iso3, value), by = "iso3") |>
+    mutate(period = factor(p, levels = period_levels))
+}))
+
+ggplot() +
+  geom_sf(data = world_period, aes(fill = value), colour = "white",
+          linewidth = 0.15) +
+  japan_layer +
+  geom_path(data = make_curves(dest_period),
+            aes(x, y, group = curve_id, linewidth = n_courses),
+            colour = "grey10", alpha = 0.6,
+            arrow = arrow(length = unit(0.18, "cm"), type = "closed"),
+            lineend = "round", linejoin = "round") +
+  geom_point(data = dest_period, aes(px, py), colour = "grey10", size = 1) +
+  facet_wrap(~period, ncol = 2) +
+  scale_fill_gradient(low = "#fcdcd3", high = "#8c1c13", na.value = "grey88",
+                      name = "F2F courses\n(country)") +
+  scale_linewidth(range = c(0.3, 2.5), name = "Arrow width =\nF2F courses") +
+  map_decor +
+  theme(strip.text = element_text(face = "bold", size = 12)) +
+  labs(title = "F2F courses outside Japan by period",
+       caption = "Japan in dark grey; no arrows for Chiba/Tokyo.")
 ```
