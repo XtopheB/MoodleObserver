@@ -35,7 +35,8 @@ library(forcats)
 file <- "Data/SBJ-SIAP-WebinarParticpants-2026-10-26.xlsx"
 
 df <- read_excel(file) %>%
-  clean_names()
+  clean_names() %>%
+  mutate(Year = as.factor(Year))
 
 names(df)
 ```
