@@ -525,6 +525,8 @@ world_p <- world |>
 ```{r}
 #| label: map-design
 
+# Useful for Lat -long coordinates  https://mapimator.com/tools/coordinates
+
 # Map window: lon 10E to 165W, lat 30S to 68N (widen if a label is cut off)
 ext <- add_xy(tibble(lon = c(10, -165, 140, 140), lat = c(0, 0, -30, 68)))
 map_xlim <- range(ext$px[1:2])
@@ -612,7 +614,7 @@ ggplot() +
   geom_point(data = dest, aes(px, py), colour = "#c0392b", size = 1.6) +
   geom_text_repel(data = dest, aes(px, py, label = City), size = 3,
                   max.overlaps = Inf, min.segment.length = Inf) +
-  scale_linewidth(range = c(0.3, 2.8), name = "Nb of F2F\ncourses") +
+  scale_linewidth(range = c(0.3, 2.8), name = "No of F2F\ncourses") +
   map_decor +
   labs(title = "Where were F2F courses held? Width = number of courses",
        caption = map_caption)
@@ -633,7 +635,7 @@ ggplot() +
   geom_text_repel(data = dest, aes(px, py, label = City), size = 3,
                   max.overlaps = Inf, min.segment.length = Inf) +
   scale_colour_viridis_c(option = "C", direction = -1, end = 0.9,
-                         name = "Nb of F2F\ncourses") +
+                         name = "No of F2F\ncourses") +
   map_decor +
   labs(title = "Where were F2F courses held? Colour = number of courses",
        caption = map_caption)
@@ -685,7 +687,7 @@ ggplot() +
   # Below: label = label if one want nb of courses)
   geom_text_repel(data = dest_country, aes(px, py, label = Country), size = 3,  
                   max.overlaps = Inf, min.segment.length = Inf) +
-  scale_linewidth(range = c(0.3, 2.8), name = "Nb of F2F\ncourses") +
+  scale_linewidth(range = c(0.3, 2.8), name = "No of F2F\ncourses") +
   map_decor +  # Where all the basemap is defined 
   labs(title = "SIAP Face-to-Face courses",
        subtitle = "Period 2015-2026 (2026 partial data)",
